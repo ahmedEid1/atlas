@@ -1,4 +1,6 @@
-// Stub for Task 7; replaced with real Trigger.dev wiring in Task 9.
+import { tasks } from "@trigger.dev/sdk";
+import type { parsePdfTask } from "@/trigger/parse-pdf";
+
 export async function enqueueParsePdf(corpusItemId: string): Promise<void> {
-  console.log(`[stub] would enqueue parse-pdf for ${corpusItemId}`);
+  await tasks.trigger<typeof parsePdfTask>("parse-pdf", { corpusItemId });
 }
