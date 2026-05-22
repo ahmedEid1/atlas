@@ -6,15 +6,22 @@ Atlas turns a research question and a corpus of PDFs into an evidence-grounded l
 
 **Status:** M1 — workspace foundation. Full design spec: [`docs/superpowers/specs/2026-05-22-atlas-design.md`](docs/superpowers/specs/2026-05-22-atlas-design.md).
 
-## What's in M1
+## Shipped
 
-- **Clerk auth** with webhook-synced user table (v7 `<Show>` API, `proxy.ts` middleware for Next 16)
-- **Prisma v7 schema** for users, projects, corpus items (driver adapter `@prisma/adapter-pg`, `prisma.config.ts` for connection)
-- **S3-compatible object store** helper, tested against local MinIO
-- **PDF upload endpoint** with mime/size validation, owner-scoped access
-- **Durable parse-pdf task** on Trigger.dev v4 wrapping marker-pdf via the Python extension
-- **Minimal UI** for project workspace + corpus list with status polling
-- **Tested**: 15 unit/integration tests + 2 Playwright e2e tests (1 skipped pending Linux infra)
+### M1 — Foundation (`v0.1.0-m1`)
+- Clerk auth (v7 `<Show>` API, `proxy.ts` middleware for Next 16, webhook handler)
+- Prisma v7 schema (driver adapter `@prisma/adapter-pg`, `prisma.config.ts`)
+- S3-compatible object store helper (MinIO local, swap endpoint for prod)
+- PDF upload endpoint with mime/size validation and owner-scoped access
+- Durable `parse-pdf` task on Trigger.dev v4 wrapping marker-pdf
+- Minimal UI: dashboard, project workspace, corpus list with status polling
+
+### M2 — Summarisation + Observability (`v0.2.0-m2`)
+- Self-hosted Langfuse stack (Postgres + ClickHouse + Redis + MinIO), bootstrapped via `LANGFUSE_INIT_*` so dev keys are deterministic
+- `lib/llm.ts` — the single wrapper for every Claude call: adaptive thinking, Zod-validated structured output via `output_config.format`, prompt caching, Langfuse trace per call
+- `summarize-paper` Trigger.dev task producing a structured summary (abstract, research questions, methodology, key findings, limitations, study type, SLR relevance)
+- UI: per-corpus-item Summarise button → structured summary card with trace link
+- 28 tests passing
 
 ## Stack
 
@@ -36,7 +43,7 @@ Atlas turns a research question and a corpus of PDFs into an evidence-grounded l
 git clone https://github.com/ahmedEid1/atlas.git
 cd atlas
 cp .env.example .env       # fill in Clerk + Trigger.dev keys
-docker compose up -d       # Postgres on :5433, MinIO on :9010/:9011
+docker compose up -d       # postgres :5433, minio :9010/:9011, langfuse :3030
 pnpm install
 pnpm prisma migrate dev
 pnpm dev                   # Next.js on :3000 (or :3001 if 3000 is taken)
@@ -71,7 +78,7 @@ pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending Linux compute for 
 
 ## Roadmap
 
-- **M2** (Wk 2): Single-node summarisation + Langfuse self-hosted observability
+- ~~**M2** (Wk 2): Single-node summarisation + Langfuse self-hosted observability~~ ✅ shipped as `v0.2.0-m2`
 - **M3** (Wk 4): Full LangGraph agent loop (planner → retriever → assessor → drafter) + HITL gates + Hetzner deployment
 - **M4** (Wk 5): Critic + `cite_check` + eval harness v1 with public `/evals` dashboard
 - **M5** (Wk 6): Authenticated MCP server (OAuth 2.1) published to MCP registry
