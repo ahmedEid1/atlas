@@ -1356,17 +1356,16 @@ marker-pdf==1.6.*
 boto3==1.34.*
 ```
 
-- [ ] **Step 2: Set up the local venv**
+- [ ] **Step 2: Set up the local venv with uv**
 
 ```bash
 cd python
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+uv venv --python 3.12 .venv
+uv pip install --python .venv/Scripts/python.exe -r requirements.txt
 cd ..
 ```
 
-Add `python/.venv/` to `.gitignore`.
+(`uv` will download Python 3.12 automatically if not already installed. `python/.venv/` is already in `.gitignore`.)
 
 - [ ] **Step 3: Write `python/parse_pdf.py`**
 
