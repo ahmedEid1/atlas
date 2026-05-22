@@ -23,6 +23,14 @@ Atlas turns a research question and a corpus of PDFs into an evidence-grounded l
 - UI: per-corpus-item Summarise button → structured summary card with trace link
 - 28 tests passing
 
+### M3 — Agent Loop + HITL (`v0.3.0-m3`)
+- LangGraph state machine: planner → retriever → assessor → drafter, with two HITL gates (approve plan, approve papers)
+- Trigger.dev `run-review` task wraps the graph for durability: `interrupt()` produces a checkpoint, `wait.forToken()` pauses the worker, the UI approves to resume
+- Schema: Run, RunStep, HumanCheckpoint, IncludedPaper, ExtractedClaim
+- UI: Start Review button on project page; live run workspace with progress, plan-approval card, papers-approval checklist, and rendered draft review
+- All four agent nodes go through the M2 `runLLM` wrapper — same Langfuse trace per call, same Zod validation, same cost capture
+- 70 tests passing
+
 ## Stack
 
 | Layer | Choice |
@@ -79,7 +87,7 @@ pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending Linux compute for 
 ## Roadmap
 
 - ~~**M2** (Wk 2): Single-node summarisation + Langfuse self-hosted observability~~ ✅ shipped as `v0.2.0-m2`
-- **M3** (Wk 4): Full LangGraph agent loop (planner → retriever → assessor → drafter) + HITL gates + Hetzner deployment
+- ~~**M3** (Wk 4): Full agent loop (planner → retriever → assessor → drafter) + HITL gates + Hetzner deployment~~ ✅ shipped as `v0.3.0-m3` (code only — Hetzner deployment is the deferred M3.5 task)
 - **M4** (Wk 5): Critic + `cite_check` + eval harness v1 with public `/evals` dashboard
 - **M5** (Wk 6): Authenticated MCP server (OAuth 2.1) published to MCP registry
 - **M6** (Wk 7): Public launch with 30-question golden eval set, blog series, recruiter 1-pager
@@ -89,6 +97,9 @@ See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the per-milestone i
 ## Built with spec-driven development
 
 Every feature is specified before code. The spec at [`docs/superpowers/specs/2026-05-22-atlas-design.md`](docs/superpowers/specs/2026-05-22-atlas-design.md) is the contract. The M1 plan at [`docs/superpowers/plans/2026-05-22-m1-workspace-foundation.md`](docs/superpowers/plans/2026-05-22-m1-workspace-foundation.md) breaks it into 12 TDD tasks that produced this release.
+
+## Deferred from M3
+- **M3.5 — Hetzner deployment.** The agent code ships at M3, but a public live demo at `atlas.review` (or alternative domain) is the M3.5 task, requiring (a) a domain Ahmed registers and (b) a Hetzner CX22 in Falkenstein. Estimated 3-4 hours of work once both are in hand.
 
 ## License
 
