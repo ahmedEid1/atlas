@@ -11,3 +11,4 @@ test-results/
 python/.venv/
 AGENTS.md
 CLAUDE.md
+tsconfig.tsbuildinfo
