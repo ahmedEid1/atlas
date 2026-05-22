@@ -20,6 +20,12 @@ const envSchema = z.object({
 
   TRIGGER_PROJECT_REF: z.string().optional(),
   TRIGGER_SECRET_KEY: z.string().optional(),
+
+  // Optional: only needed when a real LLM call is made. lib/llm.ts throws at call time if absent.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  LANGFUSE_PUBLIC_KEY: z.string().min(1),
+  LANGFUSE_SECRET_KEY: z.string().min(1),
+  LANGFUSE_HOST: z.string().url(),
 });
 
 const parsed = envSchema.safeParse(process.env);
