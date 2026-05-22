@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:trigger": "trigger dev",
-    "trigger:deploy": "trigger deploy"
+    "trigger:deploy": "trigger deploy",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1052.0",
@@ -36,6 +37,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@clerk/testing": "^2.0.32",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@trigger.dev/build": "^4",
     "@types/node": "^20",

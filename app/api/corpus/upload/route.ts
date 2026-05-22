@@ -44,7 +44,14 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  await enqueueParsePdf(item.id);
+  // Best-effort: enqueue the parse job. If Trigger.dev is unavailable (e.g. in local dev
+  // without the worker running, or with an invalid API key) the item stays PENDING and
+  // can be retried later. We do NOT fail the upload because of an infra error.
+  try {
+    await enqueueParsePdf(item.id);
+  } catch (err) {
+    console.error("[upload] Failed to enqueue parse job:", err);
+  }
 
   return NextResponse.json(item, { status: 201 });
 }
