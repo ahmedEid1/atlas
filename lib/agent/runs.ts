@@ -13,3 +13,6 @@ export async function finishStep(_args: {
 }): Promise<void> {
   throw new Error("finishStep stub — real impl in Task 8");
 }
+export async function findCorpusMarkdown(_corpusItemId: string): Promise<string | null> {
+  throw new Error("findCorpusMarkdown stub — real impl in Task 8");
+}
