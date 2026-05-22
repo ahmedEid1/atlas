@@ -32,6 +32,30 @@ enum CorpusItemStatus {
   FAILED
 }
 
+enum RunStatus {
+  PENDING
+  PLANNING
+  AWAITING_PLAN_APPROVAL
+  RETRIEVING
+  AWAITING_PAPERS_APPROVAL
+  ASSESSING
+  DRAFTING
+  COMPLETED
+  REJECTED
+  FAILED
+}
+
+enum CheckpointKind {
+  APPROVE_PLAN
+  APPROVE_PAPERS
+}
+
+enum CheckpointStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Project {
   id          String   @id @default(cuid())
   ownerId     String
@@ -42,6 +66,7 @@ model Project {
   updatedAt   DateTime @updatedAt
 
   corpus      CorpusItem[]
+  runs        Run[]
 
   @@index([ownerId])
 }
@@ -62,6 +87,94 @@ model CorpusItem {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
+  includedIn  IncludedPaper[]
+
   @@index([projectId])
   @@index([status])
+}
+
+model Run {
+  id              String     @id @default(cuid())
+  projectId       String
+  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status          RunStatus  @default(PENDING)
+  question        String     @db.Text
+  plan            Json?
+  draft           String?    @db.Text
+  failureReason   String?
+  triggerRunId    String?    @unique
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  completedAt     DateTime?
+
+  steps           RunStep[]
+  checkpoints     HumanCheckpoint[]
+  includedPapers  IncludedPaper[]
+  claims          ExtractedClaim[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model RunStep {
+  id          String   @id @default(cuid())
+  runId       String
+  run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  nodeName    String
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  traceUrl    String?
+  inputTokens Int      @default(0)
+  outputTokens Int     @default(0)
+  cacheReadInputTokens Int @default(0)
+  failureReason String?
+
+  @@index([runId])
+}
+
+model HumanCheckpoint {
+  id          String           @id @default(cuid())
+  runId       String
+  run         Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
+  kind        CheckpointKind
+  status      CheckpointStatus @default(PENDING)
+  proposal    Json
+  decisionPayload Json?
+  rejectionReason String?
+  waitToken   String?          @unique
+  createdAt   DateTime         @default(now())
+  decidedAt   DateTime?
+
+  @@index([runId])
+  @@index([status])
+}
+
+model IncludedPaper {
+  id           String     @id @default(cuid())
+  runId        String
+  run          Run        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  corpusItemId String
+  corpusItem   CorpusItem @relation(fields: [corpusItemId], references: [id], onDelete: Cascade)
+  relevanceScore Float
+  inclusionReason String  @db.Text
+  createdAt    DateTime   @default(now())
+
+  claims       ExtractedClaim[]
+
+  @@unique([runId, corpusItemId])
+  @@index([runId])
+}
+
+model ExtractedClaim {
+  id              String         @id @default(cuid())
+  runId           String
+  run             Run            @relation(fields: [runId], references: [id], onDelete: Cascade)
+  includedPaperId String
+  includedPaper   IncludedPaper  @relation(fields: [includedPaperId], references: [id], onDelete: Cascade)
+  text            String         @db.Text
+  category        String
+  createdAt       DateTime       @default(now())
+
+  @@index([runId])
+  @@index([includedPaperId])
 }
