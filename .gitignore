@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env
+.env.local
+.env.test
+.trigger/
+coverage/
+playwright-report/
+test-results/
+*.log
+python/.venv/
