@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { SummaryView, type PaperSummary } from "@/components/corpus/summary-view";
 
 type Item = {
   id: string;
@@ -11,6 +13,9 @@ type Item = {
   status: "PENDING" | "PARSING" | "PARSED" | "FAILED";
   parsedMarkdown: string | null;
   failureReason: string | null;
+  summary: PaperSummary | null;
+  summaryTraceUrl: string | null;
+  summarisedAt: Date | string | null;
 };
 
 const STATUS_VARIANT: Record<Item["status"], "default" | "secondary" | "destructive" | "outline"> = {
@@ -23,15 +28,22 @@ const STATUS_VARIANT: Record<Item["status"], "default" | "secondary" | "destruct
 export function CorpusItemList({ items }: { items: Item[] }) {
   const router = useRouter();
 
+  // Poll while parse pipeline is mid-flight. (M3 will swap to Trigger.dev realtime.)
   useEffect(() => {
-    const anyActive = items.some((i) => i.status === "PENDING" || i.status === "PARSING");
-    if (!anyActive) return;
+    const anyParsing = items.some(
+      (i) => i.status === "PENDING" || i.status === "PARSING",
+    );
+    if (!anyParsing) return;
     const t = setInterval(() => router.refresh(), 2000);
     return () => clearInterval(t);
   }, [items, router]);
 
   if (items.length === 0) {
-    return <p className="text-muted-foreground text-sm">No documents yet. Upload a PDF to get started.</p>;
+    return (
+      <p className="text-muted-foreground text-sm">
+        No documents yet. Upload a PDF to get started.
+      </p>
+    );
   }
 
   return (
@@ -46,29 +58,77 @@ export function CorpusItemList({ items }: { items: Item[] }) {
 }
 
 function ItemCard({ item }: { item: Item }) {
-  const [open, setOpen] = useState(false);
+  const [markdownOpen, setMarkdownOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(Boolean(item.summary));
+  const [isPending, startTransition] = useTransition();
+  const [summariseError, setSummariseError] = useState<string | null>(null);
+  const router = useRouter();
+
+  function summarise() {
+    setSummariseError(null);
+    startTransition(async () => {
+      const res = await fetch(`/api/corpus/${item.id}/summarize`, { method: "POST" });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setSummariseError(body.error ?? `Failed (${res.status})`);
+        return;
+      }
+      // Wait briefly then refresh so the new summary is read from the server component.
+      // M3 swaps this for Trigger.dev realtime subscription.
+      setTimeout(() => router.refresh(), 3000);
+    });
+  }
+
   return (
     <Card className="p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-xs truncate">{item.source}</p>
           {item.failureReason && (
             <p className="text-destructive text-xs mt-1">{item.failureReason}</p>
           )}
+          {summariseError && (
+            <p className="text-destructive text-xs mt-1">{summariseError}</p>
+          )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <Badge variant={STATUS_VARIANT[item.status]}>{item.status.toLowerCase()}</Badge>
           {item.status === "PARSED" && (
-            <button className="text-sm underline" onClick={() => setOpen((v) => !v)}>
-              {open ? "Hide" : "View"}
-            </button>
+            <>
+              {item.parsedMarkdown && (
+                <button
+                  className="text-sm underline"
+                  onClick={() => setMarkdownOpen((v) => !v)}
+                >
+                  {markdownOpen ? "Hide markdown" : "Markdown"}
+                </button>
+              )}
+              {!item.summary && (
+                <Button onClick={summarise} disabled={isPending}>
+                  {isPending ? "Summarising…" : "Summarise"}
+                </Button>
+              )}
+              {item.summary && (
+                <button
+                  className="text-sm underline"
+                  onClick={() => setSummaryOpen((v) => !v)}
+                >
+                  {summaryOpen ? "Hide summary" : "Summary"}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
-      {open && item.parsedMarkdown && (
+
+      {markdownOpen && item.parsedMarkdown && (
         <pre className="mt-4 max-h-96 overflow-auto rounded bg-muted p-3 text-xs whitespace-pre-wrap">
           {item.parsedMarkdown}
         </pre>
+      )}
+
+      {summaryOpen && item.summary && (
+        <SummaryView summary={item.summary} traceUrl={item.summaryTraceUrl} />
       )}
     </Card>
   );

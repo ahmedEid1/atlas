@@ -25,7 +25,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <h2 className="text-lg font-medium">Corpus</h2>
           <UploadButton projectId={project.id} />
         </div>
-        <CorpusItemList items={project.corpus} />
+        <CorpusItemList items={project.corpus as unknown as Parameters<typeof CorpusItemList>[0]["items"]} />
       </section>
     </main>
   );
