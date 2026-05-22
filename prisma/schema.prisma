@@ -56,6 +56,9 @@ model CorpusItem {
   rawText         String?          @db.Text
   parsedMarkdown  String?          @db.Text
   failureReason   String?
+  summary           Json?
+  summaryTraceUrl   String?
+  summarisedAt      DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
