@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+
+  @@index([clerkId])
+}
+
+enum CorpusItemKind {
+  PDF
+  URL
+  NOTE
+}
+
+enum CorpusItemStatus {
+  PENDING
+  PARSING
+  PARSED
+  FAILED
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  question    String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  corpus      CorpusItem[]
+
+  @@index([ownerId])
+}
+
+model CorpusItem {
+  id              String           @id @default(cuid())
+  projectId       String
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind            CorpusItemKind
+  status          CorpusItemStatus @default(PENDING)
+  source          String           // blob key for PDF, URL for URL, "" for NOTE
+  rawText         String?          @db.Text
+  parsedMarkdown  String?          @db.Text
+  failureReason   String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
