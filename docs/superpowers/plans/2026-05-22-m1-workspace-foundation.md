@@ -191,7 +191,7 @@ services:
     volumes:
       - atlas_minio:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:9010/minio/health/live"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -205,11 +205,11 @@ volumes:
 
 ```bash
 # Database (matches docker-compose)
-DATABASE_URL="postgresql://atlas:atlas_dev_pw@localhost:5432/atlas"
-DIRECT_DATABASE_URL="postgresql://atlas:atlas_dev_pw@localhost:5432/atlas"
+DATABASE_URL="postgresql://atlas:atlas_dev_pw@localhost:5433/atlas"
+DIRECT_DATABASE_URL="postgresql://atlas:atlas_dev_pw@localhost:5433/atlas"
 
 # Object store (MinIO locally; swap endpoint for prod S3)
-S3_ENDPOINT="http://localhost:9000"
+S3_ENDPOINT="http://localhost:9010"
 S3_REGION="us-east-1"
 S3_ACCESS_KEY_ID="atlas"
 S3_SECRET_ACCESS_KEY="atlas_dev_pw"
@@ -233,10 +233,10 @@ docker compose up -d
 docker compose ps
 ```
 
-Expected: both services `healthy`. Open `http://localhost:9001` and log in with `atlas` / `atlas_dev_pw` to confirm MinIO console works. Then create the bucket:
+Expected: both services `healthy`. Open `http://localhost:9011` and log in with `atlas` / `atlas_dev_pw` to confirm MinIO console works. Then create the bucket:
 
 ```bash
-docker compose exec minio mc alias set local http://localhost:9000 atlas atlas_dev_pw
+docker compose exec minio mc alias set local http://localhost:9010 atlas atlas_dev_pw
 docker compose exec minio mc mb local/atlas-corpus
 ```
 
@@ -329,8 +329,8 @@ describe("env", () => {
   });
 
   it("parses a valid env successfully", async () => {
-    process.env.DATABASE_URL = "postgresql://u:p@localhost:5432/d";
-    process.env.S3_ENDPOINT = "http://localhost:9000";
+    process.env.DATABASE_URL = "postgresql://u:p@localhost:5433/d";
+    process.env.S3_ENDPOINT = "http://localhost:9010";
     process.env.S3_REGION = "us-east-1";
     process.env.S3_ACCESS_KEY_ID = "a";
     process.env.S3_SECRET_ACCESS_KEY = "b";
@@ -836,7 +836,7 @@ import { randomUUID } from "node:crypto";
 describe("object-store (integration)", () => {
   // Skip if MinIO is not running locally.
   beforeAll(async () => {
-    const res = await fetch("http://localhost:9000/minio/health/live").catch(() => null);
+    const res = await fetch("http://localhost:9010/minio/health/live").catch(() => null);
     if (!res?.ok) {
       throw new Error("MinIO not reachable on :9000 — run `docker compose up -d`");
     }
@@ -859,7 +859,7 @@ describe("object-store (integration)", () => {
     await putObject(key, new Uint8Array([1, 2, 3]), "application/octet-stream");
 
     const url = await getSignedGetUrl(key, 60);
-    expect(url).toMatch(/^http:\/\/localhost:9000\/atlas-corpus\//);
+    expect(url).toMatch(/^http:\/\/localhost:9010\/atlas-corpus\//);
 
     const res = await fetch(url);
     expect(res.status).toBe(200);
@@ -1439,10 +1439,10 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Smoke-test manually with a real PDF**
 
-Upload any short PDF (e.g. an arXiv paper, 2 pages) to MinIO via the console at `localhost:9001`, into bucket `atlas-corpus` with key `test-input.pdf`. Then export the env vars and run:
+Upload any short PDF (e.g. an arXiv paper, 2 pages) to MinIO via the console at `localhost:9011`, into bucket `atlas-corpus` with key `test-input.pdf`. Then export the env vars and run:
 
 ```powershell
-$env:S3_ENDPOINT="http://localhost:9000"
+$env:S3_ENDPOINT="http://localhost:9010"
 $env:S3_REGION="us-east-1"
 $env:S3_ACCESS_KEY_ID="atlas"
 $env:S3_SECRET_ACCESS_KEY="atlas_dev_pw"

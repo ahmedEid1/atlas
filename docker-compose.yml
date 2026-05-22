@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: atlas_dev_pw
       POSTGRES_DB: atlas
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - atlas_pg:/var/lib/postgresql/data
     healthcheck:
@@ -24,8 +24,8 @@ services:
       MINIO_ROOT_USER: atlas
       MINIO_ROOT_PASSWORD: atlas_dev_pw
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9010:9000"
+      - "9011:9001"
     volumes:
       - atlas_minio:/data
     healthcheck:
