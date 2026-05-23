@@ -76,7 +76,7 @@ describe("summarize-paper task", () => {
     const result = await task.run({ corpusItemId: "c1" });
 
     expect(mocks.runLLM).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "summarize-paper", model: "claude-opus-4-7" }),
+      expect.objectContaining({ name: "summarize-paper", tier: "fast" }),
     );
 
     const updateCalls = vi.mocked(db.corpusItem.update).mock.calls;

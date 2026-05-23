@@ -33,7 +33,7 @@ export const summarizePaperTask = schemaTask({
 
       const { output, traceUrl, usage } = await runLLM({
         name: "summarize-paper",
-        model: "claude-opus-4-7",
+        tier: "fast",
         maxTokens: 4096,
         system,
         messages,
