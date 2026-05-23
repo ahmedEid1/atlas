@@ -4,30 +4,48 @@
 LangGraph headlessly per question; 4 metrics; CI gate at >10% regression;
 public dashboard at https://atlas-sooty-delta.vercel.app/evals.
 
-## Known issue: Gemini + Vercel AI SDK structured output (May 2026)
+## Live eval runs — current status
 
-`pnpm eval` against the default `LLM_PROVIDER=gemini` currently fails with
-`No object generated: could not parse the response`. This is a known
-upstream issue: https://github.com/vercel/ai/issues/12187 — the Vercel AI
-SDK's `generateObject` does not reliably get strict JSON back from Gemini
-Flash on the free tier. We've already set `providerOptions.google.structuredOutputs = true`
-in `lib/llm.ts` (the documented workaround), but the parse error persists
-on the free-tier Flash model.
+Atlas defaults to `LLM_PROVIDER=groq` with `openai/gpt-oss-20b` for both tiers (the
+only Groq model with strict `json_schema` support that fits the free-tier 8K TPM
+budget). The harness runs end-to-end, but **free-tier providers exhibit upstream
+quirks** that the canary surfaced:
 
-The eval harness itself (golden schema, headless runner, metrics, runner
-script, CI workflow, dashboard) works correctly. Once the upstream bug is
-fixed OR you set a different provider that doesn't exhibit it, evals will
-run end-to-end.
+| Provider           | Issue (May 2026)                                                              | Status                      |
+|--------------------|-------------------------------------------------------------------------------|-----------------------------|
+| Gemini 2.5 Flash   | `vercel/ai#12187` — `generateObject` can't parse responses reliably           | upstream blocker            |
+| Groq gpt-oss-120b  | 8K TPM free-tier limit, exceeded by multi-paper questions                      | quota limit                 |
+| Groq gpt-oss-20b   | Schema-property rejection (`$schema` meta field), occasional missing fields    | model capability + SDK quirk|
 
-### Workarounds
+For a clean live-eval baseline, use a paid provider with reliable structured-output:
 
-1. **Use Anthropic for evals (paid)**: set `LLM_PROVIDER=anthropic` and add a
-   real `ANTHROPIC_API_KEY` to `.env`. Atlas's tier mappings keep claude-opus-4-7
-   for smart and claude-sonnet-4-6 for fast.
-2. **Use Groq (free)**: set `LLM_PROVIDER=groq` and add a `GROQ_API_KEY`
-   (free at https://console.groq.com). Atlas uses `llama-3.3-70b-versatile`
-   for smart, `llama-3.1-8b-instant` for fast — both on Groq's free tier.
-3. **Wait for upstream fix** in `ai` or `@ai-sdk/google`.
+```bash
+# Option 1 — Anthropic (paid, ~$0.50 per full eval run on Sonnet 4.6)
+export LLM_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+pnpm eval
+
+# Option 2 — OpenAI (paid, ~$0.30 per full eval run on GPT-5.4-mini)
+export LLM_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+pnpm eval
+
+# Option 3 — Groq free (best-effort; some questions will fail with the quirks above)
+export GROQ_API_KEY=gsk_...
+pnpm eval
+```
+
+The harness, metrics, regression gate, and dashboard all work correctly when the
+underlying LLM produces compliant structured output. Provider stability is the
+gating factor for a populated dashboard.
+
+### Why not Gemini default?
+
+Atlas's original default was Gemini Flash (free tier), but `vercel/ai#12187` makes
+`generateObject` unreliable on Gemini Flash. Groq promoted to default because its
+free-tier quotas are higher (30K TPM / 14400 req/day vs Gemini's 10 RPM / 250 RPD)
+and `gpt-oss-20b` works for simple structured-output tasks even if it stumbles on
+Atlas's deeply nested SLR schemas.
 
 ## Run locally
 

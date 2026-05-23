@@ -28,7 +28,7 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
 
-  LLM_PROVIDER: z.enum(["gemini", "anthropic", "openai", "groq"]).default("gemini"),
+  LLM_PROVIDER: z.enum(["gemini", "anthropic", "openai", "groq"]).default("groq"),
   LANGFUSE_PUBLIC_KEY: z.string().min(1),
   LANGFUSE_SECRET_KEY: z.string().min(1),
   LANGFUSE_HOST: z.string().url(),
