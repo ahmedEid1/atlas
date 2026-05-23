@@ -1,5 +1,13 @@
 import { PrismaNeon } from "@prisma/adapter-neon";
+import { neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
 import { PrismaClient } from "@/app/generated/prisma/client";
+
+// Neon's serverless driver opens a WebSocket to Postgres. Vercel's Node
+// functions and Node 22+ have global WebSocket, but Trigger.dev's worker
+// runtime doesn't expose one by default. Set the constructor explicitly so
+// the driver works everywhere we run Atlas (Vercel, Trigger.dev, local).
+neonConfig.webSocketConstructor = ws;
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
