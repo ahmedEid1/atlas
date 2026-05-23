@@ -7,8 +7,8 @@ describe("resolveTier", () => {
     ["gemini", "fast", "gemini-2.5-flash"],
     ["anthropic", "smart", "claude-opus-4-7"],
     ["anthropic", "fast", "claude-sonnet-4-6"],
-    ["openai", "smart", "gpt-4o"],
-    ["openai", "fast", "gpt-4o-mini"],
+    ["openai", "smart", "gpt-5.5"],
+    ["openai", "fast", "gpt-5.4-mini"],
     ["groq", "smart", "llama-3.3-70b-versatile"],
     ["groq", "fast", "llama-3.1-8b-instant"],
   ];
