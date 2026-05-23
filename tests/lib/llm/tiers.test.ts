@@ -13,6 +13,8 @@ describe("resolveTier", () => {
     ["groq", "fast", "openai/gpt-oss-20b"],
     ["claude-agent", "smart", "sonnet-via-claude-code"],
     ["claude-agent", "fast", "sonnet-via-claude-code"],
+    ["mistral", "smart", "mistral-large-latest"],
+    ["mistral", "fast", "mistral-small-latest"],
   ];
 
   for (const [provider, tier, expected] of cases) {

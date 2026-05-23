@@ -1,5 +1,5 @@
 export type Tier = "smart" | "fast";
-export type ProviderName = "gemini" | "anthropic" | "openai" | "groq" | "claude-agent";
+export type ProviderName = "gemini" | "anthropic" | "openai" | "groq" | "claude-agent" | "mistral";
 
 const MODELS: Record<ProviderName, Record<Tier, string>> = {
   gemini: {
@@ -30,6 +30,12 @@ const MODELS: Record<ProviderName, Record<Tier, string>> = {
     // Tier label is informational; the SDK doesn't take a model param.
     smart: "sonnet-via-claude-code",
     fast: "sonnet-via-claude-code",
+  },
+  mistral: {
+    // Free Experiment tier covers both; mistral-large for quality,
+    // mistral-small for fast/cheap retriever batch scoring.
+    smart: "mistral-large-latest",
+    fast: "mistral-small-latest",
   },
 };
 

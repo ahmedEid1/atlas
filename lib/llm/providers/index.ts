@@ -3,6 +3,7 @@ import { geminiModel } from "./gemini";
 import { anthropicModel } from "./anthropic";
 import { openaiModel } from "./openai";
 import { groqModel } from "./groq";
+import { mistralModel } from "./mistral";
 import type { ProviderName } from "@/lib/llm/tiers";
 
 export type ModelFactory = (modelId: string) => LanguageModel;
@@ -21,6 +22,7 @@ const ADAPTERS: Record<ProviderName, ModelFactory> = {
       "claude-agent provider is handled by the bypass branch in lib/llm.ts and should not be resolved here",
     );
   },
+  mistral: mistralModel,
 };
 
 export function resolveProvider(name: ProviderName): ModelFactory {
