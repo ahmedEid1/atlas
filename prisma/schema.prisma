@@ -214,3 +214,23 @@ model EvalRun {
   @@index([goldenId, createdAt])
   @@index([commitSha])
 }
+
+model McpCall {
+  id          String        @id @default(cuid())
+  userId      String                          // Atlas User.id (NOT Clerk id)
+  toolName    String
+  inputHash   String                          // SHA-256(canonical-JSON(input))
+  reviewId    String?                         // copied from input when present
+  status      McpCallStatus
+  errorCode   String?
+  latencyMs   Int
+  createdAt   DateTime      @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, toolName, createdAt])
+}
+
+enum McpCallStatus {
+  OK
+  ERROR
+}
