@@ -1,135 +1,132 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 
-// vi.hoisted() lifts mock objects above vi.mock()'s automatic hoist.
-// Without this, the factories below run before `trace`/`generation` exist (TDZ).
+// vi.hoisted lifts mock identifiers above vi.mock factories (TDZ workaround)
 const mocks = vi.hoisted(() => {
-  const generation = { end: vi.fn() };
-  const trace = {
-    generation: vi.fn(() => generation),
-    update: vi.fn(),
-    getTraceUrl: vi.fn(() => "http://localhost:3030/project/atlas-dev/traces/trace_abc"),
-  };
-  const langfuse = {
-    trace: vi.fn(() => trace),
-    flushAsync: vi.fn(async () => undefined),
-  };
-  const parse = vi.fn();
-  return { generation, trace, langfuse, parse };
+  const generateObject = vi.fn();
+  const geminiModel = vi.fn((id: string) => ({ kind: "gemini-model", id }));
+  return { generateObject, geminiModel };
 });
 
 vi.mock("@/lib/env", () => ({
   env: {
-    ANTHROPIC_API_KEY: "sk-ant-test-fake-key-for-mocked-tests",
+    LLM_PROVIDER: "gemini",
+    GOOGLE_GENERATIVE_AI_API_KEY: "test-gemini-key",
     LANGFUSE_PUBLIC_KEY: "pk-lf-test",
     LANGFUSE_SECRET_KEY: "sk-lf-test",
     LANGFUSE_HOST: "http://localhost:3030",
   },
 }));
 
-vi.mock("@/lib/langfuse", () => ({
-  getLangfuse: () => mocks.langfuse,
-  _resetLangfuseForTest: () => {},
-}));
+vi.mock("ai", () => ({ generateObject: mocks.generateObject }));
 
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: class {
-    messages = { parse: mocks.parse };
-  },
-}));
-
-vi.mock("@anthropic-ai/sdk/helpers/zod", () => ({
-  zodOutputFormat: (schema: unknown) => ({ type: "json_schema", schema }),
-}));
+vi.mock("@/lib/llm/providers/gemini", () => ({ geminiModel: mocks.geminiModel }));
 
 beforeEach(() => {
-  mocks.parse.mockReset();
-  mocks.langfuse.trace.mockClear();
-  mocks.langfuse.flushAsync.mockClear();
-  mocks.trace.generation.mockClear();
-  mocks.trace.update.mockClear();
-  mocks.trace.getTraceUrl.mockClear();
-  mocks.generation.end.mockClear();
+  mocks.generateObject.mockReset();
+  mocks.geminiModel.mockClear();
 });
 
 describe("runLLM", () => {
-  it("returns parsed output and trace URL on success", async () => {
-    mocks.parse.mockResolvedValue({
-      parsed_output: { answer: "42" },
-      usage: {
-        input_tokens: 100,
-        output_tokens: 50,
-        cache_read_input_tokens: 80,
-        cache_creation_input_tokens: 0,
-      },
+  it("dispatches to gemini (default) and returns parsed output + usage", async () => {
+    mocks.generateObject.mockResolvedValue({
+      object: { answer: "42" },
+      usage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
     });
 
     const { runLLM } = await import("@/lib/llm");
     const result = await runLLM({
       name: "test-call",
-      model: "claude-opus-4-7",
+      tier: "fast",
       maxTokens: 1024,
-      system: [{ type: "text", text: "system" }],
+      system: "system prompt",
       messages: [{ role: "user", content: "ask" }],
       schema: z.object({ answer: z.string() }),
+      metadata: { runId: "r1" },
     });
 
     expect(result.output).toEqual({ answer: "42" });
-    expect(result.traceUrl).toBe("http://localhost:3030/project/atlas-dev/traces/trace_abc");
     expect(result.usage.inputTokens).toBe(100);
     expect(result.usage.outputTokens).toBe(50);
-    expect(result.usage.cacheReadInputTokens).toBe(80);
+    expect(result.usage.totalTokens).toBe(150);
 
-    expect(mocks.langfuse.trace).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "test-call" }),
+    expect(mocks.geminiModel).toHaveBeenCalledWith("gemini-2.5-flash");
+    expect(mocks.generateObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: { kind: "gemini-model", id: "gemini-2.5-flash" },
+        system: "system prompt",
+        messages: [{ role: "user", content: "ask" }],
+        schema: expect.any(Object),
+        experimental_telemetry: expect.objectContaining({
+          isEnabled: true,
+          functionId: "test-call",
+          metadata: expect.objectContaining({
+            tags: expect.arrayContaining(["fast", "gemini"]),
+          }),
+        }),
+      }),
     );
-    expect(mocks.trace.generation).toHaveBeenCalled();
-    expect(mocks.generation.end).toHaveBeenCalledWith(
-      expect.objectContaining({ output: { answer: "42" } }),
-    );
-    expect(mocks.langfuse.flushAsync).toHaveBeenCalled();
   });
 
-  it("marks generation with error and rethrows on Anthropic failure", async () => {
-    mocks.parse.mockRejectedValue(new Error("anthropic down"));
+  it("rethrows on provider failure", async () => {
+    mocks.generateObject.mockRejectedValue(new Error("gemini overloaded"));
 
     const { runLLM } = await import("@/lib/llm");
     await expect(
       runLLM({
         name: "test-call",
-        model: "claude-opus-4-7",
+        tier: "fast",
         maxTokens: 1024,
-        system: [{ type: "text", text: "system" }],
+        system: "system",
         messages: [{ role: "user", content: "ask" }],
         schema: z.object({ answer: z.string() }),
       }),
-    ).rejects.toThrow(/anthropic down/);
-
-    expect(mocks.generation.end).toHaveBeenCalledWith(
-      expect.objectContaining({
-        level: "ERROR",
-        statusMessage: expect.stringContaining("anthropic down"),
-      }),
-    );
-    expect(mocks.langfuse.flushAsync).toHaveBeenCalled();
+    ).rejects.toThrow(/gemini overloaded/);
   });
 
-  it("throws when parsed_output is null (Zod validation failed inside SDK)", async () => {
-    mocks.parse.mockResolvedValue({
-      parsed_output: null,
-      usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+  it("includes runId/projectId/userId in telemetry metadata when provided", async () => {
+    mocks.generateObject.mockResolvedValue({
+      object: { answer: "ok" },
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
     });
 
     const { runLLM } = await import("@/lib/llm");
-    await expect(
-      runLLM({
-        name: "test-call",
-        model: "claude-opus-4-7",
-        maxTokens: 1024,
-        system: [{ type: "text", text: "system" }],
-        messages: [{ role: "user", content: "ask" }],
-        schema: z.object({ answer: z.string() }),
-      }),
-    ).rejects.toThrow(/parsed_output/);
+    await runLLM({
+      name: "test-call",
+      tier: "smart",
+      maxTokens: 100,
+      system: "s",
+      messages: [{ role: "user", content: "u" }],
+      schema: z.object({ answer: z.string() }),
+      metadata: { runId: "r1", projectId: "p1", userId: "u1" },
+    });
+
+    const callArgs = mocks.generateObject.mock.calls[0]?.[0];
+    expect(callArgs?.experimental_telemetry?.metadata).toMatchObject({
+      runId: "r1",
+      projectId: "p1",
+      userId: "u1",
+      sessionId: "r1",
+    });
+  });
+
+  it("passes maxOutputTokens to generateObject", async () => {
+    mocks.generateObject.mockResolvedValue({
+      object: { answer: "ok" },
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+    });
+
+    const { runLLM } = await import("@/lib/llm");
+    await runLLM({
+      name: "x",
+      tier: "smart",
+      maxTokens: 8192,
+      system: "s",
+      messages: [{ role: "user", content: "u" }],
+      schema: z.object({ answer: z.string() }),
+    });
+
+    const callArgs = mocks.generateObject.mock.calls[0]?.[0];
+    expect(callArgs?.maxOutputTokens).toBe(8192);
   });
 });
