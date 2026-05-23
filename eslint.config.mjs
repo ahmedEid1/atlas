@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Python virtualenv: vendored JS in third-party packages (e.g. surya/debug/katex.js)
+    // is not part of Atlas source and breaks the JS parser.
+    "python/**",
   ]),
 ]);
 
