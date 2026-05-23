@@ -1,4 +1,4 @@
-import type Anthropic from "@anthropic-ai/sdk";
+import type { ModelMessage } from "ai";
 import { z } from "zod";
 
 export const ClaimsSchema = z.object({
@@ -12,9 +12,9 @@ export const ClaimsSchema = z.object({
 
 export type Claims = z.infer<typeof ClaimsSchema>;
 
-const SYSTEM = `You are a research analyst extracting structured claims from a paper for a systematic literature review.
+const SYSTEM_INSTRUCTIONS = `You are a research analyst extracting structured claims from a paper for a systematic literature review.
 
-Read the paper in the next system block and return a list of claims, each tagged with one category:
+Read the paper provided below and return a list of claims, each tagged with one category:
 - "finding" — a result or conclusion the paper supports (preferably with numbers)
 - "methodology" — a key design decision (sample, instrument, analysis approach)
 - "limitation" — a constraint on validity or generalisability
@@ -26,18 +26,11 @@ export function buildExtractClaimsRequest(args: {
   question: string;
   paperMarkdown: string;
 }): {
-  system: Anthropic.TextBlockParam[];
-  messages: Anthropic.MessageParam[];
+  system: string;
+  messages: ModelMessage[];
 } {
   return {
-    system: [
-      { type: "text", text: SYSTEM },
-      {
-        type: "text",
-        text: `<paper>\n${args.paperMarkdown}\n</paper>`,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
+    system: `${SYSTEM_INSTRUCTIONS}\n\n<paper>\n${args.paperMarkdown}\n</paper>`,
     messages: [
       {
         role: "user",

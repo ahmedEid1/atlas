@@ -23,8 +23,7 @@ describe("buildDrafterRequest", () => {
       },
       claims: [{ includedPaperId: "c1", text: "X improves Y by 20%", category: "finding" }],
     });
-    const [instr] = req.system;
-    expect(instr?.text).toMatch(/\[paper_id\]/);
+    expect(req.system).toMatch(/\[paper_id\]/);
     const [userMsg] = req.messages;
     const userText = JSON.stringify(userMsg?.content);
     expect(userText).toContain("X improves Y by 20%");

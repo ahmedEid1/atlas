@@ -1,4 +1,4 @@
-import type Anthropic from "@anthropic-ai/sdk";
+import type { ModelMessage } from "ai";
 import { z } from "zod";
 import type { Plan } from "@/lib/prompts/plan-review";
 import type { CandidateCorpusItem } from "@/lib/agent/state";
@@ -27,11 +27,11 @@ export function buildPaperScoreRequest(args: {
   plan: Plan;
   paper: CandidateCorpusItem;
 }): {
-  system: Anthropic.TextBlockParam[];
-  messages: Anthropic.MessageParam[];
+  system: string;
+  messages: ModelMessage[];
 } {
   return {
-    system: [{ type: "text", text: SYSTEM }],
+    system: SYSTEM,
     messages: [
       {
         role: "user",

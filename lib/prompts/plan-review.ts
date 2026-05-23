@@ -1,4 +1,4 @@
-import type Anthropic from "@anthropic-ai/sdk";
+import type { ModelMessage } from "ai";
 import { z } from "zod";
 
 export const PlanSchema = z.object({
@@ -29,11 +29,11 @@ Produce a structured plan with:
 The plan will be reviewed by the user before any retrieval happens. Be specific and actionable. Avoid generic criteria like "high quality" — anchor to the domain.`;
 
 export function buildPlannerRequest(args: { question: string; corpusSize: number }): {
-  system: Anthropic.TextBlockParam[];
-  messages: Anthropic.MessageParam[];
+  system: string;
+  messages: ModelMessage[];
 } {
   return {
-    system: [{ type: "text", text: SYSTEM }],
+    system: SYSTEM,
     messages: [
       {
         role: "user",

@@ -1,4 +1,4 @@
-import type Anthropic from "@anthropic-ai/sdk";
+import type { ModelMessage } from "ai";
 import { z } from "zod";
 import type { Plan } from "@/lib/prompts/plan-review";
 import type { ClaimSpec } from "@/lib/agent/state";
@@ -25,15 +25,15 @@ export function buildDrafterRequest(args: {
   plan: Plan;
   claims: ClaimSpec[];
 }): {
-  system: Anthropic.TextBlockParam[];
-  messages: Anthropic.MessageParam[];
+  system: string;
+  messages: ModelMessage[];
 } {
   const claimsLines = args.claims
     .map((c) => `- [${c.includedPaperId}] (${c.category}) ${c.text}`)
     .join("\n");
 
   return {
-    system: [{ type: "text", text: SYSTEM }],
+    system: SYSTEM,
     messages: [
       {
         role: "user",

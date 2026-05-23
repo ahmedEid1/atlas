@@ -20,16 +20,14 @@ describe("ClaimsSchema", () => {
 });
 
 describe("buildExtractClaimsRequest", () => {
-  it("caches the paper markdown and references the user question", () => {
+  it("embeds the paper markdown in system and references the user question", () => {
     const req = buildExtractClaimsRequest({
       question: "Does pair programming help?",
       paperMarkdown: "# Title\n\nBody.",
     });
-    expect(req.system).toHaveLength(2);
-    const [instr, paperBlock] = req.system;
-    expect(instr?.text).toMatch(/extract/i);
-    expect(paperBlock?.text).toContain("# Title");
-    expect(paperBlock?.cache_control).toEqual({ type: "ephemeral" });
+    expect(req.system).toMatch(/extract/i);
+    expect(req.system).toContain("<paper>");
+    expect(req.system).toContain("# Title");
     const [userMsg] = req.messages;
     expect(JSON.stringify(userMsg?.content)).toContain("Does pair programming help?");
   });
