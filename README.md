@@ -127,19 +127,20 @@ Atlas uses [Vercel AI SDK](https://ai-sdk.dev) so you can swap providers via a s
 
 | Provider  | Free? | Setup                                         | Env var                          |
 |-----------|-------|-----------------------------------------------|----------------------------------|
-| **Groq** (default) | ✅ Free | https://console.groq.com (30s)            | `GROQ_API_KEY`                   |
-| Gemini    | ✅ Free* | https://aistudio.google.com                  | `GOOGLE_GENERATIVE_AI_API_KEY`   |
-| Anthropic | Paid  | https://console.anthropic.com                 | `ANTHROPIC_API_KEY`              |
-| OpenAI    | Paid  | https://platform.openai.com                   | `OPENAI_API_KEY`                 |
-| Claude Agent SDK | ✅ Free with Max | `claude login` (Claude Code CLI)     | (CLI session — no key)           |
+| **Mistral** (default) | ✅ Free Experiment | https://console.mistral.ai (30s) | `MISTRAL_API_KEY`        |
+| Groq      | ✅ Free | https://console.groq.com                       | `GROQ_API_KEY`                   |
+| Gemini    | ✅ Free* | https://aistudio.google.com                   | `GOOGLE_GENERATIVE_AI_API_KEY`   |
+| Anthropic | Paid  | https://console.anthropic.com                  | `ANTHROPIC_API_KEY`              |
+| OpenAI    | Paid  | https://platform.openai.com                    | `OPENAI_API_KEY`                 |
+| Claude Agent SDK | ✅ Free with Max | `claude login` (Claude Code CLI)      | (CLI session — no key)           |
 
 *Gemini Flash has a known parse issue with Vercel AI SDK structured output
 ([vercel/ai#12187](https://github.com/vercel/ai/issues/12187)) — usable but
-unreliable for Atlas's per-call structured Zod schemas. Switch to Groq, Anthropic,
+unreliable for Atlas's per-call structured Zod schemas. Switch to Mistral, Anthropic,
 or OpenAI for production work; Gemini stays as an option for when the upstream
 bug is fixed.
 
-To switch provider, set `LLM_PROVIDER=anthropic` (or `gemini`, `openai`, `claude-agent`) in `.env` and restart.
+To switch provider, set `LLM_PROVIDER=anthropic` (or `gemini`, `groq`, `openai`, `claude-agent`) in `.env` and restart.
 Tier choice (`smart`/`fast`) per prompt stays the same — the dispatcher maps each tier to
 the equivalent model on the new provider (see `lib/llm/tiers.ts`).
 
@@ -148,23 +149,11 @@ which uses the Claude Code CLI session auth on the local machine when `ANTHROPIC
 is unset. Best for local-dev eval runs (free for Claude Max subscribers); not suitable
 for CI (no CLI auth in containers — CI should keep using Groq/OpenAI/Anthropic API keys).
 
-### Python (for marker-pdf)
-
-Atlas uses [`uv`](https://github.com/astral-sh/uv) to manage the Python venv:
-
-```bash
-cd python
-uv venv --python 3.12 .venv
-uv pip install --python .venv/Scripts/python.exe -r requirements.txt
-```
-
-Trigger.dev's Python extension picks up `python/.venv/Scripts/python.exe` at dev time and a Linux-built venv in deployment.
-
 ## Tests
 
 ```bash
-pnpm test       # 88 tests (Vitest)
-pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending Linux compute for marker
+pnpm test       # 161 tests (Vitest)
+pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending CI infra
 ```
 
 ## Roadmap
@@ -176,8 +165,12 @@ pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending Linux compute for 
 - ~~**M3.5c**: Self-host fallback docs (Oracle Cloud Always Free)~~ ✅ shipped as `v0.6.0-m3.5c` — see [`docs/self-host/oracle-cloud-quickstart.md`](docs/self-host/oracle-cloud-quickstart.md)
 - ~~**M4** (Wk 5): Critic + `cite_check` + eval harness v1 with public `/evals` dashboard~~ split into M4a (shipped) + M4b (next)
 - ~~**M4a**: Critic + cite_check~~ ✅ shipped as `v0.4.0-m4a`
-- ~~**M4b**: Evals harness + 10 golden questions + GitHub Actions + public /evals dashboard~~ ✅ shipped as `v0.4.1-m4b` — **live at https://atlas-sooty-delta.vercel.app/evals** (3 synthetic goldens; 10 real-paper goldens in v0.4.2-m4b-expand)
-- **M5** (Wk 6): Authenticated MCP server (OAuth 2.1) published to MCP registry
+- ~~**M4b**: Evals harness + 10 golden questions + GitHub Actions + public /evals dashboard~~ ✅ shipped as `v0.4.1-m4b` — **live at https://atlas-sooty-delta.vercel.app/evals** (currently 3 synthetic goldens; 10 real-paper goldens deferred)
+- ~~**v0.4.2 – Claude Agent SDK provider**~~ ✅ shipped — free programmatic Claude via Code CLI session auth, used for local eval baseline
+- ~~**v0.5.0 – Trigger.dev Cloud production deploy**~~ ✅ shipped — all 3 background tasks running on managed infra
+- ~~**v0.5.1 – First live end-to-end review on production**~~ ✅ shipped — real PDF → full SLR pipeline → completed draft + critic + cite_check
+- ~~**v0.6.0 – M3.5c self-host fallback docs**~~ ✅ shipped — Oracle Cloud Always Free deployment path
+- **M5** (Wk 6): Authenticated MCP server (OAuth 2.1) published to MCP registry — NEXT
 - **M6** (Wk 7): Public launch with 30-question golden eval set, blog series, recruiter 1-pager
 
 See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the per-milestone implementation plans.
