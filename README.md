@@ -2,6 +2,8 @@
 
 > A GDPR-safe agentic workspace for systematic literature reviews.
 
+**🚀 Live demo: https://atlas-sooty-delta.vercel.app**
+
 Atlas turns a research question and a corpus of PDFs into an evidence-grounded literature review. It uses a multi-step agent (LangGraph, planner → retriever → assessor → drafter → critic) with tool use, human-in-the-loop gates, and a `cite_check` post-pass that verifies every citation against the source paper.
 
 **Status:** M1 — workspace foundation. Full design spec: [`docs/superpowers/specs/2026-05-22-atlas-design.md`](docs/superpowers/specs/2026-05-22-atlas-design.md).
@@ -38,6 +40,17 @@ Atlas turns a research question and a corpus of PDFs into an evidence-grounded l
 - All 5 prompt builders moved to provider-neutral types (`{ system: string, messages: ModelMessage[] }`)
 - Langfuse tracing via OpenTelemetry exporter (`langfuse-vercel` + `@vercel/otel`)
 - 88 tests passing, zero real LLM calls (all mocked), tsc clean
+
+### M3.5b — Cloud deploy (`v0.3.6-m3.5b`)
+- **Live at https://atlas-sooty-delta.vercel.app** (Vercel Hobby, free tier)
+- **Neon Postgres** (eu-central-1 / Frankfurt) replaces local Docker — `@prisma/adapter-neon` for serverless connections
+- **Cloudflare R2** (10 GB free, zero egress fees) replaces MinIO — zero code change to `lib/object-store.ts`, only env values flipped
+- **Langfuse Cloud** (50K observations/mo free) replaces self-hosted stack
+- **Trigger.dev Cloud** for background jobs (500K runs/mo free)
+- **Clerk Cloud** webhook live (signed `user.created` events sync to Neon)
+- 3 verification smoke scripts in `scripts/` (gemini, neon, r2, langfuse) — all re-runnable
+- `postinstall: prisma generate` ensures the Vercel build picks up the generated client
+- **Monthly cost: $0**
 
 ## Stack
 
@@ -112,7 +125,7 @@ pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending Linux compute for 
 - ~~**M2** (Wk 2): Single-node summarisation + Langfuse self-hosted observability~~ ✅ shipped as `v0.2.0-m2`
 - ~~**M3** (Wk 4): Full agent loop (planner → retriever → assessor → drafter) + HITL gates + Hetzner deployment~~ ✅ shipped as `v0.3.0-m3` (code only — Hetzner deployment is the deferred M3.5 task)
 - ~~**M3.5a**: LLM provider abstraction (Gemini default, free)~~ ✅ shipped as `v0.3.5-m3.5a`
-- **M3.5b**: Vercel deploy + Neon + R2 + Trigger.dev Cloud + Langfuse Cloud (free tier stack)
+- ~~**M3.5b**: Vercel deploy + Neon + R2 + Trigger.dev Cloud + Langfuse Cloud (free tier stack)~~ ✅ shipped as `v0.3.6-m3.5b` — **live at https://atlas-sooty-delta.vercel.app**
 - **M3.5c**: Self-host fallback docs (Oracle Cloud Always Free)
 - **M4** (Wk 5): Critic + `cite_check` + eval harness v1 with public `/evals` dashboard
 - **M5** (Wk 6): Authenticated MCP server (OAuth 2.1) published to MCP registry
@@ -125,7 +138,6 @@ See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the per-milestone i
 Every feature is specified before code. The spec at [`docs/superpowers/specs/2026-05-22-atlas-design.md`](docs/superpowers/specs/2026-05-22-atlas-design.md) is the contract. The M1 plan at [`docs/superpowers/plans/2026-05-22-m1-workspace-foundation.md`](docs/superpowers/plans/2026-05-22-m1-workspace-foundation.md) breaks it into 12 TDD tasks that produced this release.
 
 ## Deferred (next up)
-- **M3.5b — Cloud deploy.** Vercel Hobby + Neon free Postgres + Cloudflare R2 + Trigger.dev Cloud + Langfuse Cloud. $0/month stack. Needs 5 free signups.
 - **M3.5c — Self-host fallback.** Docker-compose-prod + Caddy + Oracle Cloud Always Free quickstart (4 ARM cores, 24 GB RAM, free forever) for the day Vercel limits bite.
 - **M4** — Critic + cite_check + eval harness v1
 
