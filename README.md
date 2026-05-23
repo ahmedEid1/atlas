@@ -68,6 +68,13 @@ Atlas turns a research question and a corpus of PDFs into an evidence-grounded l
 - **Public dashboard live at https://atlas-sooty-delta.vercel.app/evals** (empty-state until upstream LLM-SDK issue is resolved or a non-Gemini provider is configured; see [evals/README.md](evals/README.md))
 - 148+ tests passing
 
+### M4b+ — Claude Agent SDK provider + first live eval baseline (`v0.4.2-claude-agent-provider`)
+- New `LLM_PROVIDER=claude-agent` routes Atlas through `@anthropic-ai/claude-agent-sdk`, inheriting your local `claude` CLI session auth — **$0 with a Claude Max subscription, no `ANTHROPIC_API_KEY` required**
+- Adapter at `lib/llm/providers/claude-agent.ts` uses Zod v4's `z.toJSONSchema()` + strict output-contract prompt
+- Local-dev only (CI containers have no CLI auth — production stays on Groq)
+- **First live eval baseline populated**: 8 EvalRun rows in Neon (4 metrics × 2 of 3 goldens) — dashboard now shows real data
+- 155 tests passing, $0 spend
+
 ## Stack
 
 | Layer | Choice |
