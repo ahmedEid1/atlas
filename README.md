@@ -108,12 +108,18 @@ Atlas uses [Vercel AI SDK](https://ai-sdk.dev) so you can swap providers via a s
 
 | Provider  | Free? | Setup                                         | Env var                          |
 |-----------|-------|-----------------------------------------------|----------------------------------|
-| **Gemini** (default) | ✅ Free | https://aistudio.google.com (30s)       | `GOOGLE_GENERATIVE_AI_API_KEY`   |
+| **Groq** (default) | ✅ Free | https://console.groq.com (30s)            | `GROQ_API_KEY`                   |
+| Gemini    | ✅ Free* | https://aistudio.google.com                  | `GOOGLE_GENERATIVE_AI_API_KEY`   |
 | Anthropic | Paid  | https://console.anthropic.com                 | `ANTHROPIC_API_KEY`              |
 | OpenAI    | Paid  | https://platform.openai.com                   | `OPENAI_API_KEY`                 |
-| Groq      | ✅ Free | https://console.groq.com                      | `GROQ_API_KEY`                   |
 
-To switch provider, set `LLM_PROVIDER=anthropic` (or `openai`, `groq`) in `.env` and restart.
+*Gemini Flash has a known parse issue with Vercel AI SDK structured output
+([vercel/ai#12187](https://github.com/vercel/ai/issues/12187)) — usable but
+unreliable for Atlas's per-call structured Zod schemas. Switch to Groq, Anthropic,
+or OpenAI for production work; Gemini stays as an option for when the upstream
+bug is fixed.
+
+To switch provider, set `LLM_PROVIDER=anthropic` (or `gemini`, `openai`) in `.env` and restart.
 Tier choice (`smart`/`fast`) per prompt stays the same — the dispatcher maps each tier to
 the equivalent model on the new provider (see `lib/llm/tiers.ts`).
 

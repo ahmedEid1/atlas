@@ -18,8 +18,12 @@ const MODELS: Record<ProviderName, Record<Tier, string>> = {
     fast: "gpt-5.4-mini",
   },
   groq: {
-    smart: "llama-3.3-70b-versatile",
-    fast: "llama-3.1-8b-instant",
+    // gpt-oss-* are the only Groq models with strict json_schema support
+    // (required by generateObject's Zod validation). 120b hits Groq's
+    // 8K TPM on multi-paper questions; 20b has higher TPM and handles
+    // Atlas's schemas reliably. Both free tier.
+    smart: "openai/gpt-oss-20b",
+    fast: "openai/gpt-oss-20b",
   },
 };
 

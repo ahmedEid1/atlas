@@ -9,8 +9,8 @@ describe("resolveTier", () => {
     ["anthropic", "fast", "claude-sonnet-4-6"],
     ["openai", "smart", "gpt-5.5"],
     ["openai", "fast", "gpt-5.4-mini"],
-    ["groq", "smart", "llama-3.3-70b-versatile"],
-    ["groq", "fast", "llama-3.1-8b-instant"],
+    ["groq", "smart", "openai/gpt-oss-20b"],
+    ["groq", "fast", "openai/gpt-oss-20b"],
   ];
 
   for (const [provider, tier, expected] of cases) {
