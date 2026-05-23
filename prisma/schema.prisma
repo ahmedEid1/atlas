@@ -56,6 +56,12 @@ enum CheckpointStatus {
   REJECTED
 }
 
+enum ClaimCheckVerdict {
+  SUPPORTED
+  UNSUPPORTED
+  UNCLEAR
+}
+
 model Project {
   id          String   @id @default(cuid())
   ownerId     String
@@ -102,6 +108,8 @@ model Run {
   plan            Json?
   draft           String?    @db.Text
   failureReason   String?
+  faithfulnessScore Float?     // 0.0-1.0 = supported / total citations after cite_check
+  critiqueScore     Float?     // 1.0-5.0 weighted rubric average from final critique
   triggerRunId    String?    @unique
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -111,6 +119,7 @@ model Run {
   checkpoints     HumanCheckpoint[]
   includedPapers  IncludedPaper[]
   claims          ExtractedClaim[]
+  claimChecks     ClaimCheck[]
 
   @@index([projectId])
   @@index([status])
@@ -177,4 +186,18 @@ model ExtractedClaim {
 
   @@index([runId])
   @@index([includedPaperId])
+}
+
+model ClaimCheck {
+  id            String              @id @default(cuid())
+  runId         String
+  run           Run                 @relation(fields: [runId], references: [id], onDelete: Cascade)
+  paperId       String              // the [paper_id] referenced in the draft (matches IncludedPaper.corpusItemId)
+  claim         String              @db.Text
+  verdict       ClaimCheckVerdict
+  reason        String              @db.Text
+  paperExcerpt  String?             @db.Text
+  createdAt     DateTime            @default(now())
+
+  @@index([runId])
 }
