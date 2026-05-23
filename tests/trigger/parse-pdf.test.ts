@@ -1,97 +1,97 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@trigger.dev/sdk", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@trigger.dev/sdk");
-  return {
-    ...actual,
-    schemaTask: (cfg: { run: (payload: unknown) => Promise<unknown> }) => cfg,
-    metadata: {
-      set: vi.fn().mockReturnThis(),
-    },
-    logger: {
-      error: vi.fn(),
-      warn: vi.fn(),
-      info: vi.fn(),
-      debug: vi.fn(),
-    },
-  };
-});
-
-vi.mock("@trigger.dev/python", () => ({
-  python: {
-    runScript: vi.fn().mockResolvedValue({
-      stdout: JSON.stringify({ ok: true, out_key: "corpus/p1/c1.md", page_count: 3, char_count: 1234 }),
-      stderr: "",
-      exitCode: 0,
-    }),
-  },
+const mocks = vi.hoisted(() => ({
+  findUnique: vi.fn(),
+  update: vi.fn(),
+  getObjectBytes: vi.fn(),
+  parsePdfWithMistral: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: {
-    corpusItem: {
-      findUnique: vi.fn(),
-      update: vi.fn().mockResolvedValue({}),
-    },
+    corpusItem: { findUnique: mocks.findUnique, update: mocks.update },
   },
 }));
 
 vi.mock("@/lib/object-store", () => ({
-  getObjectBytes: vi.fn().mockResolvedValue(new TextEncoder().encode("# parsed markdown")),
+  getObjectBytes: mocks.getObjectBytes,
 }));
 
-import { db } from "@/lib/db";
+vi.mock("@/lib/pdf-parse", () => ({
+  parsePdfWithMistral: mocks.parsePdfWithMistral,
+}));
 
-beforeEach(() => vi.clearAllMocks());
+// Trigger.dev SDK helpers used by the task — mock them to no-ops.
+vi.mock("@trigger.dev/sdk", () => ({
+  schemaTask: (def: { run: (...args: unknown[]) => Promise<unknown> }) => def,
+  logger: { info: vi.fn(), error: vi.fn() },
+  metadata: { set: () => ({ set: () => ({ set: () => undefined }) }) },
+}));
 
-describe("parse-pdf task", () => {
-  it("transitions PENDING → PARSING → PARSED with parsed markdown", async () => {
-    vi.mocked(db.corpusItem.findUnique).mockResolvedValue({
+beforeEach(() => {
+  mocks.findUnique.mockReset();
+  mocks.update.mockReset();
+  mocks.getObjectBytes.mockReset();
+  mocks.parsePdfWithMistral.mockReset();
+  mocks.update.mockResolvedValue({});
+});
+
+describe("parsePdfTask", () => {
+  it("marks PARSING, calls Mistral, saves markdown, marks PARSED", async () => {
+    mocks.findUnique.mockResolvedValue({
       id: "c1",
-      projectId: "p1",
-      source: "corpus/p1/c1.pdf",
-      status: "PENDING",
       kind: "PDF",
-    } as never);
+      source: "corpus/p1/abc.pdf",
+    });
+    mocks.getObjectBytes.mockResolvedValue(new Uint8Array([0x25, 0x50]));
+    mocks.parsePdfWithMistral.mockResolvedValue({
+      markdown: "# Paper title\n\nContent",
+      pageCount: 9,
+      charCount: 25,
+    });
 
     const mod = await import("@/trigger/parse-pdf");
-    // In tests, schemaTask is mocked to return the config object, which has .run
-    const task = mod.parsePdfTask as unknown as { run: (p: { corpusItemId: string }) => Promise<unknown> };
-    await task.run({ corpusItemId: "c1" });
+    const task = mod.parsePdfTask as unknown as { run: (p: { corpusItemId: string }) => Promise<{ ok: boolean; pageCount: number; charCount: number }> };
+    const result = await task.run({ corpusItemId: "c1" });
 
-    const updateCalls = vi.mocked(db.corpusItem.update).mock.calls;
-    expect(updateCalls.length).toBeGreaterThanOrEqual(2);
-
-    const statuses = updateCalls.map((c) => (c[0] as { data: { status: string } }).data.status);
-    expect(statuses[0]).toBe("PARSING");
-    expect(statuses.at(-1)).toBe("PARSED");
-
-    const finalCall = updateCalls.at(-1)!;
-    expect((finalCall[0] as { data: { parsedMarkdown: string } }).data.parsedMarkdown).toBe("# parsed markdown");
+    expect(result).toEqual({ ok: true, pageCount: 9, charCount: 25 });
+    expect(mocks.parsePdfWithMistral).toHaveBeenCalled();
+    expect(mocks.update).toHaveBeenCalledWith({
+      where: { id: "c1" },
+      data: { status: "PARSING", failureReason: null },
+    });
+    expect(mocks.update).toHaveBeenCalledWith({
+      where: { id: "c1" },
+      data: { status: "PARSED", parsedMarkdown: "# Paper title\n\nContent" },
+    });
   });
 
-  it("marks FAILED with reason on python error", async () => {
-    vi.mocked(db.corpusItem.findUnique).mockResolvedValue({
-      id: "c2",
-      projectId: "p1",
-      source: "corpus/p1/c2.pdf",
-      status: "PENDING",
+  it("marks FAILED and rethrows when Mistral throws", async () => {
+    mocks.findUnique.mockResolvedValue({
+      id: "c1",
       kind: "PDF",
-    } as never);
-
-    const pyMod = await import("@trigger.dev/python");
-    vi.mocked(pyMod.python.runScript).mockResolvedValue({
-      stdout: "",
-      stderr: "boom",
-      exitCode: 1,
-    } as never);
+      source: "corpus/p1/abc.pdf",
+    });
+    mocks.getObjectBytes.mockResolvedValue(new Uint8Array([0x25, 0x50]));
+    mocks.parsePdfWithMistral.mockRejectedValue(new Error("mistral quota exceeded"));
 
     const mod = await import("@/trigger/parse-pdf");
     const task = mod.parsePdfTask as unknown as { run: (p: { corpusItemId: string }) => Promise<unknown> };
-    await expect(task.run({ corpusItemId: "c2" })).rejects.toThrow(/python/i);
+    await expect(task.run({ corpusItemId: "c1" })).rejects.toThrow(/mistral quota/);
+    expect(mocks.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "FAILED",
+          failureReason: expect.stringContaining("mistral quota"),
+        }),
+      }),
+    );
+  });
 
-    const updateCalls = vi.mocked(db.corpusItem.update).mock.calls;
-    const statuses = updateCalls.map((c) => (c[0] as { data: { status: string } }).data.status);
-    expect(statuses.at(-1)).toBe("FAILED");
+  it("throws if CorpusItem not found", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    const mod = await import("@/trigger/parse-pdf");
+    const task = mod.parsePdfTask as unknown as { run: (p: { corpusItemId: string }) => Promise<unknown> };
+    await expect(task.run({ corpusItemId: "missing" })).rejects.toThrow(/not found/);
   });
 });

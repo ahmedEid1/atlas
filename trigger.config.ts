@@ -1,5 +1,4 @@
 import { defineConfig } from "@trigger.dev/sdk";
-import { pythonExtension } from "@trigger.dev/python/extension";
 import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 import { syncEnvVars } from "@trigger.dev/build/extensions/core";
 import { config as dotenvConfig } from "dotenv";
@@ -39,13 +38,6 @@ export default defineConfig({
   },
   build: {
     extensions: [
-      pythonExtension({
-        scripts: ["./python/**/*.py"],
-        // Path workaround for triggerdotdev/trigger.dev#1843 — nested
-        // requirements.txt paths fail during Docker build; root works.
-        requirementsFile: "./requirements.txt",
-        devPythonBinaryPath: "./python/.venv/Scripts/python.exe",
-      }),
       prismaExtension({
         mode: "modern",
       }),

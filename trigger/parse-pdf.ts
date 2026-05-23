@@ -1,14 +1,15 @@
 import { schemaTask, logger, metadata } from "@trigger.dev/sdk";
-import { python } from "@trigger.dev/python";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { getObjectBytes } from "@/lib/object-store";
+import { parsePdfWithMistral } from "@/lib/pdf-parse";
 
 export const parsePdfTask = schemaTask({
   id: "parse-pdf",
   schema: z.object({ corpusItemId: z.string() }),
   retry: { maxAttempts: 3, factor: 2, minTimeoutInMs: 1000, maxTimeoutInMs: 30000 },
-  machine: { preset: "large-1x" },
-  maxDuration: 600,
+  machine: { preset: "small-2x" }, // Mistral OCR is fast; small machine is plenty
+  maxDuration: 120, // OCR takes ~5-15 sec; 2 min is generous
   run: async ({ corpusItemId }) => {
     const item = await db.corpusItem.findUnique({ where: { id: corpusItemId } });
     if (!item) throw new Error(`CorpusItem ${corpusItemId} not found`);
@@ -20,36 +21,24 @@ export const parsePdfTask = schemaTask({
     });
     metadata.set("status", "parsing");
 
-    const outKey = `${item.source.replace(/\.pdf$/, "")}.md`;
-    const bucket = process.env.S3_BUCKET ?? "";
-
     try {
-      const result = await python.runScript("./python/parse_pdf.py", [bucket, item.source, outKey]);
+      logger.info("Downloading PDF from object store", { source: item.source });
+      const pdfBytes = await getObjectBytes(item.source);
 
-      if (result.exitCode !== 0) {
-        logger.error("python parser failed", { stderr: result.stderr });
-        throw new Error(`python parser exited ${result.exitCode}: ${result.stderr.slice(0, 500)}`);
-      }
-
-      const parsed = JSON.parse(result.stdout) as {
-        ok: boolean;
-        out_key: string;
-        page_count: number;
-        char_count: number;
-      };
-
-      const { getObjectBytes } = await import("@/lib/object-store");
-      const md = new TextDecoder().decode(await getObjectBytes(parsed.out_key));
+      logger.info("Calling Mistral OCR", { byteSize: pdfBytes.length });
+      const { markdown, pageCount, charCount } = await parsePdfWithMistral(pdfBytes);
 
       await db.corpusItem.update({
         where: { id: corpusItemId },
-        data: { status: "PARSED", parsedMarkdown: md },
+        data: { status: "PARSED", parsedMarkdown: markdown },
       });
-      metadata.set("status", "parsed").set("pageCount", parsed.page_count);
+      metadata.set("status", "parsed").set("pageCount", pageCount).set("charCount", charCount);
 
-      return { ok: true, pageCount: parsed.page_count, charCount: parsed.char_count };
+      logger.info("PDF parsed successfully", { pageCount, charCount });
+      return { ok: true, pageCount, charCount };
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
+      logger.error("PDF parse failed", { reason });
       await db.corpusItem.update({
         where: { id: corpusItemId },
         data: { status: "FAILED", failureReason: reason.slice(0, 1000) },
