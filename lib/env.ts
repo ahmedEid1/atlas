@@ -34,10 +34,41 @@ const envSchema = z.object({
   LANGFUSE_HOST: z.string().url(),
 });
 
-const parsed = envSchema.safeParse(process.env);
-if (!parsed.success) {
-  const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
-  throw new Error(`Invalid environment:\n${issues}`);
+export type Env = z.infer<typeof envSchema>;
+
+let _env: Env | null = null;
+
+function parseEnv(): Env {
+  if (_env !== null) return _env;
+  const parsed = envSchema.safeParse(process.env);
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
+    throw new Error(`Invalid environment:\n${issues}`);
+  }
+  _env = parsed.data;
+  return _env;
 }
 
-export const env = parsed.data;
+/**
+ * Lazy env access via Proxy. Parsing + validation happens on the first property
+ * read, not at module import. This lets indexer / build tools (notably
+ * Trigger.dev's deploy indexing phase) load modules that import env without
+ * the env vars being present in the build context. Real env access at runtime
+ * still throws with a clear error if vars are missing.
+ *
+ * For tests: vi.mock("@/lib/env", () => ({ env: { ... } })) replaces this
+ * whole module export, so the proxy is bypassed there entirely.
+ */
+export const env: Env = new Proxy({} as Env, {
+  get(_, key: string) {
+    return parseEnv()[key as keyof Env];
+  },
+  has(_, key: string) {
+    return key in parseEnv();
+  },
+});
+
+/** For tests that need to force re-parse after mocking process.env */
+export function _resetEnvForTest(): void {
+  _env = null;
+}

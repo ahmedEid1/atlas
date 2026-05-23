@@ -45,7 +45,9 @@ describe("env", () => {
     process.env.LANGFUSE_SECRET_KEY = "sk-lf-test";
     process.env.LANGFUSE_HOST = "http://localhost:3030";
 
-    await expect(import("@/lib/env")).rejects.toThrow(/DATABASE_URL/);
+    // env is lazy now — import succeeds; throw on first property read
+    const { env } = await import("@/lib/env");
+    expect(() => env.S3_BUCKET).toThrow(/DATABASE_URL/);
   });
 
   it("parses successfully without ANTHROPIC_API_KEY", async () => {
@@ -120,7 +122,9 @@ describe("env", () => {
     process.env.LANGFUSE_HOST = "http://localhost:3030";
     process.env.LLM_PROVIDER = "ollama";
 
-    await expect(import("@/lib/env")).rejects.toThrow(/LLM_PROVIDER/);
+    // env is lazy now — import succeeds; throw on first property read
+    const { env } = await import("@/lib/env");
+    expect(() => env.LLM_PROVIDER).toThrow(/LLM_PROVIDER/);
   });
 
   it("treats GOOGLE_GENERATIVE_AI_API_KEY as optional", async () => {

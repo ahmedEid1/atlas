@@ -22,7 +22,9 @@ export default defineConfig({
     extensions: [
       pythonExtension({
         scripts: ["./python/**/*.py"],
-        requirementsFile: "./python/requirements.txt",
+        // Path workaround for triggerdotdev/trigger.dev#1843 — nested
+        // requirements.txt paths fail during Docker build; root works.
+        requirementsFile: "./requirements.txt",
         devPythonBinaryPath: "./python/.venv/Scripts/python.exe",
       }),
       prismaExtension({

@@ -54,10 +54,10 @@ importers:
         specifier: ^7
         version: 7.8.0(prisma@7.8.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(magicast@0.3.5)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(typescript@5.9.3)
       '@trigger.dev/python':
-        specifier: ^4
+        specifier: 4.4.6
         version: 4.4.6(@trigger.dev/build@4.4.6(magicast@0.3.5)(typescript@5.9.3))(@trigger.dev/sdk@4.4.6(ai@6.0.191(zod@4.4.3))(zod@4.4.3))
       '@trigger.dev/sdk':
-        specifier: ^4
+        specifier: 4.4.6
         version: 4.4.6(ai@6.0.191(zod@4.4.3))(zod@4.4.3)
       '@vercel/otel':
         specifier: ^2.1.2
@@ -127,7 +127,7 @@ importers:
         specifier: ^4
         version: 4.3.0
       '@trigger.dev/build':
-        specifier: ^4
+        specifier: 4.4.6
         version: 4.4.6(magicast@0.3.5)(supports-color@10.2.2)(typescript@5.9.3)
       '@types/js-yaml':
         specifier: ^4.0.9
@@ -166,7 +166,7 @@ importers:
         specifier: ^4
         version: 4.3.0
       trigger.dev:
-        specifier: ^4
+        specifier: 4.4.6
         version: 4.4.6(@cfworker/json-schema@4.1.1)(react@19.2.4)(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))
       tsx:
         specifier: ^4.22.3
