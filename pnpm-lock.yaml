@@ -41,6 +41,9 @@ importers:
       '@langchain/langgraph-checkpoint-postgres':
         specifier: ^1.0.1
         version: 1.0.1(@langchain/core@1.1.48(@opentelemetry/api@1.9.1)(@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.1))(ws@8.21.0))(@langchain/langgraph-checkpoint@1.0.2(@langchain/core@1.1.48(@opentelemetry/api@1.9.1)(@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.1))(ws@8.21.0)))
+      '@neondatabase/serverless':
+        specifier: ^1.1.0
+        version: 1.1.0
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
