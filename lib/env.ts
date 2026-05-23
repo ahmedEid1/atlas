@@ -23,6 +23,12 @@ const envSchema = z.object({
 
   // Optional: only needed when a real LLM call is made. lib/llm.ts throws at call time if absent.
   ANTHROPIC_API_KEY: z.string().optional(),
+  // Optional: only needed when LLM_PROVIDER=gemini at call time.
+  GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  GROQ_API_KEY: z.string().optional(),
+
+  LLM_PROVIDER: z.enum(["gemini", "anthropic", "openai", "groq"]).default("gemini"),
   LANGFUSE_PUBLIC_KEY: z.string().min(1),
   LANGFUSE_SECRET_KEY: z.string().min(1),
   LANGFUSE_HOST: z.string().url(),
