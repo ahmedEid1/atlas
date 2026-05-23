@@ -3,7 +3,9 @@ export type ProviderName = "gemini" | "anthropic" | "openai" | "groq";
 
 const MODELS: Record<ProviderName, Record<Tier, string>> = {
   gemini: {
-    smart: "gemini-2.5-pro",
+    // smart and fast both use Flash on Gemini: gemini-2.5-pro is paywalled (not on free tier)
+    // and Atlas's $0 budget requires the free tier. Other providers keep the smart/fast split.
+    smart: "gemini-2.5-flash",
     fast: "gemini-2.5-flash",
   },
   anthropic: {
