@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export const CiteCheckPerCitationSchema = z.object({
   verdict: z.enum(["supported", "unsupported", "unclear"]),
-  reason: z.string().min(10).max(500).describe("Specific evidence from the paper or specific gap in <= 2 sentences"),
+  reason: z.string().min(10).max(1500).describe("Specific evidence from the paper or specific gap (1-3 sentences)"),
   paperExcerpt: z
     .string()
     .max(300)
