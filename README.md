@@ -84,10 +84,12 @@ Atlas turns a research question and a corpus of PDFs into an evidence-grounded l
 | Auth | Clerk |
 | DB | Postgres 16 + Prisma v7 (`prisma-client` generator + `@prisma/adapter-pg`) |
 | Object store | S3-compatible (MinIO locally, swap endpoint for prod) |
-| Background jobs | Trigger.dev v4 (`@trigger.dev/sdk`, `@trigger.dev/python` for marker) |
-| PDF parsing | marker-pdf (Python, via Trigger.dev Python extension) |
+| Background jobs | Trigger.dev v4 (`@trigger.dev/sdk`) |
+| PDF parsing | Mistral OCR API (`lib/pdf-parse.ts`) — replaced marker-pdf in v0.5.x |
 | Tests | Vitest (unit/integration) + Playwright (e2e) |
 | Local dev orchestration | docker-compose |
+| Deploy (cloud, default) | Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers |
+| Deploy (self-host alternative) | Single Oracle Cloud Ampere A1 VM via [`infra/self-host/`](infra/self-host/) — see [self-host quickstart](docs/self-host/oracle-cloud-quickstart.md) |
 
 ## Quickstart
 
@@ -101,6 +103,16 @@ pnpm prisma migrate dev
 pnpm dev                   # Next.js on :3000 (or :3001 if 3000 is taken)
 pnpm dev:trigger           # Trigger.dev worker (separate terminal)
 ```
+
+## Self-host alternative
+
+Don't want to depend on Vercel + Neon + R2 + Langfuse Cloud? See
+[`docs/self-host/oracle-cloud-quickstart.md`](docs/self-host/oracle-cloud-quickstart.md)
+for a step-by-step walkthrough to deploy Atlas on **Oracle Cloud's Always Free** tier
+(4-core ARM Ampere A1 + 24 GB RAM, free forever). One VM runs Atlas + Postgres +
+MinIO + Langfuse behind Caddy with auto-TLS; you still use a hosted LLM API
+(Mistral free tier, or any of the 6 supported providers). Total recurring cost:
+**$0/month + ~€10/yr domain**. Config lives under [`infra/self-host/`](infra/self-host/).
 
 ### Environment variables
 
@@ -161,7 +173,7 @@ pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending Linux compute for 
 - ~~**M3** (Wk 4): Full agent loop (planner → retriever → assessor → drafter) + HITL gates + Hetzner deployment~~ ✅ shipped as `v0.3.0-m3` (code only — Hetzner deployment is the deferred M3.5 task)
 - ~~**M3.5a**: LLM provider abstraction (Gemini default, free)~~ ✅ shipped as `v0.3.5-m3.5a`
 - ~~**M3.5b**: Vercel deploy + Neon + R2 + Trigger.dev Cloud + Langfuse Cloud (free tier stack)~~ ✅ shipped as `v0.3.6-m3.5b` — **live at https://atlas-sooty-delta.vercel.app**
-- **M3.5c**: Self-host fallback docs (Oracle Cloud Always Free)
+- ~~**M3.5c**: Self-host fallback docs (Oracle Cloud Always Free)~~ ✅ shipped as `v0.6.0-m3.5c` — see [`docs/self-host/oracle-cloud-quickstart.md`](docs/self-host/oracle-cloud-quickstart.md)
 - ~~**M4** (Wk 5): Critic + `cite_check` + eval harness v1 with public `/evals` dashboard~~ split into M4a (shipped) + M4b (next)
 - ~~**M4a**: Critic + cite_check~~ ✅ shipped as `v0.4.0-m4a`
 - ~~**M4b**: Evals harness + 10 golden questions + GitHub Actions + public /evals dashboard~~ ✅ shipped as `v0.4.1-m4b` — **live at https://atlas-sooty-delta.vercel.app/evals** (3 synthetic goldens; 10 real-paper goldens in v0.4.2-m4b-expand)
@@ -175,8 +187,8 @@ See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the per-milestone i
 Every feature is specified before code. The spec at [`docs/superpowers/specs/2026-05-22-atlas-design.md`](docs/superpowers/specs/2026-05-22-atlas-design.md) is the contract. The M1 plan at [`docs/superpowers/plans/2026-05-22-m1-workspace-foundation.md`](docs/superpowers/plans/2026-05-22-m1-workspace-foundation.md) breaks it into 12 TDD tasks that produced this release.
 
 ## Deferred (next up)
-- **M3.5c — Self-host fallback.** Docker-compose-prod + Caddy + Oracle Cloud Always Free quickstart (4 ARM cores, 24 GB RAM, free forever) for the day Vercel limits bite.
-- **M4b** — Evals harness v1 (10 golden SLR questions + Promptfoo + GitHub Actions + public /evals dashboard)
+- **M4b-expand** — Expand from 3 synthetic golden questions to 10 real-paper goldens.
+- **M5** — Authenticated MCP server (OAuth 2.1), published to the MCP registry.
 
 ## License
 
