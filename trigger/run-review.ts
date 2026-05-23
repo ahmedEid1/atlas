@@ -7,6 +7,7 @@ import {
   recordCheckpoint,
   persistIncludedPapers,
   persistClaims,
+  persistCritiqueScore,
   finishRun,
   failRun,
 } from "@/lib/agent/runs";
@@ -33,6 +34,7 @@ type GraphResult = {
   }>;
   planApproved?: { approved: boolean; rejectionReason?: string } | null;
   papersApproved?: { approved: boolean; rejectionReason?: string } | null;
+  critique?: { overallScore?: number | null } | null;
   [k: string]: unknown;
 };
 
@@ -139,6 +141,9 @@ export const runReviewTask = schemaTask({
         return { ok: true, status: "REJECTED" as const };
       }
       if (claims && claims.length > 0) await persistClaims({ runId, claims });
+      if (lastState.critique?.overallScore != null) {
+        await persistCritiqueScore({ runId, overallScore: lastState.critique.overallScore });
+      }
       if (draft) {
         await finishRun({ runId, draft });
         return { ok: true, status: "COMPLETED" as const };
