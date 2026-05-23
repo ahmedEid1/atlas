@@ -4,6 +4,8 @@ import { plannerNode } from "@/lib/agent/nodes/planner";
 import { retrieverNode } from "@/lib/agent/nodes/retriever";
 import { assessorNode } from "@/lib/agent/nodes/assessor";
 import { drafterNode } from "@/lib/agent/nodes/drafter";
+import { criticNode } from "@/lib/agent/nodes/critic";
+import { citeCheckNode } from "@/lib/agent/nodes/cite-check";
 import { getCheckpointer } from "@/lib/agent/checkpointer";
 
 /**
@@ -35,6 +37,12 @@ function routeAfterPapersGate(state: AgentState): "assessor" | typeof END {
   return state.papersApproved?.approved ? "assessor" : END;
 }
 
+export function routeAfterCritic(state: AgentState): "drafter" | "cite_check" {
+  if (state.critique?.decision === "approve") return "cite_check";
+  if (state.critiqueIterations >= 2) return "cite_check"; // safety cap
+  return "drafter";
+}
+
 /**
  * Build and compile the SLR agent graph:
  *
@@ -54,12 +62,19 @@ export async function buildGraph() {
     .addNode("papers_gate", papersApprovalGate)
     .addNode("assessor", assessorNode)
     .addNode("drafter", drafterNode)
+    .addNode("critic", criticNode)
+    .addNode("cite_check", citeCheckNode)
     .addEdge(START, "planner")
     .addEdge("planner", "plan_gate")
     .addConditionalEdges("plan_gate", routeAfterPlanGate, { retriever: "retriever", [END]: END })
     .addEdge("retriever", "papers_gate")
     .addConditionalEdges("papers_gate", routeAfterPapersGate, { assessor: "assessor", [END]: END })
     .addEdge("assessor", "drafter")
-    .addEdge("drafter", END);
+    .addEdge("drafter", "critic")
+    .addConditionalEdges("critic", routeAfterCritic, {
+      drafter: "drafter",
+      cite_check: "cite_check",
+    })
+    .addEdge("cite_check", END);
   return graph.compile({ checkpointer });
 }

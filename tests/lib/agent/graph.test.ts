@@ -5,12 +5,16 @@ const mocks = vi.hoisted(() => ({
   retriever: vi.fn(),
   assessor: vi.fn(),
   drafter: vi.fn(),
+  critic: vi.fn(),
+  citeCheck: vi.fn(),
 }));
 
 vi.mock("@/lib/agent/nodes/planner", () => ({ plannerNode: mocks.planner }));
 vi.mock("@/lib/agent/nodes/retriever", () => ({ retrieverNode: mocks.retriever }));
 vi.mock("@/lib/agent/nodes/assessor", () => ({ assessorNode: mocks.assessor }));
 vi.mock("@/lib/agent/nodes/drafter", () => ({ drafterNode: mocks.drafter }));
+vi.mock("@/lib/agent/nodes/critic", () => ({ criticNode: mocks.critic }));
+vi.mock("@/lib/agent/nodes/cite-check", () => ({ citeCheckNode: mocks.citeCheck }));
 
 // Avoid touching real postgres in tests — use an in-memory checkpointer.
 vi.mock("@/lib/agent/checkpointer", async () => {
@@ -24,6 +28,8 @@ beforeEach(() => {
   mocks.retriever.mockReset();
   mocks.assessor.mockReset();
   mocks.drafter.mockReset();
+  mocks.critic.mockReset();
+  mocks.citeCheck.mockReset();
 });
 
 const initialState = {
@@ -82,6 +88,16 @@ describe("agent graph", () => {
       claims: [{ includedPaperId: "c1", text: "Finding", category: "finding" }],
     });
     mocks.drafter.mockResolvedValue({ draft: "# Review\n\nFinding [c1]." });
+    mocks.critic.mockResolvedValue({
+      critique: {
+        decision: "approve",
+        overallScore: 4.5,
+        rubric: { faithfulness: 5, completeness: 4, citationQuality: 5, clarity: 4 },
+        actionableFeedback: "looks good",
+      },
+      critiqueIterations: 1,
+    });
+    mocks.citeCheck.mockResolvedValue({ claimChecks: [] });
 
     const { buildGraph } = await import("@/lib/agent/graph");
     const { Command } = await import("@langchain/langgraph");
@@ -95,6 +111,8 @@ describe("agent graph", () => {
     const final = await graph.getState(config);
     expect(final.values.draft).toContain("[c1]");
     expect(mocks.drafter).toHaveBeenCalledTimes(1);
+    expect(mocks.critic).toHaveBeenCalledTimes(1);
+    expect(mocks.citeCheck).toHaveBeenCalledTimes(1);
   });
 
   it("skips retriever/assessor/drafter when plan is rejected", async () => {
@@ -122,6 +140,73 @@ describe("agent graph", () => {
     expect(mocks.retriever).not.toHaveBeenCalled();
     expect(mocks.assessor).not.toHaveBeenCalled();
     expect(mocks.drafter).not.toHaveBeenCalled();
+    expect(mocks.critic).not.toHaveBeenCalled();
+    expect(mocks.citeCheck).not.toHaveBeenCalled();
     expect(final.values.planApproved?.approved).toBe(false);
+  });
+});
+
+describe("routeAfterCritic", () => {
+  const minimalState = {
+    runId: "r1",
+    projectId: "p1",
+    question: "?",
+    candidateCorpusItems: [],
+    plan: null,
+    planApproved: null,
+    includedPapers: [],
+    papersApproved: null,
+    claims: [],
+    draft: null,
+    critique: null,
+    critiqueIterations: 0,
+  };
+
+  it("routes to cite_check on approve regardless of iteration count", async () => {
+    const { routeAfterCritic } = await import("@/lib/agent/graph");
+    expect(
+      routeAfterCritic({
+        ...minimalState,
+        critique: {
+          decision: "approve",
+          overallScore: 4.5,
+          rubric: { faithfulness: 5, completeness: 4, citationQuality: 5, clarity: 4 },
+          actionableFeedback: "looks good",
+        },
+        critiqueIterations: 1,
+      }),
+    ).toBe("cite_check");
+  });
+
+  it("routes to drafter on revise when iterations < 2", async () => {
+    const { routeAfterCritic } = await import("@/lib/agent/graph");
+    expect(
+      routeAfterCritic({
+        ...minimalState,
+        critique: {
+          decision: "revise",
+          overallScore: 3,
+          rubric: { faithfulness: 3, completeness: 3, citationQuality: 3, clarity: 3 },
+          actionableFeedback: "x".repeat(50),
+        },
+        critiqueIterations: 0,
+      }),
+    ).toBe("drafter");
+  });
+
+  it("caps the loop at 2 iterations — routes to cite_check even on revise", async () => {
+    const { routeAfterCritic } = await import("@/lib/agent/graph");
+    expect(
+      routeAfterCritic({
+        ...minimalState,
+        critique: {
+          decision: "revise",
+          overallScore: 3,
+          rubric: { faithfulness: 3, completeness: 3, citationQuality: 3, clarity: 3 },
+          actionableFeedback: "x".repeat(50),
+        },
+        critiqueIterations: 2,
+      }),
+    ).toBe("cite_check");
   });
 });
