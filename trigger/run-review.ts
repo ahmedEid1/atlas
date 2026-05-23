@@ -120,8 +120,15 @@ export const runReviewTask = schemaTask({
           await persistIncludedPapers({ runId, included: intr.includedPapers });
         }
 
-        // Block until the UI calls the approve/reject endpoint with the token id
-        const decision = await wait.forToken(token);
+        // Block until the UI calls the approve/reject endpoint with the token id.
+        // .unwrap() returns just the decision payload (the data the approve API
+        // sent); throws on timeout (24h) which propagates to the catch handler.
+        // Without unwrap(), `decision` is { ok: boolean, output: T } and resuming
+        // with that breaks the gate's expected shape — state.planApproved.approved
+        // becomes undefined, routeAfterPlanGate returns END, graph skips retriever.
+        const decision = await wait
+          .forToken<{ approved: boolean; rejectionReason?: string; editedPlan?: unknown; corpusItemIds?: string[] }>(token)
+          .unwrap();
 
         payload = new Command({ resume: decision });
       }

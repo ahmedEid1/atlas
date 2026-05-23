@@ -84,8 +84,8 @@ describe("run-review task", () => {
       });
 
     mocks.waitForToken
-      .mockResolvedValueOnce({ approved: true })
-      .mockResolvedValueOnce({ approved: true, corpusItemIds: ["c1"] });
+      .mockReturnValueOnce({ unwrap: () => Promise.resolve({ approved: true }) })
+      .mockReturnValueOnce({ unwrap: () => Promise.resolve({ approved: true, corpusItemIds: ["c1"] }) });
 
     const mod = await import("@/trigger/run-review");
     const task = mod.runReviewTask as unknown as {
@@ -106,7 +106,9 @@ describe("run-review task", () => {
       .mockResolvedValueOnce({ __interrupt__: [{ value: { kind: "APPROVE_PLAN", plan: { picoc: {} } } }] })
       .mockResolvedValueOnce({ planApproved: { approved: false, rejectionReason: "Out of scope" } });
 
-    mocks.waitForToken.mockResolvedValueOnce({ approved: false, rejectionReason: "Out of scope" });
+    mocks.waitForToken.mockReturnValueOnce({
+      unwrap: () => Promise.resolve({ approved: false, rejectionReason: "Out of scope" }),
+    });
 
     const mod = await import("@/trigger/run-review");
     const task = mod.runReviewTask as unknown as {
