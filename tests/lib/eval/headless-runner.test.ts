@@ -3,14 +3,33 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
   buildGraph: vi.fn(),
+  corpusFindMany: vi.fn(),
 }));
 
 vi.mock("@/lib/agent/graph", () => ({ buildGraph: mocks.buildGraph }));
+
+vi.mock("@/lib/db", () => ({
+  db: {
+    corpusItem: { findMany: mocks.corpusFindMany },
+  },
+}));
 
 beforeEach(() => {
   mocks.invoke.mockReset();
   mocks.buildGraph.mockReset();
   mocks.buildGraph.mockResolvedValue({ invoke: mocks.invoke });
+  mocks.corpusFindMany.mockReset();
+  // Default: return one item per requested id (echo-shape)
+  mocks.corpusFindMany.mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
+    Promise.resolve(
+      where.id.in.map((id) => ({
+        id,
+        source: `golden:${id}`,
+        summary: { abstract: `summary ${id}`, studyType: "other", relevanceToSLR: "relevant" },
+        status: "PARSED",
+      })),
+    ),
+  );
 });
 
 describe("runHeadless", () => {

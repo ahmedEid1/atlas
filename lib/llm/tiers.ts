@@ -13,8 +13,9 @@ const MODELS: Record<ProviderName, Record<Tier, string>> = {
     fast: "claude-sonnet-4-6",
   },
   openai: {
-    smart: "gpt-4o",
-    fast: "gpt-4o-mini",
+    // GPT-5.5 is current flagship (released 2026-04-24); 5.4-mini is the cost-effective workhorse.
+    smart: "gpt-5.5",
+    fast: "gpt-5.4-mini",
   },
   groq: {
     smart: "llama-3.3-70b-versatile",

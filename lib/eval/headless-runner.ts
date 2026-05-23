@@ -1,6 +1,7 @@
 import { Command } from "@langchain/langgraph";
 import { buildGraph } from "@/lib/agent/graph";
 import type { AgentState } from "@/lib/agent/state";
+import { db } from "@/lib/db";
 
 export type HeadlessRunArgs = {
   runId: string;
@@ -28,12 +29,30 @@ export async function runHeadless(args: HeadlessRunArgs): Promise<HeadlessRunRes
   const graph = await buildGraph();
   const config = { configurable: { thread_id: args.runId } };
 
+  // Fetch the seeded CorpusItems and map them into the CandidateCorpusItem shape the
+  // planner/retriever expect (mirrors trigger/run-review.ts:hydrate-initial-state).
+  const corpus = await db.corpusItem.findMany({
+    where: { id: { in: args.corpusItemIds } },
+    select: { id: true, source: true, summary: true, status: true },
+  });
+  if (corpus.length !== args.corpusItemIds.length) {
+    throw new Error(
+      `runHeadless: only found ${corpus.length}/${args.corpusItemIds.length} CorpusItems by id`,
+    );
+  }
+
   // Initial invocation seeds the run; subsequent invocations pass a Command to resume from interrupts.
   let payload: Partial<AgentState> | Command = {
     runId: args.runId,
     projectId: args.projectId,
     question: args.question,
-    candidateCorpusItems: [], // populated by the planner via state machinery; seeded separately in the eval setup
+    candidateCorpusItems: corpus.map((c) => ({
+      id: c.id,
+      title: c.source.split("/").pop() ?? c.id,
+      summary: c.summary as
+        | { abstract: string; studyType: string; relevanceToSLR: string }
+        | null,
+    })),
   };
 
   let state: AgentState | undefined;
