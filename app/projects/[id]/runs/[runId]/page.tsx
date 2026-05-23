@@ -7,6 +7,11 @@ import { PlanApprovalCard } from "@/components/runs/plan-approval-card";
 import { PapersApprovalCard } from "@/components/runs/papers-approval-card";
 import { DraftView } from "@/components/runs/draft-view";
 import { RefreshTick } from "@/components/runs/refresh-tick";
+import { CritiquePanel } from "@/components/runs/CritiquePanel";
+import {
+  CitationFaithfulnessWidget,
+  type ClaimCheckRow,
+} from "@/components/runs/CitationFaithfulnessWidget";
 
 export default async function RunPage({
   params,
@@ -22,6 +27,7 @@ export default async function RunPage({
       project: { select: { ownerId: true, title: true, question: true } },
       steps: { orderBy: { startedAt: "asc" } },
       checkpoints: { where: { status: "PENDING" }, orderBy: { createdAt: "asc" } },
+      claimChecks: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!run || run.project.ownerId !== user.id) notFound();
@@ -61,6 +67,16 @@ export default async function RunPage({
           checkpointId={pendingPapers.id}
           proposed={(pendingPapers.proposal as { includedPapers: never }).includedPapers ?? []}
         />
+      )}
+
+      {run.status === "COMPLETED" && (run.critiqueScore != null || run.faithfulnessScore != null) && (
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CritiquePanel critiqueScore={run.critiqueScore} />
+          <CitationFaithfulnessWidget
+            faithfulnessScore={run.faithfulnessScore}
+            claimChecks={(run.claimChecks ?? []) as ClaimCheckRow[]}
+          />
+        </section>
       )}
 
       {run.draft && <DraftView draft={run.draft} />}
