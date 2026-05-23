@@ -67,6 +67,32 @@ export async function findCorpusMarkdown(corpusItemId: string): Promise<string |
   return ci.parsedMarkdown;
 }
 
+/**
+ * Returns the structured paper summary text used by cite_check to verify claims.
+ * Reads `summary.abstract` from the M2 summarisation output if available;
+ * falls back to the first 2000 chars of parsedMarkdown.
+ */
+export async function findCorpusSummary(corpusItemId: string): Promise<string | null> {
+  const ci = await db.corpusItem.findUnique({
+    where: { id: corpusItemId },
+    select: { summary: true, parsedMarkdown: true, status: true },
+  });
+  if (!ci) return null;
+  if (ci.summary && typeof ci.summary === "object" && "abstract" in ci.summary) {
+    const s = ci.summary as { abstract: string; keyFindings?: string[]; methodology?: string };
+    const parts = [
+      `Abstract: ${s.abstract}`,
+      s.methodology ? `Methodology: ${s.methodology}` : null,
+      s.keyFindings && s.keyFindings.length > 0 ? `Key findings:\n- ${s.keyFindings.join("\n- ")}` : null,
+    ].filter((p): p is string => p !== null);
+    return parts.join("\n\n");
+  }
+  if (ci.status === "PARSED" && ci.parsedMarkdown) {
+    return ci.parsedMarkdown.slice(0, 2000);
+  }
+  return null;
+}
+
 export async function recordCheckpoint(args: {
   runId: string;
   kind: "APPROVE_PLAN" | "APPROVE_PAPERS";
@@ -154,5 +180,55 @@ export async function failRun(args: { runId: string; reason: string }): Promise<
   await db.run.update({
     where: { id: args.runId },
     data: { status: "FAILED", failureReason: args.reason.slice(0, 1000) },
+  });
+}
+
+export type CiteCheckPersistInput = {
+  runId: string;
+  perCitation: Array<{
+    paperId: string;
+    claim: string;
+    verdict: "supported" | "unsupported" | "unclear";
+    reason: string;
+    paperExcerpt?: string;
+  }>;
+  aggregate: {
+    totalCitations: number;
+    supported: number;
+    unsupported: number;
+    unclear: number;
+    faithfulnessScore: number;
+  };
+};
+
+const VERDICT_DB_MAP = {
+  supported: "SUPPORTED",
+  unsupported: "UNSUPPORTED",
+  unclear: "UNCLEAR",
+} as const;
+
+export async function persistCiteCheck(args: CiteCheckPersistInput): Promise<void> {
+  if (args.perCitation.length > 0) {
+    await db.claimCheck.createMany({
+      data: args.perCitation.map((c) => ({
+        runId: args.runId,
+        paperId: c.paperId,
+        claim: c.claim,
+        verdict: VERDICT_DB_MAP[c.verdict],
+        reason: c.reason,
+        paperExcerpt: c.paperExcerpt ?? null,
+      })),
+    });
+  }
+  await db.run.update({
+    where: { id: args.runId },
+    data: { faithfulnessScore: args.aggregate.faithfulnessScore },
+  });
+}
+
+export async function persistCritiqueScore(args: { runId: string; overallScore: number }): Promise<void> {
+  await db.run.update({
+    where: { id: args.runId },
+    data: { critiqueScore: args.overallScore },
   });
 }
