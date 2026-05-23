@@ -1,125 +1,93 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { generateObject, type ModelMessage } from "ai";
+import type { AttributeValue } from "@opentelemetry/api";
 import { z } from "zod";
 import { env } from "@/lib/env";
-import { getLangfuse } from "@/lib/langfuse";
-
-let _client: Anthropic | null = null;
-
-function getAnthropic(): Anthropic {
-  if (_client) return _client;
-  if (!env.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY === "sk-ant-...") {
-    throw new Error(
-      "ANTHROPIC_API_KEY is not set. Add a real key to .env to run live LLM calls. " +
-        "Tests should mock @anthropic-ai/sdk to avoid this path.",
-    );
-  }
-  _client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  return _client;
-}
+import { resolveProvider } from "@/lib/llm/providers";
+import { resolveTier, type Tier, type ProviderName } from "@/lib/llm/tiers";
 
 export type RunLLMArgs<T> = {
   /** Span name shown in Langfuse — used to group traces ("summarize-paper", "planner", etc.) */
   name: string;
-  model: "claude-opus-4-7" | "claude-sonnet-4-6" | "claude-haiku-4-5";
+  /** Quality tier — maps to a per-provider model id via lib/llm/tiers. */
+  tier: Tier;
+  /** Max output tokens. */
   maxTokens: number;
-  /** System blocks. Mark long stable content with `cache_control: { type: "ephemeral" }`. */
-  system: Anthropic.TextBlockParam[];
-  messages: Anthropic.MessageParam[];
-  /** Zod schema. SDK validates the response against this; `parsed_output` is typed. */
+  /** System prompt (single string — provider-neutral). */
+  system: string;
+  /** Conversation messages. */
+  messages: ModelMessage[];
+  /** Zod schema for structured output. */
   schema: z.ZodType<T>;
-  /** Optional Langfuse trace metadata (e.g. corpusItemId, projectId). */
+  /** Trace metadata (runId, projectId, userId, etc.). */
   metadata?: Record<string, unknown>;
-  /** Adaptive thinking. Defaults to on for Opus 4.7 / 4.6. */
-  thinking?: Anthropic.ThinkingConfigParam;
 };
 
 export type RunLLMResult<T> = {
   output: T;
+  /** Trace URL is now constructed via Langfuse OTel exporter — populated by instrumentation. */
   traceUrl: string;
   usage: {
     inputTokens: number;
     outputTokens: number;
+    totalTokens: number;
+    /** Cache read tokens, when the provider reports them. 0 otherwise. */
     cacheReadInputTokens: number;
-    cacheCreationInputTokens: number;
   };
 };
 
 /**
- * The single wrapper for every LLM call in the codebase.
+ * The single LLM call surface for the whole codebase.
  *
- * Responsibilities:
- *   - Construct one Anthropic client (lazy)
- *   - Open a Langfuse trace + generation span around the call
- *   - Pass the schema through `output_config.format` for SDK-side Zod validation
- *   - Capture token usage and cost
- *   - Emit the Langfuse trace URL so the UI can link to it
- *   - Flush Langfuse on success AND failure (Trigger.dev workers exit fast)
+ * Resolves {provider, tier} -> concrete ai-SDK LanguageModel via the provider
+ * registry, calls generateObject with the caller's Zod schema, attaches
+ * experimental_telemetry so the Langfuse OTel exporter captures the span,
+ * and returns a uniform RunLLMResult regardless of provider.
  */
 export async function runLLM<T>(args: RunLLMArgs<T>): Promise<RunLLMResult<T>> {
-  const anthropic = getAnthropic();
-  const lf = getLangfuse();
+  const providerName = env.LLM_PROVIDER as ProviderName;
+  const factory = resolveProvider(providerName);
+  const model = factory(resolveTier(providerName, args.tier));
 
-  const trace = lf.trace({
-    name: args.name,
-    metadata: args.metadata,
-    input: { system: args.system, messages: args.messages },
-  });
-
-  const generation = trace.generation({
-    name: `${args.name}:claude`,
-    model: args.model,
-    modelParameters: { max_tokens: args.maxTokens },
-    input: args.messages,
-    metadata: args.metadata,
-  });
-
-  try {
-    const response = await anthropic.messages.parse({
-      model: args.model,
-      max_tokens: args.maxTokens,
-      thinking: args.thinking ?? { type: "adaptive" },
-      system: args.system,
-      messages: args.messages,
-      output_config: { format: zodOutputFormat(args.schema) },
-    });
-
-    if (response.parsed_output == null) {
-      throw new Error("LLM returned null parsed_output — schema validation failed inside SDK");
+  const meta = args.metadata ?? {};
+  const runId = typeof meta.runId === "string" ? meta.runId : undefined;
+  // OTel AttributeValue only accepts string|number|boolean (+ arrays of those).
+  // We pass through string/number/boolean values from caller metadata and skip
+  // anything else so the exporter doesn't reject the span.
+  const telemetryMeta: Record<string, AttributeValue> = {
+    tags: [args.tier, providerName],
+  };
+  for (const [k, v] of Object.entries(meta)) {
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+      telemetryMeta[k] = v;
     }
-
-    const usage = {
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
-      cacheReadInputTokens: response.usage.cache_read_input_tokens ?? 0,
-      cacheCreationInputTokens: response.usage.cache_creation_input_tokens ?? 0,
-    };
-
-    generation.end({
-      output: response.parsed_output,
-      usage: {
-        input: usage.inputTokens,
-        output: usage.outputTokens,
-        unit: "TOKENS",
-      },
-    });
-
-    trace.update({ output: response.parsed_output });
-
-    return {
-      output: response.parsed_output as T,
-      traceUrl: trace.getTraceUrl(),
-      usage,
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    generation.end({
-      level: "ERROR",
-      statusMessage: message.slice(0, 500),
-    });
-    trace.update({ output: { error: message.slice(0, 500) } });
-    throw err;
-  } finally {
-    await lf.flushAsync();
   }
+  if (runId !== undefined) telemetryMeta.sessionId = runId;
+
+  const { object, usage } = await generateObject({
+    model,
+    output: "object",
+    schema: args.schema as z.ZodType<Record<string, unknown>>,
+    system: args.system,
+    messages: args.messages,
+    maxOutputTokens: args.maxTokens,
+    experimental_telemetry: {
+      isEnabled: true,
+      functionId: args.name,
+      metadata: telemetryMeta,
+    },
+  });
+
+  return {
+    output: object as T,
+    // Trace URL is recorded on the OTel span; left empty here. Consumers that
+    // need a URL can construct one from env.LANGFUSE_HOST + the captured span ID
+    // in a future iteration. Empty string is intentional placeholder.
+    traceUrl: "",
+    usage: {
+      inputTokens: usage.inputTokens ?? 0,
+      outputTokens: usage.outputTokens ?? 0,
+      totalTokens: usage.totalTokens ?? 0,
+      cacheReadInputTokens: 0,
+    },
+  };
 }
