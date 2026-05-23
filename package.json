@@ -12,6 +12,8 @@
     "dev:trigger": "trigger dev",
     "trigger:deploy": "trigger deploy",
     "test:e2e": "playwright test",
+    "eval": "tsx scripts/run-evals.ts",
+    "eval:check": "tsx scripts/check-eval-regression.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
