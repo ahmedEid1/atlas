@@ -46,7 +46,7 @@ describe("plannerNode", () => {
     });
 
     expect(mocks.runLLM).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "planner", model: "claude-opus-4-7" }),
+      expect.objectContaining({ name: "planner", tier: "smart" }),
     );
     expect(update.plan?.picoc.population).toBe("p");
     expect(mocks.addStep).toHaveBeenCalledWith({ runId: "r1", nodeName: "planner" });

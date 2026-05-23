@@ -20,7 +20,7 @@ export async function retrieverNode(state: AgentState): Promise<Partial<AgentSta
       });
       const { output, traceUrl, usage } = await runLLM({
         name: "retriever:score",
-        model: "claude-sonnet-4-6",
+        tier: "fast",
         maxTokens: 1024,
         system,
         messages,
