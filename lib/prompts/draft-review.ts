@@ -24,6 +24,7 @@ export function buildDrafterRequest(args: {
   question: string;
   plan: Plan;
   claims: ClaimSpec[];
+  critiqueFeedback?: string;
 }): {
   system: string;
   messages: ModelMessage[];
@@ -32,12 +33,16 @@ export function buildDrafterRequest(args: {
     .map((c) => `- [${c.includedPaperId}] (${c.category}) ${c.text}`)
     .join("\n");
 
+  const reviseBlock = args.critiqueFeedback
+    ? `\n\nRevise based on this feedback from the critic:\n\n${args.critiqueFeedback}\n`
+    : "";
+
   return {
     system: SYSTEM,
     messages: [
       {
         role: "user",
-        content: `Research question:\n\n> ${args.question}\n\nPlan:\n${JSON.stringify(args.plan, null, 2)}\n\nClaims (each prefixed with its source paper id):\n${claimsLines}\n\nWrite the review.`,
+        content: `Research question:\n\n> ${args.question}\n\nPlan:\n${JSON.stringify(args.plan, null, 2)}\n\nClaims (each prefixed with its source paper id):\n${claimsLines}${reviseBlock}\n\nWrite the review.`,
       },
     ],
   };

@@ -59,4 +59,28 @@ describe("drafterNode", () => {
     const { drafterNode } = await import("@/lib/agent/nodes/drafter");
     await expect(drafterNode({ ...baseState, claims: [] })).rejects.toThrow(/no claims/i);
   });
+
+  it("passes critique feedback to the prompt when critique decision is revise", async () => {
+    mocks.runLLM.mockResolvedValue({
+      output: { draft: "Revised." },
+      traceUrl: "http://lf/d2",
+      usage: { inputTokens: 1, outputTokens: 1, cacheReadInputTokens: 0, totalTokens: 2 },
+    });
+
+    const { drafterNode } = await import("@/lib/agent/nodes/drafter");
+    await drafterNode({
+      ...baseState,
+      critique: {
+        rubric: { faithfulness: 3, completeness: 3, citationQuality: 3, clarity: 3 },
+        overallScore: 3.0,
+        actionableFeedback: "Add the missing limitations paragraph.",
+        decision: "revise",
+      },
+      critiqueIterations: 1,
+    });
+
+    // The runLLM call's `messages[0].content` should contain the feedback text.
+    const args = mocks.runLLM.mock.calls[0]?.[0];
+    expect(JSON.stringify(args.messages)).toContain("Add the missing limitations paragraph.");
+  });
 });

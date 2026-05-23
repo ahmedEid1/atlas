@@ -13,6 +13,8 @@ export async function drafterNode(state: AgentState): Promise<Partial<AgentState
       question: state.question,
       plan: state.plan,
       claims: state.claims,
+      critiqueFeedback:
+        state.critique?.decision === "revise" ? state.critique.actionableFeedback : undefined,
     });
     const { output, traceUrl, usage } = await runLLM({
       name: "drafter",
