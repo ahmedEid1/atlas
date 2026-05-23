@@ -59,6 +59,15 @@ Atlas turns a research question and a corpus of PDFs into an evidence-grounded l
 - UI: critic-score badge + citation-faithfulness widget with expandable per-citation verdicts
 - 119+ tests passing, all mocked, tsc + lint clean
 
+### M4b — Eval harness + public dashboard (`v0.4.1-m4b`)
+- 3 hand-curated synthetic golden SLR questions in `evals/golden/*.yaml` (10-question target deferred to v0.4.2-m4b-expand)
+- Headless graph runner (`lib/eval/headless-runner.ts`) drives Atlas's M3+M4a LangGraph in-process with auto-approved HITL
+- 4 metrics: citation recall, citation precision, claim faithfulness, expected-claim coverage
+- GitHub Actions: runs on push + nightly cron at 03:00 UTC
+- Regression gate: CI fails if any metric drops >10% vs the last main-branch run
+- **Public dashboard live at https://atlas-sooty-delta.vercel.app/evals** (empty-state until upstream LLM-SDK issue is resolved or a non-Gemini provider is configured; see [evals/README.md](evals/README.md))
+- 148+ tests passing
+
 ## Stack
 
 | Layer | Choice |
@@ -136,7 +145,7 @@ pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending Linux compute for 
 - **M3.5c**: Self-host fallback docs (Oracle Cloud Always Free)
 - ~~**M4** (Wk 5): Critic + `cite_check` + eval harness v1 with public `/evals` dashboard~~ split into M4a (shipped) + M4b (next)
 - ~~**M4a**: Critic + cite_check~~ ✅ shipped as `v0.4.0-m4a`
-- **M4b**: Evals harness + 10 golden questions + GitHub Actions + public /evals dashboard
+- ~~**M4b**: Evals harness + 10 golden questions + GitHub Actions + public /evals dashboard~~ ✅ shipped as `v0.4.1-m4b` — **live at https://atlas-sooty-delta.vercel.app/evals** (3 synthetic goldens; 10 real-paper goldens in v0.4.2-m4b-expand)
 - **M5** (Wk 6): Authenticated MCP server (OAuth 2.1) published to MCP registry
 - **M6** (Wk 7): Public launch with 30-question golden eval set, blog series, recruiter 1-pager
 
