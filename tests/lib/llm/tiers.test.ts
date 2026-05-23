@@ -3,7 +3,7 @@ import { resolveTier, type Tier, type ProviderName } from "@/lib/llm/tiers";
 
 describe("resolveTier", () => {
   const cases: Array<[ProviderName, Tier, string]> = [
-    ["gemini", "smart", "gemini-2.5-pro"],
+    ["gemini", "smart", "gemini-2.5-flash"],
     ["gemini", "fast", "gemini-2.5-flash"],
     ["anthropic", "smart", "claude-opus-4-7"],
     ["anthropic", "fast", "claude-sonnet-4-6"],
