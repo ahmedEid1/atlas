@@ -54,8 +54,8 @@ describe("listReviews", () => {
       },
     ]);
     const res = await listReviews({}, { userId: "u1", clerkId: "c1" });
-    expect(res.reviews[0].completedAt).toBeNull();
-    expect(res.reviews[0].critiqueScore).toBeNull();
-    expect(res.reviews[0].citationCount).toBe(0);
+    expect(res.reviews[0]!.completedAt).toBeNull();
+    expect(res.reviews[0]!.critiqueScore).toBeNull();
+    expect(res.reviews[0]!.citationCount).toBe(0);
   });
 });

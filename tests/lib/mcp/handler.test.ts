@@ -23,8 +23,8 @@ describe("mcpTool wrapper", () => {
       handler: async (input) => ({ echoed: input.msg }),
     });
     const res = await tool({ msg: "hi" }, { userId: "u1", clerkId: "c1" });
-    expect(res.content[0].type).toBe("text");
-    expect(JSON.parse(res.content[0].text)).toEqual({ echoed: "hi" });
+    expect(res.content[0]!.type).toBe("text");
+    expect(JSON.parse(res.content[0]!.text)).toEqual({ echoed: "hi" });
     expect(logMcpCall).toHaveBeenCalledWith(expect.objectContaining({
       toolName: "echo", status: "OK", userId: "u1",
     }));
@@ -42,7 +42,7 @@ describe("mcpTool wrapper", () => {
     const res = await tool({ msg: "hi" }, { userId: "u1", clerkId: "c1" });
     expect(handlerFn).not.toHaveBeenCalled();
     expect(res.isError).toBe(true);
-    expect(res.content[0].text).toContain("rate_limited");
+    expect(res.content[0]!.text).toContain("rate_limited");
     expect(logMcpCall).toHaveBeenCalledWith(expect.objectContaining({
       status: "ERROR", errorCode: "rate_limited",
     }));
@@ -69,8 +69,8 @@ describe("mcpTool wrapper", () => {
     });
     const res = await tool({ msg: "hi" }, { userId: "u1", clerkId: "c1" });
     expect(res.isError).toBe(true);
-    expect(res.content[0].text).not.toContain("secret stack trace contents");
-    expect(res.content[0].text).toContain("internal");
+    expect(res.content[0]!.text).not.toContain("secret stack trace contents");
+    expect(res.content[0]!.text).toContain("internal");
     expect(logMcpCall).toHaveBeenCalledWith(expect.objectContaining({
       status: "ERROR", errorCode: "internal",
     }));

@@ -24,19 +24,20 @@ export class McpAuthError extends Error {
  * { userId, clerkId } so tool handlers can read it from extra.
  */
 export async function resolveMcpUser(token: string): Promise<McpUserCtx> {
-  let subject: string | null;
+  let clerkUserId: string | null;
   try {
     const clerkAuth = await auth({ acceptsToken: "oauth_token" });
     const verified = await verifyClerkToken(clerkAuth, token);
-    subject = verified?.subject ?? null;
+    const fromExtra = verified?.extra?.userId;
+    clerkUserId = typeof fromExtra === "string" ? fromExtra : null;
   } catch {
     throw new McpAuthError("invalid_token");
   }
 
-  if (!subject) throw new McpAuthError("invalid_token");
+  if (!clerkUserId) throw new McpAuthError("invalid_token");
 
-  const user = await db.user.findUnique({ where: { clerkId: subject } });
+  const user = await db.user.findUnique({ where: { clerkId: clerkUserId } });
   if (!user) throw new McpAuthError("user_not_found");
 
-  return { userId: user.id, clerkId: subject };
+  return { userId: user.id, clerkId: clerkUserId };
 }
