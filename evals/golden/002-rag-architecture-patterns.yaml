@@ -1,0 +1,298 @@
+id: 002-rag-architecture-patterns
+question: Which architectural patterns for retrieval-augmented generation produce the best results in production deployments on enterprise knowledge bases, considering answer quality, latency, and cost?
+picoc:
+  population: Production retrieval-augmented generation (RAG) systems serving enterprise knowledge bases
+  intervention: Architectural patterns including naive RAG, query rewriting, multi-step retrieval, agentic RAG, hybrid sparse-dense retrieval, and GraphRAG over knowledge graphs
+  comparison: Baseline naive single-shot dense-retrieval RAG with a fixed top-k passages
+  outcome: Answer quality on labeled QA benchmarks, end-to-end latency, and per-query cost in dollars
+  context: Enterprise deployments and large public benchmarks studied between 2023 and 2025
+papers:
+  - id: paper_001
+    title: "A controlled comparison of five RAG architectural patterns on enterprise QA"
+    summary: |
+      A synthetic controlled comparison of five RAG architectural patterns (naive, query rewriting,
+      multi-step retrieval, agentic, and GraphRAG) on a curated enterprise QA benchmark of 1,400
+      questions across four corporate knowledge bases. Quality measured by reference-based grading
+      improves consistently with architectural complexity, but latency and cost rise sharply. Naive
+      RAG achieves 54% answer accuracy; query rewriting raises it to 61%; multi-step retrieval
+      reaches 67% but adds 2.3x median latency. Agentic RAG reaches 74% accuracy but costs roughly
+      8x naive RAG per query.
+    markdown: |
+      # A controlled comparison of five RAG architectural patterns on enterprise QA
+
+      ## Abstract
+      We compare five RAG architectural patterns on a curated benchmark of 1,400 questions drawn
+      from four enterprise knowledge bases (legal, HR policy, engineering wiki, customer support).
+      Patterns evaluated are naive RAG, query-rewriting RAG, multi-step retrieval, agentic RAG with
+      a planner-executor loop, and GraphRAG built over an extracted knowledge graph.
+
+      ## Methodology
+      All patterns share the same base retriever (a dense bi-encoder over chunked documents), the
+      same generator LLM, and the same prompt scaffolding. Answer quality is measured by a
+      reference-based grader using a held-out reference answer per question, validated against
+      human grading on a 200-question sample (Cohen's kappa 0.78). We log end-to-end latency
+      (p50 and p95) and per-query dollar cost computed from inference token counts.
+
+      ## Findings
+      Answer accuracy was 54% (naive), 61% (query rewriting), 67% (multi-step), 71% (GraphRAG on
+      relational sub-benchmark), and 74% (agentic). Multi-step retrieval improves quality but adds
+      2-3x latency: median latency rose from 1.4s (naive) to 3.2s (multi-step) and 6.1s (agentic).
+      Per-query cost rose from $0.004 (naive) to $0.011 (multi-step) and $0.034 (agentic),
+      consistent with the claim that agentic RAG has highest accuracy but 5-10x cost. Quality
+      gains plateaued for simple lookup-style questions and were largest for synthesis and
+      multi-hop questions.
+
+      ## Limitations
+      The benchmark skews toward English documents and four specific verticals. Reference-based
+      grading penalizes paraphrases of correct answers; we mitigated with a semantic-equivalence
+      pass but cannot eliminate the bias. We did not test mixed-pattern routing.
+
+      ## Implications
+      Architectural complexity buys quality but at material latency and cost. Teams should pick a
+      pattern based on question mix and service-level objectives, and consider routing easy
+      questions to cheaper patterns.
+  - id: paper_002
+    title: "When query rewriting helps: a study of ambiguous enterprise queries"
+    summary: |
+      A synthetic study isolating the effect of LLM-based query rewriting on RAG quality, evaluated
+      on 600 enterprise queries hand-labeled for ambiguity. Query rewriting improves answer
+      accuracy by 14 percentage points on ambiguous queries (questions that omit key entities or
+      reference time) but only 2 points on unambiguous queries, and slightly hurts accuracy on a
+      small subset of well-formed queries where the rewriter introduces spurious entities. The
+      authors recommend selective rewriting gated by an ambiguity classifier.
+    markdown: |
+      # When query rewriting helps: a study of ambiguous enterprise queries
+
+      ## Abstract
+      We measure the marginal effect of LLM-based query rewriting on RAG answer quality, focusing
+      on whether rewriting helps uniformly or only for ambiguous queries. We hand-label 600
+      enterprise queries on a four-point ambiguity scale and run controlled comparisons.
+
+      ## Methodology
+      Labels were assigned by three annotators with adjudication; inter-annotator agreement was
+      substantial (kappa 0.71). The same retriever and generator were used with and without an
+      LLM query-rewriting step that expands abbreviations, resolves coreference, and adds
+      time-disambiguation when appropriate. Accuracy was graded against reference answers by an
+      LLM-as-judge calibrated on 100 human-labeled examples.
+
+      ## Findings
+      Query rewriting helps for ambiguous queries: rewriting lifts accuracy from 38% to 52% on the
+      most ambiguous tier (a 14-point gain), while gains on the least ambiguous tier are within
+      noise (+2 points). On well-formed queries the rewriter occasionally introduces spurious
+      entities that hurt accuracy by 3-5 points. A simple ambiguity classifier that gates
+      rewriting recovered most of the gains while avoiding the regressions on well-formed
+      queries.
+
+      ## Limitations
+      The ambiguity scale is coarse and benchmark-specific. Findings depend on the rewriter
+      prompt; alternative prompts may behave differently. The study covers one organization.
+
+      ## Implications
+      Query rewriting is best deployed selectively. Always-on rewriting risks regressing on
+      already-clear queries, while selective rewriting captures most of the gains.
+  - id: paper_003
+    title: "GraphRAG versus naive RAG on relational and multi-hop questions"
+    summary: |
+      A synthetic empirical comparison of a GraphRAG architecture (entity extraction, knowledge
+      graph construction, graph-augmented retrieval) against naive dense-only RAG on a benchmark
+      partitioned by question type. GraphRAG outperforms naive for relational questions, with an
+      accuracy gap of 18 points (62% vs 44%) on multi-hop relational questions, but offers no
+      meaningful improvement on simple lookup questions and is slightly worse on questions that
+      require numerical reasoning. Index construction cost is 5-15x higher than for naive RAG.
+    markdown: |
+      # GraphRAG versus naive RAG on relational and multi-hop questions
+
+      ## Abstract
+      We compare a GraphRAG architecture against naive dense-only RAG on a benchmark partitioned
+      into three question types: simple lookup, multi-hop relational, and numerical reasoning.
+      GraphRAG augments retrieval with a knowledge graph extracted from the corpus using LLM-based
+      entity and relation extraction.
+
+      ## Methodology
+      The graph was built by extracting entities and typed relations from 240,000 enterprise
+      documents using an LLM extractor, with deduplication via entity linking. Both systems share
+      the same generator. The benchmark contains 900 questions partitioned by the lead author and
+      a second annotator (kappa 0.82). Quality was graded against reference answers.
+
+      ## Findings
+      GraphRAG outperforms naive for relational questions: 62% accuracy versus 44% on multi-hop
+      relational questions, an 18-point gap. On simple lookup questions, GraphRAG and naive RAG
+      were statistically indistinguishable (71% vs 69%). On numerical reasoning, GraphRAG was
+      slightly worse (47% vs 51%), likely because the graph schema does not model quantities
+      well. Graph construction cost was 5-15x higher than naive RAG indexing, and ongoing
+      maintenance required handling schema drift as new entity types appeared.
+
+      ## Limitations
+      The graph schema reflects the lead author's design choices; alternative schemas could
+      change the numerical-reasoning result. Index-construction cost is sensitive to LLM pricing.
+
+      ## Implications
+      GraphRAG is most valuable when relational and multi-hop questions are common; for lookup-
+      heavy workloads the additional construction cost is hard to justify.
+  - id: paper_004
+    title: "Agentic RAG: accuracy and cost tradeoffs of planner-executor architectures"
+    summary: |
+      A synthetic study of agentic RAG architectures that use a planner LLM to issue successive
+      retrieval and reasoning steps. On a complex enterprise QA benchmark, agentic RAG reaches
+      78% accuracy versus 56% for naive RAG, but costs 7.4x more per query and has p95 latency
+      9.8x higher. The authors decompose the cost into planner tokens (32%), retrieval calls
+      (18%), and intermediate reasoning (50%). They recommend agentic RAG only for high-value
+      questions or with aggressive caching.
+    markdown: |
+      # Agentic RAG: accuracy and cost tradeoffs of planner-executor architectures
+
+      ## Abstract
+      We study agentic RAG architectures in which an LLM planner issues successive retrieval and
+      reasoning steps, and we compare them to naive RAG on a complex enterprise QA benchmark of
+      850 questions requiring synthesis across multiple documents.
+
+      ## Methodology
+      The planner uses a tool-calling pattern with retrieval, search, and read-document tools.
+      Maximum depth is capped at 6 steps. The same generator is used in the final synthesis step
+      across both systems. We measured accuracy with a reference-based grader and logged token
+      usage, retrieval calls, and end-to-end latency.
+
+      ## Findings
+      Agentic RAG reached 78% accuracy versus 56% for naive RAG (a 22-point improvement).
+      However, agentic RAG has highest accuracy but 5-10x cost in our measurements: 7.4x cost
+      per query and 9.8x p95 latency. Cost decomposition: 32% planner tokens, 18% retrieval
+      calls, 50% intermediate reasoning. On simple questions, the planner often took
+      unnecessary steps, suggesting opportunities for early-exit heuristics. Aggressive caching
+      of intermediate results reduced cost by 28% with no measurable quality loss in a follow-on
+      experiment.
+
+      ## Limitations
+      The maximum step cap influences both accuracy and cost. Cost estimates are sensitive to
+      LLM pricing. The benchmark is biased toward synthesis questions where agentic patterns
+      are expected to excel.
+
+      ## Implications
+      Agentic RAG is most cost-effective for high-value or synthesis-heavy workloads, and least
+      attractive when most queries are simple lookups. Caching and early-exit heuristics can
+      reduce the cost gap.
+  - id: paper_005
+    title: "Hybrid sparse-dense retrieval for RAG: a benchmark study"
+    summary: |
+      A synthetic benchmark comparing dense-only, sparse-only (BM25), and hybrid sparse-dense
+      retrieval as the first stage of a RAG pipeline. Across four enterprise corpora, hybrid
+      retrieval (BM25 + dense) consistently beats either alone in recall@k for relevant
+      passages, with mean gains of 8-14 points. The quality lift propagates to end-to-end answer
+      accuracy, with a 4-7 point improvement. Hybrid adds modest latency (typically <50ms) and
+      negligible cost increase relative to the generator step.
+    markdown: |
+      # Hybrid sparse-dense retrieval for RAG: a benchmark study
+
+      ## Abstract
+      We benchmark dense-only, sparse-only (BM25), and hybrid sparse-dense first-stage retrieval
+      for RAG across four enterprise corpora and three public benchmarks. We measure passage-level
+      recall@k and end-to-end answer accuracy with a fixed generator.
+
+      ## Methodology
+      Hybrid retrieval was implemented as reciprocal-rank fusion (RRF) of BM25 and dense
+      bi-encoder rankings. We tuned the dense model on a held-out portion of each corpus where
+      possible. End-to-end accuracy used a reference-based grader.
+
+      ## Findings
+      Hybrid retrieval (BM25 + dense) consistently beats either alone on recall@10, with mean
+      gains of 8-14 percentage points across corpora. The lift propagates to a 4-7 point
+      improvement in end-to-end answer accuracy. Hybrid added 20-50ms of latency on our
+      hardware and negligible cost compared with generator cost. BM25 alone retained an edge on
+      keyword-heavy queries with rare technical terms, suggesting query-aware routing as a
+      future direction.
+
+      ## Limitations
+      The dense model is tuned per corpus; results may differ with off-the-shelf embeddings.
+      Latency depends on index sharding and hardware. The benchmark covers English-language
+      corpora.
+
+      ## Implications
+      Hybrid retrieval is a low-cost upgrade for nearly any RAG system. There is little
+      principled reason to deploy dense-only first-stage retrieval in production, given the
+      consistent gains from adding BM25.
+  - id: paper_006
+    title: "Optimizing vector search indices for high-throughput similarity queries"
+    summary: |
+      A synthetic study of vector-search index choices (HNSW, IVF-PQ, ScaNN) for high-throughput
+      similarity queries, measuring recall, latency, and memory footprint as a function of index
+      parameters. The study is purely about the data-structures layer underneath vector search
+      and does not address RAG architectural patterns, end-to-end answer quality, query routing,
+      or generator integration. Included to test whether the question correctly excludes
+      adjacent infrastructure topics that are not about RAG architecture.
+    markdown: |
+      # Optimizing vector search indices for high-throughput similarity queries
+
+      ## Abstract
+      We characterize the recall-latency-memory tradeoff space for three popular approximate
+      nearest neighbor indices: HNSW, IVF-PQ, and ScaNN. We measure how index parameters
+      (number of clusters, code size, probe count) affect 99th-percentile latency, recall@10,
+      and resident memory across two large public embedding datasets.
+
+      ## Methodology
+      Benchmarks were run on a single 64-core machine with NVMe-backed storage. We measured
+      throughput under sustained query loads of 1k, 5k, and 10k queries per second. Recall is
+      computed against an exact-search ground truth.
+
+      ## Findings
+      HNSW dominates at low query rates and high recall targets; IVF-PQ wins on memory-
+      constrained deployments; ScaNN offers the best latency at the highest sustained
+      throughputs but requires careful tuning. We provide parameter recommendations per
+      operating point.
+
+      ## Limitations
+      Results are specific to the benchmarked datasets and hardware. Index build cost is
+      reported but not optimized.
+
+      ## Implications
+      Vector-search index choice is a meaningful infrastructure decision below the RAG
+      architecture layer, but does not by itself determine end-to-end answer quality. This
+      paper does not study RAG architectural patterns.
+  - id: paper_007
+    title: "A comparison of open embedding models on retrieval benchmarks"
+    summary: |
+      A synthetic study comparing eight open-weight embedding models on three public retrieval
+      benchmarks, reporting MTEB-style scores, dimensionality, and inference cost. The study
+      focuses purely on embedding-model quality and does not evaluate RAG architectural patterns,
+      retrieval-augmented generation pipelines, or end-to-end QA accuracy. Included to test
+      whether the question correctly excludes adjacent model-evaluation topics that are not
+      about RAG architecture.
+    markdown: |
+      # A comparison of open embedding models on retrieval benchmarks
+
+      ## Abstract
+      We benchmark eight open-weight embedding models on three public retrieval datasets, scoring
+      them on standard metrics (nDCG@10, recall@100) and reporting model dimensionality and
+      per-query inference cost.
+
+      ## Methodology
+      All models were evaluated with the same query encoding, document encoding, and exact
+      similarity search to isolate model quality from index effects. We report scores per
+      dataset and aggregated across datasets.
+
+      ## Findings
+      Larger embedding models tend to score higher on nDCG@10 but the relationship is not
+      monotone; two mid-size models matched or beat a much larger model on two of three
+      benchmarks. Inference cost scales roughly linearly with parameter count. Domain-specific
+      fine-tuning, where available, lifted scores by 4-9 points.
+
+      ## Limitations
+      Benchmarks cover only English text retrieval. We did not evaluate downstream task
+      accuracy or end-to-end RAG quality.
+
+      ## Implications
+      Embedding model choice matters for retrieval quality at the component level, but this
+      study is silent on RAG architectural patterns and end-to-end answer quality.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+  - paper_005
+expectedClaims:
+  - Multi-step retrieval improves quality but adds 2-3x latency
+  - Query rewriting helps for ambiguous queries
+  - GraphRAG outperforms naive for relational questions
+  - Agentic RAG has highest accuracy but 5-10x cost
+  - Hybrid retrieval (BM25 + dense) consistently beats either alone
+metadata:
+  source: Synthetic test question — illustrative, not derived from a real review
+  difficulty: hard

@@ -1,0 +1,264 @@
+id: 001-llm-code-review-security
+question: How effective are LLM-based code review tools at finding security bugs in real-world software projects, and how do they compare to traditional static analysis security testing tools?
+picoc:
+  population: Software projects undergoing code review, including open-source and enterprise codebases
+  intervention: LLM-based static analysis and code review tools (e.g., GPT-driven reviewers, CodeQL combined with LLMs, hybrid LLM+rules systems)
+  comparison: Traditional static application security testing (SAST) tools such as Semgrep, SonarQube, CodeQL alone, and rule-based linters
+  outcome: True-positive rate, false-positive rate, recall on labeled vulnerability benchmarks, and cost per finding relative to human reviewer time
+  context: Industry-scale codebases and curated vulnerability benchmarks studied in 2023 and 2024
+papers:
+  - id: paper_001
+    title: "Benchmarking LLM code reviewers against SAST on a 1,200-CVE dataset"
+    summary: |
+      A synthetic benchmark study evaluating three commercial LLM code-review tools and two open-source
+      LLM pipelines on a labeled dataset of 1,200 historical CVEs across C, C++, Java, Python, and
+      JavaScript repositories. The LLM reviewers achieved a mean recall of 62%, compared to 41% for the
+      strongest SAST baseline (CodeQL), but produced 2.4x more false positives per file. Performance
+      was strongest on injection and authentication flaws and weakest on race conditions and
+      cryptographic misuse. The authors stress that recall-without-precision is operationally
+      expensive at scale, and that LLM reviewers should be paired with a triage layer.
+    markdown: |
+      # Benchmarking LLM code reviewers against SAST on a 1,200-CVE dataset
+
+      ## Abstract
+      We benchmark five LLM-based code-review tools, including three commercial products and two
+      open-source pipelines, against four traditional SAST tools on a curated dataset of 1,200
+      historical CVEs spanning C, C++, Java, Python, and JavaScript projects. For each CVE we
+      provide the vulnerable file and the patched file, and measure whether each tool flags the
+      vulnerable version while not flagging the patched version.
+
+      ## Methodology
+      We constructed the benchmark from public CVE feeds and the corresponding repository patches,
+      excluding cases where the vulnerability spanned multiple files. Each tool was run with default
+      settings and with a security-focused prompt or policy where supported. We computed recall as
+      the fraction of true vulnerabilities correctly flagged and false-positive rate as the number
+      of incorrect flags per 1,000 lines on the patched (clean) versions.
+
+      ## Findings
+      LLM reviewers achieved mean recall of 62% versus 41% for the strongest SAST baseline. However,
+      LLM tools have higher recall but more false positives than traditional SAST, producing 2.4x
+      more false flags per file on the clean versions. By CWE category, LLMs were strongest on
+      injection flaws (CWE-89, CWE-79) and broken authentication, and weakest on race conditions
+      (CWE-362) and cryptographic misuse (CWE-327). Recall on the longest patches (>200 changed
+      lines) dropped sharply for both classes of tool.
+
+      ## Limitations
+      The benchmark covers historical CVEs, which may overrepresent issues that traditional tools
+      were already designed to catch. Patched code is not necessarily fully clean; some patched
+      files contain unrelated vulnerabilities. We did not measure runtime cost or developer
+      experience.
+
+      ## Implications
+      LLM reviewers offer materially higher recall than SAST on a broad CVE benchmark, but the
+      precision gap means they are best deployed with a triage layer or in hybrid configurations.
+  - id: paper_002
+    title: "Hybrid LLM and rule-based pipelines for enterprise code review"
+    summary: |
+      A synthetic case study at a large fintech company that deployed an LLM code-review pipeline
+      alongside an existing Semgrep rule set across 4.2 million lines of code. The hybrid system
+      (LLM findings filtered by Semgrep rules and a custom risk model) achieved 71% precision and
+      58% recall on a held-out evaluation set, outperforming the LLM-only configuration (precision
+      34%, recall 64%) and Semgrep-only (precision 81%, recall 39%). The authors report a 47%
+      reduction in mean reviewer time per pull request and present the hybrid as the operating
+      point that balances precision, recall, and cost.
+    markdown: |
+      # Hybrid LLM and rule-based pipelines for enterprise code review
+
+      ## Abstract
+      We report a 9-month deployment of a hybrid LLM and rule-based code-review pipeline at a large
+      fintech company with 4.2 million lines of code across Java, TypeScript, and Go services. We
+      compare three configurations on a held-out evaluation set drawn from internal security audits.
+
+      ## Methodology
+      The evaluation set comprises 412 security-relevant changes from the prior year, each
+      manually labeled by the company's application-security team. Three configurations were
+      evaluated: (a) LLM-only review (GPT-class model with a security-focused system prompt), (b)
+      Semgrep-only with the team's curated rule set, and (c) hybrid pipeline that runs both and
+      uses a learned risk model to filter and rank findings.
+
+      ## Findings
+      The hybrid configuration achieved precision of 71% and recall of 58%, outperforming LLM-only
+      (precision 34%, recall 64%) and Semgrep-only (precision 81%, recall 39%) on F1. Hybrid
+      LLM+rule-based outperforms either alone in our setting. Deployment metrics show a 47%
+      reduction in median reviewer time per pull request, primarily through automated triage of
+      low-risk findings.
+
+      ## Limitations
+      The study is limited to one organization and three primary languages. The labeling team also
+      built the Semgrep rules, which may inflate Semgrep-only precision. We did not measure the
+      tail of false negatives that bypassed all three configurations.
+
+      ## Implications
+      Hybrid pipelines that combine LLM judgment with rule-based filtering can improve both
+      precision and recall over either alone, and can materially reduce reviewer time in
+      enterprise settings.
+  - id: paper_003
+    title: "LLM code review accuracy across framework popularity tiers"
+    summary: |
+      A synthetic empirical study examining how LLM code-review accuracy varies with framework
+      popularity, evaluating the same LLM-based review tool on three tiers of frameworks: mainstream
+      (React, Django, Spring), mid-tier (Svelte, FastAPI, Quarkus), and niche or new (HTMX, Litestar,
+      Micronaut). Mean security-finding precision drops from 68% on mainstream frameworks to 41% on
+      niche frameworks; recall drops from 63% to 38%. The authors attribute the gap to limited
+      framework-specific training data and propose retrieval-augmented prompts that improve niche
+      accuracy by roughly 10 percentage points.
+    markdown: |
+      # LLM code review accuracy across framework popularity tiers
+
+      ## Abstract
+      We evaluate a single LLM-based code-review tool on a controlled set of 600 synthetic and
+      curated vulnerable code samples drawn from three tiers of framework popularity: mainstream,
+      mid-tier, and niche. We measure security-finding precision and recall on each tier.
+
+      ## Methodology
+      We constructed 200 vulnerable samples per tier, each paired with a fixed version, spanning
+      common CWE categories (injection, broken authentication, SSRF, insecure deserialization).
+      Samples were validated by two independent security engineers. The same LLM review tool was
+      used in default configuration and in a retrieval-augmented configuration with framework
+      documentation in context.
+
+      ## Findings
+      LLM code review accuracy drops on niche frameworks: precision falls from 68% on mainstream
+      frameworks to 50% on mid-tier and 41% on niche frameworks; recall falls from 63% to 49% to
+      38%. Retrieval-augmented prompts with framework documentation in context improved niche
+      precision by about 10 percentage points and recall by 7 points. Qualitative analysis shows
+      the tool frequently misidentifies framework-provided sanitizers on niche frameworks,
+      generating either false positives or missing real flaws.
+
+      ## Limitations
+      The study uses a single LLM tool and one snapshot of model capabilities. The niche framework
+      sample is small and may not generalize. Retrieval augmentation adds latency and cost not
+      measured here.
+
+      ## Implications
+      Practitioners deploying LLM code review on niche or new frameworks should expect a meaningful
+      accuracy drop and should consider retrieval-augmented configurations or framework-specific
+      fine-tuning.
+  - id: paper_004
+    title: "Cost-benefit analysis of LLM code review against senior reviewer time"
+    summary: |
+      A synthetic cost analysis comparing per-finding cost of an LLM code-review pipeline against
+      senior security-engineer reviewer time at three organizations. Across the three organizations,
+      median cost per true-positive finding for the LLM pipeline ranged from $4 to $11, compared to
+      $35 to $90 for senior human reviewers, after amortizing infrastructure and prompt-engineering
+      effort. Cost per finding is competitive with senior human reviewer time at all three
+      organizations, though the authors caution that LLM pipelines should complement rather than
+      replace human reviewers for high-impact changes.
+    markdown: |
+      # Cost-benefit analysis of LLM code review against senior reviewer time
+
+      ## Abstract
+      We perform a cost-benefit analysis of LLM-based code review at three organizations of
+      different sizes, comparing per-finding cost against senior security-engineer reviewer time.
+      We use blended hourly rates, inference costs from public pricing, and audited counts of true
+      and false positives over a six-month window.
+
+      ## Methodology
+      Each organization shared anonymized review logs covering 9,400 pull requests, with security
+      findings labeled by their internal AppSec teams. LLM-pipeline cost per finding was computed
+      as total inference plus operations cost divided by the count of true positives. Human cost
+      per finding was computed using reviewer hourly rates multiplied by recorded review time on
+      matched pull requests.
+
+      ## Findings
+      Median LLM cost per true-positive finding ranged from $4 to $11 across the three
+      organizations, compared with $35 to $90 for senior human reviewers. Cost per finding is
+      competitive with senior human reviewer time at every organization. Human reviewers retained
+      a meaningful advantage in finding context-sensitive logic flaws and multi-file vulnerabilities,
+      where LLM precision dropped sharply. The authors recommend LLM pipelines as a first-pass
+      filter combined with focused human review on high-impact changes.
+
+      ## Limitations
+      The cost model excludes engineering time to maintain prompts, ratelimit handling, and on-call
+      triage of false positives. Hourly rates are blended estimates. The study covers only three
+      organizations and may not generalize.
+
+      ## Implications
+      LLM code review is economically attractive as a first-pass tool, particularly when paired
+      with human review on the highest-risk changes.
+  - id: paper_005
+    title: "LLM-generated unit tests for legacy Java services"
+    summary: |
+      A synthetic study on using LLMs to generate unit tests for legacy Java services. The tool
+      under study generated compiling tests for 73% of target methods, with branch coverage of 41%
+      on average. While the work touches on test quality and mutation score, it does not address
+      security review, vulnerability detection, or static analysis comparisons, and is included
+      here only to test whether the question scoping correctly excludes adjacent LLM-for-code
+      topics that are not about code review for security.
+    markdown: |
+      # LLM-generated unit tests for legacy Java services
+
+      ## Abstract
+      We evaluate an LLM-driven unit test generation tool on 18 legacy Java services at a single
+      organization. The tool produces JUnit tests that compile on 73% of target methods and reach
+      mean branch coverage of 41%, with mutation score of 28%.
+
+      ## Methodology
+      We selected 18 legacy services with low pre-existing coverage. For each service, the tool
+      was invoked on every public method with annotation-driven configuration. Generated tests
+      were compiled, executed, and assessed with PIT mutation testing. We compared mutation score
+      against existing handwritten tests where available.
+
+      ## Findings
+      Generated tests compile reliably and add meaningful branch coverage, but mutation score
+      trails handwritten tests by roughly 15 points, suggesting weaker assertion quality.
+      Developers reported the generated tests were useful as a starting point but typically
+      required hand-editing for fixture setup and assertion strengthening.
+
+      ## Limitations
+      The study is limited to Java and to one organization. Mutation testing was applied only to
+      a subset of services due to runtime cost.
+
+      ## Implications
+      LLMs can accelerate baseline unit-test creation for legacy code, but human curation remains
+      necessary for assertion quality. This work does not address security-focused code review or
+      vulnerability detection.
+  - id: paper_006
+    title: "LLM-driven documentation generation for OpenAPI-described services"
+    summary: |
+      A synthetic study describing a documentation-generation pipeline that uses LLMs to produce
+      developer-facing reference documentation from OpenAPI specifications and source code. The
+      study evaluates documentation completeness and developer satisfaction but does not measure
+      security finding rates, code review precision, or vulnerability detection, and is included
+      to test whether the question correctly excludes adjacent LLM-for-developers topics that are
+      not about security review.
+    markdown: |
+      # LLM-driven documentation generation for OpenAPI-described services
+
+      ## Abstract
+      We describe and evaluate a pipeline that uses an LLM to generate developer-facing reference
+      documentation from OpenAPI specifications combined with source code excerpts. The pipeline
+      produces Markdown reference pages, example requests, and short prose explanations.
+
+      ## Methodology
+      We applied the pipeline to 42 internal services at a mid-sized SaaS company. Documentation
+      completeness was scored against a rubric covering endpoint description, authentication,
+      error codes, and example payloads. We surveyed 71 internal API consumers on perceived
+      documentation quality before and after the pipeline.
+
+      ## Findings
+      Documentation completeness improved by 38 points on the rubric and developer satisfaction
+      scores rose from a median of 3.1 to 4.2 on a 5-point scale. Hallucinations were rare but
+      present, mostly in inferred error semantics for endpoints with undocumented edge cases.
+
+      ## Limitations
+      The study covers one organization and one set of language stacks. The completeness rubric
+      reflects this organization's preferences. We did not measure long-term documentation drift.
+
+      ## Implications
+      LLM-driven documentation generation can meaningfully improve developer experience when
+      grounded in an OpenAPI specification and curated source code, but is unrelated to security
+      review or vulnerability detection.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+expectedClaims:
+  - LLM tools have higher recall but more false positives than traditional SAST
+  - Hybrid LLM+rule-based outperforms either alone
+  - LLM code review accuracy drops on niche frameworks
+  - Cost per finding is competitive with senior human reviewer time
+metadata:
+  source: Synthetic test question — illustrative, not derived from a real review
+  difficulty: medium

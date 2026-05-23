@@ -1,0 +1,161 @@
+id: 000-tdd-web-frameworks
+question: What are the main approaches to test-driven development in modern JavaScript web frameworks, and how do they affect defect rate, test coverage, and development time?
+picoc:
+  population: Web developers building applications with JavaScript frameworks (React, Vue, Angular)
+  intervention: Adoption of test-driven development (TDD) workflows, including red-green-refactor and outside-in TDD
+  comparison: Test-after development, where tests are written after implementation, and ad-hoc testing practices
+  outcome: Defect rate in production, automated test coverage percentage, and time-to-completion for feature work
+  context: Industry and academic studies on frontend JavaScript projects between 2020 and 2024
+papers:
+  - id: paper_001
+    title: "An empirical study of TDD adoption in React projects (2020-2024)"
+    summary: |
+      This synthetic study reports on a survey and repository-mining analysis of 142 React codebases drawn
+      from public GitHub repositories and three industry partners. The authors compare teams that practice
+      test-driven development (TDD) with teams that write tests after the implementation. They find that
+      TDD teams achieve a median statement coverage of 78%, compared to 54% for test-after teams, and that
+      defect density in production (measured by post-release issues per 1,000 lines of changed code) is
+      roughly 30% lower in TDD-led projects. However, TDD teams report 12-18% longer time-to-completion
+      on new features in the first quarter of adoption, with the gap narrowing after teams stabilize their
+      tooling. The study identifies React Testing Library and Vitest as the dominant tools and notes that
+      outside-in TDD is more common than classical inside-out TDD in component-heavy code.
+    markdown: |
+      # An empirical study of TDD adoption in React projects (2020-2024)
+
+      ## Abstract
+      We study how test-driven development (TDD) is adopted across 142 React projects, combining a developer
+      survey (n=318) with mining of commit histories and CI data from public repositories and three industry
+      partners. We compare TDD-led teams against test-after teams on three outcomes: automated test coverage,
+      defect density in production, and feature time-to-completion.
+
+      ## Methodology
+      We classified projects as TDD-led if at least 60% of feature commits were preceded within 24 hours by
+      a failing test commit, validated by interviews with maintainers. Coverage was computed from CI reports
+      (Vitest and Jest). Defect density was measured as post-release issues per 1,000 changed lines of code
+      over a 90-day window. Time-to-completion was extracted from issue-to-merge timestamps for 1,940 feature
+      tickets. We controlled for team size, project age, and codebase size using multilevel regression.
+
+      ## Findings
+      TDD-led teams reached a median statement coverage of 78%, while test-after teams reached 54%. The
+      difference held after controlling for team size and project age (p < 0.01). Defect density was 30%
+      lower in TDD-led projects, and TDD-led teams reported fewer hotfix releases per quarter. In contrast,
+      TDD-led teams had a 12-18% longer time-to-completion in the first quarter of adoption. The penalty
+      shrank to 3-5% by the third quarter, suggesting a learning-curve effect. Outside-in TDD using React
+      Testing Library was the dominant style; classical inside-out TDD was uncommon for view-layer code but
+      more frequent for state-management and utility modules.
+
+      ## Limitations
+      The sample skews toward English-language open-source repositories and three industry partners in
+      fintech and developer tooling. Defect density is a noisy measure because issue-tracker hygiene varies.
+      We cannot rule out selection effects: teams that adopt TDD may already be more disciplined. The
+      coverage metric does not measure assertion quality, only line execution.
+
+      ## Implications
+      TDD increases test coverage and reduces production defects in React projects, at the cost of a
+      short-term productivity dip. The dip is recoverable within one to two quarters. Teams adopting TDD
+      should budget for a learning period rather than expect immediate speed gains.
+  - id: paper_002
+    title: "TDD in Vue and Angular: a multi-vocal literature review"
+    summary: |
+      A synthetic multi-vocal literature review combining 22 peer-reviewed studies with 47 industry
+      blog posts and conference talks (2020-2024) on test-driven development in Vue and Angular
+      ecosystems. The review finds consistent evidence that TDD increases coverage (typical gains of
+      20-40 percentage points) and reduces production defects (10-35% reduction across studies).
+      Reported time-to-completion effects are mixed: roughly half of the included studies report an
+      initial slowdown of 10-25%, while a smaller subset report no significant difference after the
+      first month. The review highlights that Vue's Composition API and Angular's dependency injection
+      both lend themselves to TDD because dependencies are easy to mock, but that end-to-end TDD with
+      Cypress or Playwright remains underused. The authors call for more longitudinal studies and
+      caution against over-generalizing from short-term experiments.
+    markdown: |
+      # TDD in Vue and Angular: a multi-vocal literature review
+
+      ## Abstract
+      We conduct a multi-vocal literature review (MLR) of test-driven development (TDD) practice in the
+      Vue and Angular frontend ecosystems, combining 22 peer-reviewed studies with 47 grey-literature
+      sources (industry blog posts, conference talks, and engineering handbooks) published between 2020
+      and 2024. Our research questions concern measured effects of TDD on test coverage, defect rate,
+      and development velocity.
+
+      ## Methodology
+      We followed Garousi et al.'s guidelines for multi-vocal literature reviews. Academic sources were
+      retrieved from IEEE Xplore, ACM Digital Library, and Scopus; grey literature was collected via a
+      structured Google search with curated source quality criteria. Two reviewers independently coded
+      each source for study type, outcomes reported, and confounders controlled. Disagreements were
+      resolved by discussion.
+
+      ## Findings
+      Across the included sources, TDD increases test coverage by 20 to 40 percentage points relative to
+      test-after baselines. Reductions in production defects range from 10% to 35%, with larger effects
+      reported for teams that pair TDD with continuous integration. Reported effects on velocity are
+      mixed: 12 of 22 academic studies report an initial slowdown of 10-25%, while 6 report no
+      significant difference after the first month, and 4 report a small speed-up attributed to fewer
+      debugging cycles. Vue's Composition API and Angular's dependency-injection model both reduce
+      mocking friction. End-to-end TDD with Cypress or Playwright is mentioned in 31 grey-literature
+      sources but rarely studied empirically.
+
+      ## Limitations
+      Grey-literature sources are inherently variable in rigor and may overstate effects. The MLR cannot
+      disentangle TDD from co-adopted practices such as pair programming or trunk-based development.
+      Publication bias is a concern: studies reporting no effect may be underrepresented.
+
+      ## Implications
+      The evidence base broadly supports the claim that TDD increases test coverage and reduces
+      production defects in Vue and Angular projects, but the effect on development time is contested
+      and likely depends on team experience and tooling maturity.
+  - id: paper_003
+    title: "When TDD does not help: a controlled experiment on frontend feature delivery"
+    summary: |
+      A synthetic controlled experiment with 64 professional developers randomly assigned to TDD or
+      test-after groups, asked to deliver four UI features over three days using React, Vue, or
+      Angular. The study finds no statistically significant difference in defect rate at task
+      submission, though the TDD group produced higher coverage (median 71% vs 49%). TDD participants
+      took 14% longer on average to complete features. The authors argue that TDD's benefits are
+      strongest for long-lived codebases with regression pressure, and weaker for short greenfield
+      tasks where the design is already well understood. They caution practitioners against assuming
+      TDD will always reduce time-to-completion and recommend pilot studies before mandating TDD.
+    markdown: |
+      # When TDD does not help: a controlled experiment on frontend feature delivery
+
+      ## Abstract
+      We report a controlled experiment with 64 professional frontend developers randomly assigned to
+      TDD or test-after groups. Participants implemented four well-scoped UI features over three days
+      using React, Vue, or Angular. We measured defect rate at submission (by independent grading),
+      automated test coverage, and time-to-completion.
+
+      ## Methodology
+      Participants were recruited via professional networks and three contracting firms; all reported
+      at least three years of professional frontend experience. We block-randomized by framework
+      familiarity. Defect grading was performed by two reviewers blind to condition, using a fixed
+      rubric of acceptance criteria. Coverage was measured by Vitest and Karma. Time-to-completion
+      was self-reported and corroborated by IDE telemetry.
+
+      ## Findings
+      The TDD group achieved median statement coverage of 71%, compared to 49% for the test-after
+      group (p < 0.01). However, defect rate at submission did not differ significantly (mean 1.8 vs
+      2.1 defects per feature, p = 0.21). TDD participants took 14% longer on average. In qualitative
+      interviews, TDD participants reported higher confidence in their changes despite no measured
+      defect reduction. We interpret the absence of a defect-rate effect as consistent with the short,
+      well-scoped nature of the tasks: TDD's benefits may accrue mainly when tests guard against
+      future regression rather than initial correctness.
+
+      ## Limitations
+      Three-day tasks are short relative to typical product cycles. Defect grading captured only
+      visible failures against the rubric and not subtle UX or accessibility issues. Self-reported
+      time-to-completion is noisy. The recruited sample is more experienced than the median frontend
+      developer and may underestimate TDD's learning-curve cost.
+
+      ## Implications
+      TDD reliably increases coverage but does not always reduce immediate defects, and it can slow
+      short-term delivery. Practitioners should pilot TDD on representative work before mandating it.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+expectedClaims:
+  - TDD increases test coverage
+  - TDD initially slows development
+  - TDD reduces production defects
+metadata:
+  source: Synthetic test question — illustrative, not derived from a real review
+  difficulty: easy
