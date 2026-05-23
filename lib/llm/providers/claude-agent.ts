@@ -18,13 +18,26 @@ export async function callClaudeAgent<T>(args: {
   schemaName: string;
 }): Promise<T> {
   // Build a strict-JSON prompt. We tell the model to return ONLY JSON, no prose.
+  // Use zod v4's built-in toJSONSchema so the model sees the real field
+  // names, types, required-ness, and enum values rather than a placeholder.
+  const jsonSchema = z.toJSONSchema(args.schema);
   const prompt = `${args.system}
 
 ${args.userMessage}
 
-You MUST respond with ONLY valid JSON (no prose before or after, no markdown code fences) matching this schema named "${args.schemaName}":
+CRITICAL OUTPUT CONTRACT — read carefully:
 
-${JSON.stringify(schemaToHint(args.schema), null, 2)}`;
+You MUST respond with ONLY a single valid JSON object. No prose before or after. No markdown code fences. No explanatory text.
+
+The JSON object MUST EXACTLY match this JSON Schema named "${args.schemaName}" — use the EXACT field names from the "properties" map below, in camelCase as shown. Do NOT invent new field names. Do NOT use snake_case substitutes (e.g., use "subQuestions" not "sub_questions" or "research_questions"). Do NOT add extra fields not in the schema. Every field listed under "required" MUST be present.
+
+If the schema specifies an array of strings, return an array of plain strings (not objects). If the schema specifies an array of objects, follow each object's properties exactly.
+
+JSON Schema:
+
+${JSON.stringify(jsonSchema, null, 2)}
+
+Now produce the JSON object that satisfies this schema:`;
 
   // No tools, single-turn, just text generation
   const session = query({
@@ -59,21 +72,4 @@ ${JSON.stringify(schemaToHint(args.schema), null, 2)}`;
   }
 
   return args.schema.parse(parsed);
-}
-
-/**
- * Best-effort hint of the Zod schema's shape for the prompt. Not strict
- * (Zod doesn't have a built-in JSON-Schema exporter without an extra dep);
- * for our purposes a stringified hint is enough — the model has the actual
- * Zod schema enforced at parse time anyway.
- */
-function schemaToHint(schema: z.ZodType<unknown>): unknown {
-  // For prompt purposes we just expose the schema's _def at a shallow level.
-  // The model will see field names + types via Zod's internal description.
-  // If this turns out too opaque for the model, we can swap in zod-to-json-schema later.
-  return {
-    _zodSchemaName: schema.constructor.name,
-    _description:
-      "See the function name for expected fields. Output strict JSON matching that schema.",
-  };
 }
