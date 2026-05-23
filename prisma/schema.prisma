@@ -201,3 +201,16 @@ model ClaimCheck {
 
   @@index([runId])
 }
+
+model EvalRun {
+  id        String   @id @default(cuid())
+  goldenId  String   // e.g., "000-cbt-back-pain"
+  metric    String   // "citation_recall" | "citation_precision" | "claim_faithfulness" | "expected_claim_coverage"
+  score     Float    // 0.0-1.0
+  runId     String?  // optional FK-ish link to the underlying Atlas Run (not enforced; eval runs may delete the Run row afterwards)
+  commitSha String   // git commit at time of run
+  createdAt DateTime @default(now())
+
+  @@index([goldenId, createdAt])
+  @@index([commitSha])
+}
