@@ -34,6 +34,8 @@ const baseState = {
   papersApproved: { approved: true, corpusItemIds: ["c1"] },
   claims: [{ includedPaperId: "c1", text: "X improves Y.", category: "finding" as const }],
   draft: null,
+  critique: null,
+  critiqueIterations: 0,
 };
 
 describe("drafterNode", () => {

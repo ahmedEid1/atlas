@@ -37,6 +37,8 @@ const baseState = {
   papersApproved: null,
   claims: [],
   draft: null,
+  critique: null,
+  critiqueIterations: 0,
 };
 
 describe("retrieverNode", () => {

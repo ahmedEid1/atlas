@@ -43,6 +43,8 @@ describe("plannerNode", () => {
       papersApproved: null,
       claims: [],
       draft: null,
+      critique: null,
+      critiqueIterations: 0,
     });
 
     expect(mocks.runLLM).toHaveBeenCalledWith(
@@ -76,6 +78,8 @@ describe("plannerNode", () => {
         papersApproved: null,
         claims: [],
         draft: null,
+        critique: null,
+        critiqueIterations: 0,
       }),
     ).rejects.toThrow(/anthropic 500/);
     expect(mocks.finishStep).toHaveBeenCalledWith(
