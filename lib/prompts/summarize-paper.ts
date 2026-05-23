@@ -1,4 +1,4 @@
-import type Anthropic from "@anthropic-ai/sdk";
+import type { ModelMessage } from "ai";
 import { z } from "zod";
 
 export const PaperSummarySchema = z.object({
@@ -30,7 +30,7 @@ export type PaperSummary = z.infer<typeof PaperSummarySchema>;
 
 const SYSTEM_INSTRUCTIONS = `You are a research analyst preparing a structured paper summary for a systematic literature review.
 
-Your job is to read the paper provided in the next system block and produce a JSON summary matching the schema.
+Your job is to read the paper provided below and produce a JSON summary matching the schema.
 
 Rules:
 - Write in your own words. Do NOT copy abstract text verbatim.
@@ -44,21 +44,11 @@ export function buildSummarizePaperRequest(args: {
   paperMarkdown: string;
   researchQuestion: string;
 }): {
-  system: Anthropic.TextBlockParam[];
-  messages: Anthropic.MessageParam[];
+  system: string;
+  messages: ModelMessage[];
 } {
   return {
-    system: [
-      {
-        type: "text",
-        text: SYSTEM_INSTRUCTIONS,
-      },
-      {
-        type: "text",
-        text: `<paper>\n${args.paperMarkdown}\n</paper>`,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
+    system: `${SYSTEM_INSTRUCTIONS}\n\n<paper>\n${args.paperMarkdown}\n</paper>`,
     messages: [
       {
         role: "user",

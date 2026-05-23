@@ -33,19 +33,17 @@ describe("PaperSummarySchema", () => {
 });
 
 describe("buildSummarizePaperRequest", () => {
-  it("returns system blocks with the paper markdown cached, and a user instruction", () => {
+  it("concatenates instructions and paper markdown into a single system string, with a user instruction", () => {
     const req = buildSummarizePaperRequest({
       paperMarkdown: "# Paper title\n\nSome content.",
       researchQuestion: "Does X improve Y in SE?",
     });
 
-    expect(req.system).toHaveLength(2);
-    const [instructions, paperBlock] = req.system;
-    // Static role/instructions first — these stay in cache across re-summarisations of the same paper
-    expect(instructions?.text).toMatch(/research analyst/i);
-    // Paper markdown second, cached
-    expect(paperBlock?.text).toContain("# Paper title");
-    expect(paperBlock?.cache_control).toEqual({ type: "ephemeral" });
+    // Static role/instructions first
+    expect(req.system).toMatch(/research analyst/i);
+    // Paper markdown embedded in system string
+    expect(req.system).toContain("<paper>");
+    expect(req.system).toContain("# Paper title");
     // User turn carries the project-level research question
     expect(req.messages).toHaveLength(1);
     const [userMessage] = req.messages;

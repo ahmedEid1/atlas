@@ -29,8 +29,7 @@ describe("buildPlannerRequest", () => {
       question: "Does X improve Y in SE?",
       corpusSize: 12,
     });
-    const [systemBlock] = req.system;
-    expect(systemBlock?.text).toMatch(/PICOC/i);
+    expect(req.system).toMatch(/PICOC/i);
     const [userMsg] = req.messages;
     expect(JSON.stringify(userMsg?.content)).toContain("Does X improve Y in SE?");
     expect(JSON.stringify(userMsg?.content)).toContain("12");
