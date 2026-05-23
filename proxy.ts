@@ -8,7 +8,12 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) await auth.protect();
+  if (!isPublicRoute(req)) {
+    // Redirect unauthenticated users to /sign-in instead of returning Clerk's
+    // default 404. Better UX for anyone landing on a protected URL directly
+    // (e.g. recruiters following a link to /dashboard).
+    await auth.protect({ unauthenticatedUrl: new URL("/sign-in", req.url).toString() });
+  }
 });
 
 export const config = {
