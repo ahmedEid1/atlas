@@ -40,6 +40,8 @@ const baseState = {
   papersApproved: { approved: true, corpusItemIds: ["c1", "c2"] },
   claims: [],
   draft: null,
+  critique: null,
+  critiqueIterations: 0,
 };
 
 describe("assessorNode", () => {

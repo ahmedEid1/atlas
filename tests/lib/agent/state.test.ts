@@ -38,6 +38,8 @@ describe("AgentStateAnnotation", () => {
       papersApproved: null,
       claims: [],
       draft: null,
+      critique: null,
+      critiqueIterations: 0,
     };
     expect(s.runId).toBe("r1");
   });

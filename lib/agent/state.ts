@@ -36,6 +36,18 @@ export type ClaimSpec = {
   category: "finding" | "methodology" | "limitation" | "context";
 };
 
+export type Critique = {
+  rubric: {
+    faithfulness: number;
+    completeness: number;
+    citationQuality: number;
+    clarity: number;
+  };
+  overallScore: number;
+  actionableFeedback: string;
+  decision: "approve" | "revise";
+};
+
 /**
  * Shared state that flows through the agent graph.
  * - `planApproved` / `papersApproved` are HITL gate decisions; `null` means "not asked yet"
@@ -73,6 +85,14 @@ export const AgentStateAnnotation = Annotation.Root({
   draft: Annotation<string | null>({
     reducer: (_old, neu) => neu,
     default: () => null,
+  }),
+  critique: Annotation<Critique | null>({
+    reducer: (_old, neu) => neu,
+    default: () => null,
+  }),
+  critiqueIterations: Annotation<number>({
+    reducer: (_old, neu) => neu,
+    default: () => 0,
   }),
 });
 
