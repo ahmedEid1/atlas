@@ -20,7 +20,7 @@ export async function assessorNode(state: AgentState): Promise<Partial<AgentStat
       });
       const { output, traceUrl, usage } = await runLLM({
         name: "assessor:extract",
-        model: "claude-sonnet-4-6",
+        tier: "smart",
         maxTokens: 4096,
         system,
         messages,

@@ -49,7 +49,7 @@ describe("drafterNode", () => {
 
     expect(update.draft).toContain("[c1]");
     expect(mocks.runLLM).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "drafter", model: "claude-opus-4-7" }),
+      expect.objectContaining({ name: "drafter", tier: "smart" }),
     );
   });
 

@@ -12,7 +12,7 @@ export async function plannerNode(state: AgentState): Promise<Partial<AgentState
     });
     const { output, traceUrl, usage } = await runLLM({
       name: "planner",
-      model: "claude-opus-4-7",
+      tier: "smart",
       maxTokens: 4096,
       system,
       messages,

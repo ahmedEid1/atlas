@@ -16,7 +16,7 @@ export async function drafterNode(state: AgentState): Promise<Partial<AgentState
     });
     const { output, traceUrl, usage } = await runLLM({
       name: "drafter",
-      model: "claude-opus-4-7",
+      tier: "smart",
       maxTokens: 16000,
       system,
       messages,
