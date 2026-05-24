@@ -11,7 +11,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://thoth.vercel.app/api/mcp/mcp"
+      "url": "https://thoth-slr.vercel.app/api/mcp/mcp"
     }
   ]
 }

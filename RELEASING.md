@@ -31,7 +31,7 @@ touches `app/api/mcp/`, `lib/mcp/`, or `app/.well-known/`. ~5 minutes.
 - [ ] **MCP Inspector full OAuth flow**:
   1. `npx @modelcontextprotocol/inspector`
   2. Set transport to "Streamable HTTP"
-  3. URL: `https://thoth.vercel.app/api/mcp/mcp`
+  3. URL: `https://thoth-slr.vercel.app/api/mcp/mcp`
   4. Click "Connect" — browser pops Clerk sign-in
   5. Sign in / sign up
   6. Expect: 3 tools appear in the left pane
@@ -43,7 +43,7 @@ touches `app/api/mcp/`, `lib/mcp/`, or `app/.well-known/`. ~5 minutes.
 
 - [ ] **Claude Desktop install** (proves the recruiter-demo path works):
   1. Claude Desktop → Settings → Developer → Edit Config → add an MCP server
-     pointing at `https://thoth.vercel.app/api/mcp/mcp`
+     pointing at `https://thoth-slr.vercel.app/api/mcp/mcp`
   2. Restart Claude Desktop
   3. Sign in via the browser pop
   4. In a new conversation, ask: "List my Thoth reviews"

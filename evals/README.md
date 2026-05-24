@@ -2,7 +2,7 @@
 
 10 golden SLR questions in YAML; a runner that drives Thoth's M3+M4a
 LangGraph headlessly per question; 4 metrics; CI gate at >10% regression;
-public dashboard at https://thoth.vercel.app/evals.
+public dashboard at https://thoth-slr.vercel.app/evals.
 
 ## Live eval runs — current status
 

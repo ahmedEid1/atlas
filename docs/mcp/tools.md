@@ -2,7 +2,7 @@
 
 Thoth's MCP server exposes 3 read-only tools over your Thoth reviews.
 
-Install URL: `https://thoth.vercel.app/api/mcp/mcp`
+Install URL: `https://thoth-slr.vercel.app/api/mcp/mcp`
 Registry entry: [`io.github.ahmedEid1/thoth`](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) on the official MCP Registry.
 
 All tools require an OAuth 2.1 access token from Clerk (your MCP client

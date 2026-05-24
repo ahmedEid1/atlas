@@ -4,7 +4,7 @@
 
 > *Named for Thoth, ancient Egypt's ibis-headed god of writing and scribes — the divine patron of the work this tool automates.*
 
-**Live app:** https://thoth.vercel.app · **Public evals:** https://thoth.vercel.app/evals · **MCP endpoint:** `https://thoth.vercel.app/api/mcp/mcp`
+**Live app:** https://thoth-slr.vercel.app · **Public evals:** https://thoth-slr.vercel.app/evals · **MCP endpoint:** `https://thoth-slr.vercel.app/api/mcp/mcp`
 
 Thoth turns a research question and a corpus of PDFs into an evidence-grounded literature review. A multi-step LangGraph agent (planner → retriever → assessor → drafter → critic) reads the papers, drafts the review, and runs a `cite_check` post-pass that verifies every cited claim against the source paper — flagging hallucinated citations before the user reads the draft.
 
@@ -18,8 +18,8 @@ Thoth turns a research question and a corpus of PDFs into an evidence-grounded l
 
 | | |
 |---|---|
-| **Live app** | [thoth.vercel.app](https://thoth.vercel.app) (Clerk sign-in) |
-| **Public eval dashboard** | [`/evals`](https://thoth.vercel.app/evals) — recall/precision/faithfulness/coverage over a versioned golden set |
+| **Live app** | [thoth-slr.vercel.app](https://thoth-slr.vercel.app) (Clerk sign-in) |
+| **Public eval dashboard** | [`/evals`](https://thoth-slr.vercel.app/evals) — recall/precision/faithfulness/coverage over a versioned golden set |
 | **Official MCP Registry entry** | [`io.github.ahmedEid1/thoth`](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) — `status: active` |
 | **Tests** | 199 unit + 3 live e2e MCP smoke checks, all green; tsc + lint clean |
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
@@ -36,7 +36,7 @@ Thoth turns a research question and a corpus of PDFs into an evidence-grounded l
 
 ## Connect via MCP
 
-Thoth ships an authenticated MCP server at `https://thoth.vercel.app/api/mcp/mcp` — paste this URL into claude.ai (Pro/Max), Claude Desktop, Cursor, or any MCP-compatible client. OAuth flow runs in your browser (powered by Clerk + Dynamic Client Registration); you never copy-paste a token.
+Thoth ships an authenticated MCP server at `https://thoth-slr.vercel.app/api/mcp/mcp` — paste this URL into claude.ai (Pro/Max), Claude Desktop, Cursor, or any MCP-compatible client. OAuth flow runs in your browser (powered by Clerk + Dynamic Client Registration); you never copy-paste a token.
 
 **Listed in the official [MCP Registry](https://registry.modelcontextprotocol.io)** as `io.github.ahmedEid1/thoth`. Verify independently with:
 
@@ -95,7 +95,7 @@ See [`.env.example`](.env.example) for the full env-var list. Non-obvious ones: 
 
 ```bash
 pnpm test                                                                # 199 unit/integration tests
-PLAYWRIGHT_BASE_URL=https://thoth.vercel.app pnpm playwright test tests/e2e/mcp-smoke.spec.ts  # 3 live e2e
+PLAYWRIGHT_BASE_URL=https://thoth-slr.vercel.app pnpm playwright test tests/e2e/mcp-smoke.spec.ts  # 3 live e2e
 pnpm tsx scripts/verify-mcp-audit.ts                                     # spot-check the McpCall audit log
 ```
 
