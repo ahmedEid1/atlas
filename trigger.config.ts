@@ -35,7 +35,8 @@ import { config as dotenvConfig } from "dotenv";
  * NOT included on purpose:
  *   - TRIGGER_PROJECT_REF / TRIGGER_SECRET_KEY — CLI-only credentials,
  *     the workers don't read them.
- *   - DEMO_TEMPLATE_PROJECT_ID — only used by /api/demo/start in the web app.
+ *   - DEMO_TEMPLATE_PROJECT_ID — dormant, only referenced by the kept-for-
+ *     potential-re-enable `lib/demo/clone-review.ts`; not on any active path.
  *   - LLM_PROVIDER — pinned per environment in Trigger.dev project settings,
  *     so the dev default ("groq") doesn't accidentally override prod.
  *   - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY — web-only; workers don't render UI.

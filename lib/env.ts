@@ -35,9 +35,11 @@ const envSchema = z.object({
   LANGFUSE_SECRET_KEY: z.string().min(1),
   LANGFUSE_HOST: z.string().url(),
 
-  // Optional: the canonical Project id whose data the /api/demo/start
-  // endpoint clones into each new guest account. If unset, the demo
-  // button returns 503 with a clear error.
+  // Retained for the dormant `lib/demo/clone-review.ts` helper kept in
+  // the tree for potential future re-enable. Not on the current code
+  // path — `/api/demo/start` lands guests on an empty dashboard. Safe
+  // to leave unset; safe to remove the helper + this var entirely if
+  // the clone flow stays retired through V1.
   DEMO_TEMPLATE_PROJECT_ID: z.string().optional(),
 
   // Optional: salt used to hash client IPs before they're used as keys in

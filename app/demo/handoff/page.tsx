@@ -137,7 +137,7 @@ function DemoHandoffInner() {
             />
             <p className="eyebrow text-[var(--thoth-stone)]">Preparing your demo</p>
             <p className="text-sm text-[var(--thoth-stone)] max-w-xs">
-              Signing you into a sample-data guest account.
+              Signing you into an anonymous guest account.
             </p>
           </div>
         )}
