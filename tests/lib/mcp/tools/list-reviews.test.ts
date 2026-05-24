@@ -11,7 +11,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("listReviews", () => {
   it("returns reviews for the caller's projects only", async () => {
-    (db.run.findMany as any).mockResolvedValue([
+    vi.mocked(db.run.findMany).mockResolvedValue([
       {
         id: "r1", projectId: "p1", status: "COMPLETED",
         question: "q1",
@@ -21,7 +21,7 @@ describe("listReviews", () => {
         project: { id: "p1", title: "ProjectOne" },
         _count: { claims: 12, claimChecks: 10 },
       },
-    ]);
+    ] as never);
     const res = await listReviews({}, { userId: "u1", clerkId: "c1" });
     expect(db.run.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { project: { ownerId: "u1" } },
@@ -38,13 +38,13 @@ describe("listReviews", () => {
   });
 
   it("returns empty array for new user", async () => {
-    (db.run.findMany as any).mockResolvedValue([]);
+    vi.mocked(db.run.findMany).mockResolvedValue([] as never);
     const res = await listReviews({}, { userId: "u1", clerkId: "c1" });
     expect(res.reviews).toEqual([]);
   });
 
   it("handles null completedAt and null scores for in-progress runs", async () => {
-    (db.run.findMany as any).mockResolvedValue([
+    vi.mocked(db.run.findMany).mockResolvedValue([
       {
         id: "r2", projectId: "p1", status: "PLANNING",
         question: "q", createdAt: new Date("2026-05-24T00:00:00Z"),
@@ -52,7 +52,7 @@ describe("listReviews", () => {
         project: { id: "p1", title: "Pending" },
         _count: { claims: 0, claimChecks: 0 },
       },
-    ]);
+    ] as never);
     const res = await listReviews({}, { userId: "u1", clerkId: "c1" });
     expect(res.reviews[0]!.completedAt).toBeNull();
     expect(res.reviews[0]!.critiqueScore).toBeNull();

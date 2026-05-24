@@ -15,14 +15,14 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("getCitationAudit", () => {
   it("returns per-claim verdicts and aggregates for an owned review", async () => {
-    (db.run.findFirst as any).mockResolvedValue({
+    vi.mocked(db.run.findFirst).mockResolvedValue({
       id: "r1", faithfulnessScore: 0.83,
-    });
-    (db.claimCheck.findMany as any).mockResolvedValue([
+    } as never);
+    vi.mocked(db.claimCheck.findMany).mockResolvedValue([
       { paperId: "p1", claim: "A claim", verdict: "SUPPORTED", reason: "found in page 3", paperExcerpt: "supporting span" },
       { paperId: "p2", claim: "Another", verdict: "UNSUPPORTED", reason: "not found", paperExcerpt: null },
       { paperId: "p3", claim: "Unclear", verdict: "UNCLEAR", reason: "ambiguous", paperExcerpt: null },
-    ]);
+    ] as never);
 
     const res = await getCitationAudit(
       { reviewId: "r1" },
@@ -45,8 +45,8 @@ describe("getCitationAudit", () => {
   });
 
   it("returns empty claims array when cite_check has not run yet", async () => {
-    (db.run.findFirst as any).mockResolvedValue({ id: "r1", faithfulnessScore: null });
-    (db.claimCheck.findMany as any).mockResolvedValue([]);
+    vi.mocked(db.run.findFirst).mockResolvedValue({ id: "r1", faithfulnessScore: null } as never);
+    vi.mocked(db.claimCheck.findMany).mockResolvedValue([] as never);
 
     const res = await getCitationAudit({ reviewId: "r1" }, { userId: "u1", clerkId: "c1" });
 
@@ -58,7 +58,7 @@ describe("getCitationAudit", () => {
   });
 
   it("throws NotFoundError when review is unowned", async () => {
-    (db.run.findFirst as any).mockResolvedValue(null);
+    vi.mocked(db.run.findFirst).mockResolvedValue(null as never);
     await expect(getCitationAudit(
       { reviewId: "r_other" },
       { userId: "u1", clerkId: "c1" },

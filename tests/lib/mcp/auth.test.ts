@@ -22,9 +22,9 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("resolveMcpUser", () => {
   it("returns Atlas User.id when JWT is valid and user exists", async () => {
-    (auth as any).mockResolvedValue({ tokenType: "oauth_token" });
-    (verifyClerkToken as any).mockResolvedValue({ token: "t", clientId: "c", scopes: ["profile","email"], extra: { userId: "user_clerk_abc" } });
-    (db.user.findUnique as any).mockResolvedValue({ id: "atlas_user_xyz", clerkId: "user_clerk_abc" });
+    vi.mocked(auth).mockResolvedValue({ tokenType: "oauth_token" } as never);
+    vi.mocked(verifyClerkToken).mockResolvedValue({ token: "t", clientId: "c", scopes: ["profile","email"], extra: { userId: "user_clerk_abc" } } as never);
+    vi.mocked(db.user.findUnique).mockResolvedValue({ id: "atlas_user_xyz", clerkId: "user_clerk_abc" } as never);
 
     const ctx = await resolveMcpUser("fake-jwt");
 
@@ -32,23 +32,23 @@ describe("resolveMcpUser", () => {
   });
 
   it("throws McpAuthError when verifyClerkToken returns null subject", async () => {
-    (auth as any).mockResolvedValue({});
-    (verifyClerkToken as any).mockResolvedValue({ token: "t", clientId: "c", scopes: [], extra: {} });
+    vi.mocked(auth).mockResolvedValue({} as never);
+    vi.mocked(verifyClerkToken).mockResolvedValue({ token: "t", clientId: "c", scopes: [], extra: {} } as never);
 
     await expect(resolveMcpUser("bad-jwt")).rejects.toBeInstanceOf(McpAuthError);
   });
 
   it("throws McpAuthError when local User row is missing (webhook race)", async () => {
-    (auth as any).mockResolvedValue({});
-    (verifyClerkToken as any).mockResolvedValue({ token: "t", clientId: "c", scopes: ["profile","email"], extra: { userId: "user_clerk_new" } });
-    (db.user.findUnique as any).mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue({} as never);
+    vi.mocked(verifyClerkToken).mockResolvedValue({ token: "t", clientId: "c", scopes: ["profile","email"], extra: { userId: "user_clerk_new" } } as never);
+    vi.mocked(db.user.findUnique).mockResolvedValue(null as never);
 
     await expect(resolveMcpUser("jwt")).rejects.toBeInstanceOf(McpAuthError);
   });
 
   it("throws McpAuthError when verifyClerkToken throws", async () => {
-    (auth as any).mockResolvedValue({});
-    (verifyClerkToken as any).mockRejectedValue(new Error("expired"));
+    vi.mocked(auth).mockResolvedValue({} as never);
+    vi.mocked(verifyClerkToken).mockRejectedValue(new Error("expired") as never);
 
     await expect(resolveMcpUser("expired-jwt")).rejects.toBeInstanceOf(McpAuthError);
   });

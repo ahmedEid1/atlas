@@ -15,14 +15,14 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("getReviewDraft", () => {
   it("returns draft for an owned, completed review", async () => {
-    (db.run.findFirst as any).mockResolvedValue({
+    vi.mocked(db.run.findFirst).mockResolvedValue({
       id: "r1", question: "q", status: "COMPLETED",
       draft: "## Review\n\nIntroduction with [paper_1].",
       critiqueScore: 0.9, faithfulnessScore: 0.88,
       completedAt: new Date("2026-05-24T12:00:00Z"),
       project: { ownerId: "u1" },
-    });
-    (db.runStep.count as any).mockResolvedValue(2);
+    } as never);
+    vi.mocked(db.runStep.count).mockResolvedValue(2 as never);
 
     const res = await getReviewDraft(
       { reviewId: "r1" },
@@ -45,7 +45,7 @@ describe("getReviewDraft", () => {
   });
 
   it("throws NotFoundError when the review is owned by someone else", async () => {
-    (db.run.findFirst as any).mockResolvedValue(null);
+    vi.mocked(db.run.findFirst).mockResolvedValue(null as never);
     await expect(getReviewDraft(
       { reviewId: "r_other" },
       { userId: "u1", clerkId: "c1" },
@@ -53,7 +53,7 @@ describe("getReviewDraft", () => {
   });
 
   it("throws NotFoundError when reviewId does not exist", async () => {
-    (db.run.findFirst as any).mockResolvedValue(null);
+    vi.mocked(db.run.findFirst).mockResolvedValue(null as never);
     await expect(getReviewDraft(
       { reviewId: "missing" },
       { userId: "u1", clerkId: "c1" },
@@ -61,11 +61,11 @@ describe("getReviewDraft", () => {
   });
 
   it("throws NotFoundError when run exists but has no draft yet", async () => {
-    (db.run.findFirst as any).mockResolvedValue({
+    vi.mocked(db.run.findFirst).mockResolvedValue({
       id: "r1", question: "q", status: "RUNNING",
       draft: null, critiqueScore: null, faithfulnessScore: null,
       completedAt: null, project: { ownerId: "u1" },
-    });
+    } as never);
     await expect(getReviewDraft(
       { reviewId: "r1" },
       { userId: "u1", clerkId: "c1" },

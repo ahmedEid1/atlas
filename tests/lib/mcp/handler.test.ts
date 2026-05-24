@@ -15,7 +15,7 @@ const echoOutput = z.object({ echoed: z.string() });
 
 describe("mcpTool wrapper", () => {
   it("runs the handler on valid input, logs OK, returns MCP content", async () => {
-    (checkRateLimit as any).mockResolvedValue({ ok: true });
+    vi.mocked(checkRateLimit).mockResolvedValue({ ok: true } as never);
     const tool = mcpTool({
       name: "echo",
       inputSchema: echoInput,
@@ -31,9 +31,9 @@ describe("mcpTool wrapper", () => {
   });
 
   it("returns rate_limited error without invoking handler", async () => {
-    (checkRateLimit as any).mockResolvedValue({
+    vi.mocked(checkRateLimit).mockResolvedValue({
       ok: false, retryAfter: 60, errorCode: "rate_limited",
-    });
+    } as never);
     const handlerFn = vi.fn();
     const tool = mcpTool({
       name: "echo", inputSchema: echoInput, outputSchema: echoOutput,
@@ -49,11 +49,12 @@ describe("mcpTool wrapper", () => {
   });
 
   it("returns invalid_input on Zod failure", async () => {
-    (checkRateLimit as any).mockResolvedValue({ ok: true });
+    vi.mocked(checkRateLimit).mockResolvedValue({ ok: true } as never);
     const tool = mcpTool({
       name: "echo", inputSchema: echoInput, outputSchema: echoOutput,
       handler: async () => ({ echoed: "x" }),
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const res = await tool({ msg: 42 } as any, { userId: "u1", clerkId: "c1" });
     expect(res.isError).toBe(true);
     expect(logMcpCall).toHaveBeenCalledWith(expect.objectContaining({
@@ -62,7 +63,7 @@ describe("mcpTool wrapper", () => {
   });
 
   it("returns generic internal on unknown error (does not leak message)", async () => {
-    (checkRateLimit as any).mockResolvedValue({ ok: true });
+    vi.mocked(checkRateLimit).mockResolvedValue({ ok: true } as never);
     const tool = mcpTool({
       name: "echo", inputSchema: echoInput, outputSchema: echoOutput,
       handler: async () => { throw new Error("secret stack trace contents"); },
@@ -77,7 +78,7 @@ describe("mcpTool wrapper", () => {
   });
 
   it("returns not_found when handler throws an Error with name=NotFoundError", async () => {
-    (checkRateLimit as any).mockResolvedValue({ ok: true });
+    vi.mocked(checkRateLimit).mockResolvedValue({ ok: true } as never);
     const tool = mcpTool({
       name: "get", inputSchema: echoInput, outputSchema: echoOutput,
       handler: async () => {

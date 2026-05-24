@@ -69,7 +69,7 @@ describe("logMcpCall", () => {
   });
 
   it("does NOT throw when db.create fails", async () => {
-    (db.mcpCall.create as any).mockRejectedValue(new Error("DB down"));
+    vi.mocked(db.mcpCall.create).mockRejectedValue(new Error("DB down") as never);
     await expect(logMcpCall({
       userId: "u1", toolName: "list_reviews", input: {},
       status: "OK", latencyMs: 1,

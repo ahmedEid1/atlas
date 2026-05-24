@@ -11,40 +11,40 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("checkRateLimit", () => {
   it("returns { ok: true } when all counters are well below their caps", async () => {
-    (db.mcpCall.count as any).mockResolvedValue(0);
+    vi.mocked(db.mcpCall.count).mockResolvedValue(0 as never);
     const res = await checkRateLimit("u1", "list_reviews");
     expect(res).toEqual({ ok: true });
   });
 
   it("returns { ok: false, retryAfter } when per-minute cap is hit", async () => {
-    (db.mcpCall.count as any)
-      .mockResolvedValueOnce(RATE_LIMITS.perMinute)      // all-tools/min
-      .mockResolvedValueOnce(0)                          // per-tool/min
-      .mockResolvedValueOnce(0);                         // daily
+    vi.mocked(db.mcpCall.count)
+      .mockResolvedValueOnce(RATE_LIMITS.perMinute as never)      // all-tools/min
+      .mockResolvedValueOnce(0 as never)                          // per-tool/min
+      .mockResolvedValueOnce(0 as never);                         // daily
     const res = await checkRateLimit("u1", "list_reviews");
     expect(res).toEqual({ ok: false, retryAfter: 60, errorCode: "rate_limited" });
   });
 
   it("returns { ok: false } when per-tool cap is hit", async () => {
-    (db.mcpCall.count as any)
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(RATE_LIMITS.perToolPerMinute)
-      .mockResolvedValueOnce(0);
+    vi.mocked(db.mcpCall.count)
+      .mockResolvedValueOnce(0 as never)
+      .mockResolvedValueOnce(RATE_LIMITS.perToolPerMinute as never)
+      .mockResolvedValueOnce(0 as never);
     const res = await checkRateLimit("u1", "list_reviews");
     expect(res).toEqual({ ok: false, retryAfter: 60, errorCode: "rate_limited" });
   });
 
   it("returns { ok: false } when daily cap is hit", async () => {
-    (db.mcpCall.count as any)
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(RATE_LIMITS.perDay);
+    vi.mocked(db.mcpCall.count)
+      .mockResolvedValueOnce(0 as never)
+      .mockResolvedValueOnce(0 as never)
+      .mockResolvedValueOnce(RATE_LIMITS.perDay as never);
     const res = await checkRateLimit("u1", "list_reviews");
     expect(res).toEqual({ ok: false, retryAfter: 60, errorCode: "rate_limited" });
   });
 
   it("counts ERROR rows alongside OK rows toward the limit", async () => {
-    (db.mcpCall.count as any).mockResolvedValue(0);
+    vi.mocked(db.mcpCall.count).mockResolvedValue(0 as never);
     await checkRateLimit("u1", "list_reviews");
     // First call: per-minute (no status filter)
     expect(db.mcpCall.count).toHaveBeenNthCalledWith(1, {
@@ -54,7 +54,7 @@ describe("checkRateLimit", () => {
       }),
     });
     // The where clause must NOT include a status filter
-    const firstCall = (db.mcpCall.count as any).mock.calls[0][0];
-    expect(firstCall.where.status).toBeUndefined();
+    const firstCall = vi.mocked(db.mcpCall.count).mock.calls[0]![0]!;
+    expect(firstCall.where!.status).toBeUndefined();
   });
 });

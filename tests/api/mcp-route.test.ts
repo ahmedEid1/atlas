@@ -48,13 +48,13 @@ describe("POST /api/mcp/[transport]", () => {
   });
 
   it("returns the 3 registered tools on tools/list with a valid JWT", async () => {
-    (verifyClerkToken as any).mockResolvedValue({
+    vi.mocked(verifyClerkToken).mockResolvedValue({
       token: "good-jwt",
       clientId: "client_test",
       scopes: ["profile", "email"],
       extra: { userId: "user_c1" },
-    });
-    (db.user.findUnique as any).mockResolvedValue({ id: "u1", clerkId: "user_c1" });
+    } as never);
+    vi.mocked(db.user.findUnique).mockResolvedValue({ id: "u1", clerkId: "user_c1" } as never);
 
     const res = await POST(post(
       { jsonrpc: "2.0", id: 1, method: "tools/list" },
@@ -67,7 +67,7 @@ describe("POST /api/mcp/[transport]", () => {
     const dataLine = raw.split("\n").find((l) => l.startsWith("data:"));
     expect(dataLine, `expected an SSE data: line in response, got:\n${raw}`).toBeDefined();
     const body = JSON.parse(dataLine!.slice(5).trim());
-    expect(body.result.tools.map((t: any) => t.name).sort()).toEqual(
+    expect(body.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(
       ["get_citation_audit", "get_review_draft", "list_reviews"],
     );
   });
