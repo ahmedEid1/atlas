@@ -1,0 +1,15 @@
+# pnpm 10+ moved per-project settings (including `overrides`) out of
+# package.json's "pnpm" field into this file. Even single-package
+# projects need this file for those settings, with `packages: ["."]`
+# declaring the (one) workspace member.
+packages:
+  - .
+
+# Pins the MCP SDK to the v1.29.x line that `mcp-handler` 1.1.0 was
+# tested against — mcp-handler's loose peer/dependency range otherwise
+# lets pnpm pick a newer SDK that drops or renames fields we use
+# (server.registerTool's `annotations` config, withMcpAuth's
+# `extra.authInfo` payload). See `app/api/mcp/[transport]/route.ts`
+# for the consumers.
+overrides:
+  '@modelcontextprotocol/sdk': '^1.29.0'
