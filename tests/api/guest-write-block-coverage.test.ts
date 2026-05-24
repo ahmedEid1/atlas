@@ -31,7 +31,6 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/agent/runs", () => ({
   createRun: vi.fn(),
-  resolveCheckpoint: vi.fn(),
 }));
 vi.mock("@/lib/object-store", () => ({ putObject: vi.fn() }));
 vi.mock("@/lib/trigger-client", () => ({
@@ -43,7 +42,7 @@ vi.mock("@/lib/trigger-client", () => ({
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { createRun, resolveCheckpoint } from "@/lib/agent/runs";
+import { createRun } from "@/lib/agent/runs";
 import { putObject } from "@/lib/object-store";
 import {
   enqueueRunReview,
@@ -180,7 +179,6 @@ describe("Guest write-block coverage (every mutation POST must short-circuit bef
       expect(db.project.create).not.toHaveBeenCalled();
       expect(db.corpusItem.create).not.toHaveBeenCalled();
       expect(createRun).not.toHaveBeenCalled();
-      expect(resolveCheckpoint).not.toHaveBeenCalled();
       expect(putObject).not.toHaveBeenCalled();
       expect(enqueueRunReview).not.toHaveBeenCalled();
       expect(enqueueParsePdf).not.toHaveBeenCalled();

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { guestWriteBlock } from "@/lib/demo/guards";
-import { resolveCheckpoint } from "@/lib/agent/runs";
 import { resolveWaitToken } from "@/lib/trigger-client";
 
 export async function POST(
@@ -28,50 +27,69 @@ export async function POST(
   const reason = body.reason ?? "rejected";
   const decisionPayload = { approved: false, rejectionReason: reason };
 
-  // Atomic transition (PENDING -> REJECTED). A null return means another
-  // concurrent caller already resolved this checkpoint; we MUST NOT call
-  // resolveWaitToken with a fresh payload in that case — Trigger.dev's
-  // wait.completeToken is not idempotent across different payloads. But
-  // a null can also mean a prior attempt updated the DB row and then
-  // crashed before completing the wait token — see F2 recovery below.
-  const resolved = await resolveCheckpoint({
-    checkpointId: cpId,
-    status: "REJECTED",
-    decisionPayload,
-    rejectionReason: reason,
-  });
-  if (resolved === null) {
-    // F2.2: Recovery path. If a prior attempt set status but failed to
-    // deliver the wait token (Trigger outage between the DB update and
-    // resolveWaitToken), the row will still have a non-null waitToken.
-    // Replay using the persisted decisionPayload so the agent unblocks.
-    const row = await db.humanCheckpoint.findUnique({
-      where: { id: cpId },
-      select: { waitToken: true, decisionPayload: true },
-    });
-    if (row?.waitToken) {
-      await resolveWaitToken(
-        row.waitToken,
-        (row.decisionPayload ?? {}) as Record<string, unknown>,
-      );
-      await db.humanCheckpoint.update({
-        where: { id: cpId },
-        data: { waitToken: null },
+  // F2 + F3: All three operations (PENDING -> REJECTED transition, wait-token
+  // probe, resolveWaitToken delivery, waitToken null-out) run inside a single
+  // transaction holding a per-checkpoint advisory lock. See approve/route.ts
+  // for full rationale on holding the Trigger.dev call inside the lock.
+  type ResolveResult =
+    | { status: "delivered"; recovered: false }
+    | { status: "delivered"; recovered: true }
+    | { status: "already_resolved" };
+  const result = await db.$transaction(
+    async (tx): Promise<ResolveResult> => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
+      const updated = await tx.humanCheckpoint.updateMany({
+        where: { id: cpId, status: "PENDING" },
+        data: {
+          status: "REJECTED",
+          decisionPayload,
+          rejectionReason: reason,
+          decidedAt: new Date(),
+        },
       });
-      return NextResponse.json({ ok: true, recovered: true });
-    }
-    return NextResponse.json({ error: "checkpoint_already_resolved" }, { status: 409 });
-  }
-  if (resolved.waitToken) {
-    await resolveWaitToken(resolved.waitToken, decisionPayload);
-    // F2.1: Null out the waitToken so a retry doesn't re-deliver it.
-    // Safe to use update (not updateMany) — the row is guaranteed to
-    // exist because resolveCheckpoint just updated it.
-    await db.humanCheckpoint.update({
-      where: { id: cpId },
-      data: { waitToken: null },
-    });
-  }
+      const row = await tx.humanCheckpoint.findUnique({
+        where: { id: cpId },
+        select: { waitToken: true, decisionPayload: true },
+      });
+      if (updated.count === 1) {
+        // Happy path: we won the race. Deliver with the LIVE request payload.
+        if (row?.waitToken) {
+          await resolveWaitToken(row.waitToken, decisionPayload);
+          await tx.humanCheckpoint.update({
+            where: { id: cpId },
+            data: { waitToken: null },
+          });
+        }
+        return { status: "delivered", recovered: false };
+      }
+      // updated.count === 0: a prior caller already transitioned the row.
+      if (row?.waitToken) {
+        // F2.2: Recovery — prior attempt crashed between DB update and
+        // resolveWaitToken. Replay with the PERSISTED decisionPayload
+        // (NOT the current request body).
+        await resolveWaitToken(
+          row.waitToken,
+          (row.decisionPayload ?? {}) as Record<string, unknown>,
+        );
+        await tx.humanCheckpoint.update({
+          where: { id: cpId },
+          data: { waitToken: null },
+        });
+        return { status: "delivered", recovered: true };
+      }
+      return { status: "already_resolved" };
+    },
+    { timeout: 30_000 },
+  );
 
+  if (result.status === "already_resolved") {
+    return NextResponse.json(
+      { error: "checkpoint_already_resolved" },
+      { status: 409 },
+    );
+  }
+  if (result.recovered) {
+    return NextResponse.json({ ok: true, recovered: true });
+  }
   return NextResponse.json({ ok: true });
 }

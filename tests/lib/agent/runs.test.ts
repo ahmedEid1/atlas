@@ -116,42 +116,10 @@ describe("runs helpers", () => {
     );
   });
 
-  describe("resolveCheckpoint (atomic, TOCTOU-safe)", () => {
-    it("uses a conditional updateMany gated on status: PENDING and returns the waitToken on success", async () => {
-      vi.mocked(db.humanCheckpoint.updateMany).mockResolvedValue({ count: 1 } as never);
-      vi.mocked(db.humanCheckpoint.findUnique).mockResolvedValue({ waitToken: "tk_abc" } as never);
-      const { resolveCheckpoint } = await import("@/lib/agent/runs");
-
-      const result = await resolveCheckpoint({
-        checkpointId: "cp_1",
-        status: "APPROVED",
-        decisionPayload: { approved: true } as never,
-      });
-
-      expect(result).toEqual({ waitToken: "tk_abc" });
-      expect(db.humanCheckpoint.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: "cp_1", status: "PENDING" },
-          data: expect.objectContaining({ status: "APPROVED" }),
-        }),
-      );
-    });
-
-    it("returns null (race lost) when no row matched the PENDING guard", async () => {
-      vi.mocked(db.humanCheckpoint.updateMany).mockResolvedValue({ count: 0 } as never);
-      const { resolveCheckpoint } = await import("@/lib/agent/runs");
-
-      const result = await resolveCheckpoint({
-        checkpointId: "cp_1",
-        status: "REJECTED",
-        decisionPayload: { approved: false } as never,
-        rejectionReason: "x",
-      });
-
-      expect(result).toBeNull();
-      // Must NOT fall through to findUnique — caller would otherwise resolve a wait token
-      // for a checkpoint someone else already decided.
-      expect(db.humanCheckpoint.findUnique).not.toHaveBeenCalled();
-    });
-  });
+  // resolveCheckpoint was removed: the per-checkpoint advisory-lock
+  // refactor in the approve/reject routes (see app/api/runs/[id]/
+  // checkpoints/[cpId]/{approve,reject}/route.ts) inlines the
+  // PENDING -> APPROVED/REJECTED transition + wait-token delivery inside
+  // a single transaction holding the lock, so the standalone helper is
+  // no longer needed. Coverage lives in tests/api/checkpoint-*.test.ts.
 });

@@ -124,39 +124,6 @@ export async function recordCheckpoint(args: {
   });
 }
 
-/**
- * Atomically resolve a HumanCheckpoint. Uses a conditional `updateMany`
- * gated on `status: "PENDING"` so two concurrent approve/reject calls
- * can't both succeed (TOCTOU race). Returns `null` if another caller
- * already resolved the row; callers MUST treat null as a 409 conflict
- * and skip any side effects (e.g. wait-token completion).
- *
- * `update` can't be used here because Prisma requires a unique WHERE
- * clause for `update`, and we need a compound (id + status) WHERE.
- */
-export async function resolveCheckpoint(args: {
-  checkpointId: string;
-  status: "APPROVED" | "REJECTED";
-  decisionPayload?: Prisma.InputJsonValue;
-  rejectionReason?: string;
-}): Promise<{ waitToken: string | null } | null> {
-  const result = await db.humanCheckpoint.updateMany({
-    where: { id: args.checkpointId, status: "PENDING" },
-    data: {
-      status: args.status,
-      decisionPayload: args.decisionPayload,
-      rejectionReason: args.rejectionReason ?? null,
-      decidedAt: new Date(),
-    },
-  });
-  if (result.count === 0) return null;
-  const row = await db.humanCheckpoint.findUnique({
-    where: { id: args.checkpointId },
-    select: { waitToken: true },
-  });
-  return row ? { waitToken: row.waitToken } : null;
-}
-
 export async function persistIncludedPapers(args: {
   runId: string;
   included: IncludedPaperSpec[];
