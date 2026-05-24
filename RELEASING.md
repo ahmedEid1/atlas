@@ -62,8 +62,28 @@ touches `app/api/mcp/`, `lib/mcp/`, or `app/.well-known/`. ~5 minutes.
 ## After tagging
 
 - [ ] `git tag -a v<version> -m "..."` and `git push origin v<version>`
-- [ ] Create the GitHub release with the release notes
+- [ ] `gh release create v<version> --title "..." --notes-file <file>` (or via the web UI)
 - [ ] Update `~/.claude/projects/E--2026-building-with-AI/memory/atlas_execution_state.md`
   with the new milestone row
-- [ ] (M5 only) Open a PR to `github.com/modelcontextprotocol/registry`
-  adding `atlas-research` (see registry README for entry format)
+
+## Republishing to the MCP Registry (when bumping version)
+
+The registry uses the `mcp-publisher` CLI — **not** a PR to `modelcontextprotocol/registry`.
+That repo is the registry's own source code; submitting servers happens via API.
+
+```bash
+# 1. Install (Windows; macOS/Linux: see https://github.com/modelcontextprotocol/registry releases)
+curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_windows_amd64.tar.gz" \
+  | tar xz -C /tmp mcp-publisher.exe
+
+# 2. Bump `server.json`'s "version" to match `package.json`'s new version, then:
+/tmp/mcp-publisher.exe validate                 # sanity check against the schema
+/tmp/mcp-publisher.exe login github             # device-code flow as ahmedEid1
+/tmp/mcp-publisher.exe publish                  # POSTs to registry.modelcontextprotocol.io
+
+# 3. Verify the new version is live:
+curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=atlas-research" \
+  | jq '.servers[0].server.version'
+```
+
+Namespace `io.github.ahmedEid1/atlas-research` requires logging in as **`ahmedEid1`** (capital E — namespace is case-sensitive). Description is hard-capped at 100 chars.
