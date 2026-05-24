@@ -153,6 +153,10 @@ The full design is at [`docs/superpowers/specs/thoth-design.md`](docs/superpower
 - ~~**v0.7.1** — Post-M5 hardening + ibis brand + anonymous demo~~ ✅ — Cost cap on every agent node (per-run token budget), 2-phase commit-then-deliver for HITL gates (exactly-once via Postgres advisory lock + Trigger.dev idempotent `wait.completeToken`), cron outbox + UI retry for stranded checkpoints, security headers, MCP `ToolAnnotations`, accessibility pass (skip-link, contrast, focus rings), Delapouite ibis identity + papyrus design tokens, `/api/demo/start` + `/demo/handoff` for one-click anonymous trial (no pre-cloned sample — guests build their own review)
 - **M6** (next) — 30-question real-paper golden eval set, recruiter 1-pager, public launch (HN / LinkedIn / Twitter)
 
+## Security & privacy
+
+See [`docs/security-and-privacy.md`](docs/security-and-privacy.md) for the full evidence page behind the GDPR-friendly claim: data inventory, jurisdiction of every service, retention rules, deletion paths, the auth model end-to-end, and the limits we don't pretend to have closed.
+
 ## Credits
 
 Ibis icon by [Delapouite](https://delapouite.com/) under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via [game-icons.net](https://game-icons.net/1x1/delapouite/ibis.html).
