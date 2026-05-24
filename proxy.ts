@@ -5,6 +5,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks/clerk",
+  "/api/demo/(.*)",  // sample-data entry point — anonymous, provisions guest Clerk user
   "/evals",          // public eval dashboard
   "/evals/(.*)",     // future per-question detail pages
   // MCP server has its own OAuth via withMcpAuth — must not be intercepted by
