@@ -30,10 +30,13 @@ function buildRequest(
 ): Request {
   const headers: Record<string, string> = {
     "x-forwarded-for": opts.ip ?? "203.0.113.99",
+    // `host` is needed to build the absolute redirect_url for the
+    // Clerk sign-in ticket. Node's Request constructor doesn't
+    // auto-populate it from the URL, so we set it explicitly here.
+    host: opts.host ?? "localhost",
   };
   if (opts.origin) headers.origin = opts.origin;
   if (opts.referer) headers.referer = opts.referer;
-  if (opts.host) headers.host = opts.host;
   return new Request("http://localhost/api/demo/start", {
     method: "POST",
     headers,
@@ -137,7 +140,13 @@ describe("POST /api/demo/start — happy path", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.signInUrl).toContain("ticket=tk_xyz");
-    expect(body.signInUrl).toContain("redirect_url=%2Fdashboard");
+    // redirect_url must be ABSOLUTE — Clerk resolves relative paths against
+    // its own accounts.dev subdomain, so a relative "/dashboard" would
+    // land the guest on the wrong host. The route builds the URL from the
+    // request's host header (defaults to "localhost" in this test runtime).
+    expect(body.signInUrl).toContain(
+      `redirect_url=${encodeURIComponent("http://localhost/dashboard")}`,
+    );
 
     expect(createUser).toHaveBeenCalledWith(
       expect.objectContaining({

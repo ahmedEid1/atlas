@@ -1,8 +1,24 @@
+<div align="center">
+
+<img src="docs/assets/thoth-logo.svg" alt="Thoth — sacred ibis logo" width="140" height="140" />
+
 # Thoth
 
-> Agentic systematic literature reviews with verifiable citations.
+**Agentic systematic literature reviews with verifiable citations.**
 
-> *Named for Thoth, ancient Egypt's ibis-headed god of writing and scribes — the divine patron of the work this tool automates.*
+*Named for Thoth, ancient Egypt's ibis-headed god of writing and scribes — the divine patron of the work this tool automates.*
+
+[![Live app](https://img.shields.io/badge/live-thoth--slr.vercel.app-1E3A8A?style=flat-square)](https://thoth-slr.vercel.app)
+[![Public evals](https://img.shields.io/badge/evals-public-C9A961?style=flat-square)](https://thoth-slr.vercel.app/evals)
+[![MCP Registry](https://img.shields.io/badge/MCP-registered-orange?style=flat-square)](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/tests-passing-success?style=flat-square)](#)
+[![Status](https://img.shields.io/badge/status-v0.7.0--m5-informational?style=flat-square)](#)
+[![Deploy cost](https://img.shields.io/badge/deploy-%240%2Fmo-brightgreen?style=flat-square)](#)
+
+`agentic-ai` · `langgraph` · `systematic-literature-review` · `mcp-server` · `oauth-2.1` · `next.js` · `prisma` · `trigger.dev` · `clerk` · `cite-check`
+
+</div>
 
 **Live app:** https://thoth-slr.vercel.app · **Public evals:** https://thoth-slr.vercel.app/evals · **MCP endpoint:** `https://thoth-slr.vercel.app/api/mcp/mcp`
 

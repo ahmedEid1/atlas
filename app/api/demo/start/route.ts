@@ -184,7 +184,18 @@ export async function POST(req: Request) {
       userId: clerkUser.id,
       expiresInSeconds: 60,
     });
-    const signInUrl = `${ticket.url}&redirect_url=${encodeURIComponent("/dashboard")}`;
+    // redirect_url MUST be absolute. Clerk resolves relative paths against
+    // its own ticket-handling subdomain (e.g. https://*.accounts.dev/...),
+    // not against our app — passing "/dashboard" would land the guest on
+    // the wrong host. Build the absolute URL from the request so this
+    // works across dev (localhost) and every deploy environment without
+    // hardcoding a hostname.
+    const reqHost = req.headers.get("host") ?? "";
+    const reqProto =
+      req.headers.get("x-forwarded-proto") ??
+      (reqHost.startsWith("localhost") || reqHost.startsWith("127.") ? "http" : "https");
+    const dashboardUrl = `${reqProto}://${reqHost}/dashboard`;
+    const signInUrl = `${ticket.url}&redirect_url=${encodeURIComponent(dashboardUrl)}`;
 
     return NextResponse.json(
       { signInUrl, message: "Demo provisioned. Redirect to signInUrl." },

@@ -31,16 +31,37 @@ export const metadata: Metadata = {
 };
 
 function IbisMark({ className = "" }: { className?: string }) {
-  // Inline ibis silhouette — same path family as app/icon.svg, scaled for nav.
+  // Stylized sacred ibis — round head, long down-curving beak (the iconic
+  // species marker), oval body, thin legs. Designed to read as an ibis
+  // even at 16-24px favicon scale. Same artwork as app/icon.svg.
   return (
     <svg
-      viewBox="0 0 24 24"
+      viewBox="0 0 32 32"
       className={className}
       fill="currentColor"
       aria-hidden="true"
     >
-      <path d="M16.8 5.4 C 18.2 5.4 19.3 6.5 19.3 7.9 C 19.3 8.9 18.7 9.8 17.8 10.2 C 18.4 11.0 18.6 12.0 18.3 12.9 L 22 13.6 C 21.0 14.6 18.6 14.7 16.5 14.0 C 15.0 14.0 13.6 13.3 12.7 12.2 L 12.2 14.0 C 12.0 14.7 11.8 15.4 11.4 16.0 C 10.0 18.4 7.6 20.0 5.0 20.4 L 5.0 19.2 C 7.0 18.6 8.8 17.2 9.8 15.4 C 10.5 14.2 10.8 12.8 10.7 11.4 C 10.5 9.6 11.0 7.8 12.2 6.5 C 13.4 5.2 15.0 4.6 16.6 4.8 L 16.8 5.4 Z" />
-      <circle cx="17.2" cy="7.6" r="0.7" fill="var(--thoth-papyrus, #FAF7F0)" />
+      {/* Body */}
+      <ellipse cx="11" cy="17" rx="6" ry="3.2" />
+      {/* Tail point on the left */}
+      <path d="M 5 16 L 2 17 L 5 18 Z" />
+      {/* Neck connecting body to head */}
+      <path d="M 14.5 14.5 C 16.5 12, 18 10, 19 8.5 L 20 9 C 19 11, 17.5 13.5, 15.5 16 Z" />
+      {/* Head */}
+      <circle cx="20.5" cy="8.5" r="2.4" />
+      {/* Iconic long downward-curving beak */}
+      <path
+        d="M 22 10.5 C 24 13, 26 17, 28 21.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        fill="none"
+        strokeLinecap="round"
+      />
+      {/* Eye highlight */}
+      <circle cx="20.8" cy="7.8" r="0.55" fill="var(--thoth-papyrus, #FAF7F0)" />
+      {/* Thin wading legs */}
+      <line x1="9" y1="20" x2="8" y2="27" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="12" y1="20" x2="13" y2="27" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
   );
 }
