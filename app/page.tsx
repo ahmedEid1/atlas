@@ -21,7 +21,7 @@ export default function Home() {
         <svg
           aria-hidden="true"
           viewBox="0 0 512 512"
-          className="hidden lg:block absolute top-12 right-0 w-[420px] h-[420px] text-[var(--thoth-blue)] opacity-[0.045] -mr-24 thoth-rise"
+          className="hidden lg:block absolute top-12 right-6 w-[360px] h-[360px] text-[var(--thoth-blue)] opacity-[0.05] thoth-rise"
           style={{ animationDelay: "120ms" }}
         >
           <path

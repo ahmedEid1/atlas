@@ -97,6 +97,11 @@ function wireHappyPath(opts: {
   const createUser = vi.fn().mockResolvedValue({ id: "user_clerk_xyz" });
   const deleteUser = opts.deleteUserImpl ?? vi.fn().mockResolvedValue({});
   const createSignInToken = vi.fn().mockResolvedValue({
+    // The route now reads ticket.token (handed to our /demo/handoff
+    // page) rather than ticket.url (which routed through Clerk's
+    // accounts.dev handoff). Both fields are present on the real
+    // response; the mock includes both for forward-compat.
+    token: "tk_xyz",
     url: "https://clerk.example.com/v1/tickets?ticket=tk_xyz",
   });
   vi.mocked(clerkClient).mockResolvedValue({
@@ -139,14 +144,17 @@ describe("POST /api/demo/start — happy path", () => {
     const res = await POST(buildRequest({ ip: "10.0.0.3" }));
     expect(res.status).toBe(201);
     const body = await res.json();
+    // signInUrl now points at our own /demo/handoff page (not Clerk's
+    // accounts.dev ticket URL). Clerk's ticket URL bounced dev instances
+    // to a "Welcome — Clerk cannot redirect" default-redirect page; doing
+    // the ticket consumption client-side via signIn.ticket() avoids that
+    // and gives us a branded loading state.
+    expect(body.signInUrl).toContain("/demo/handoff");
     expect(body.signInUrl).toContain("ticket=tk_xyz");
-    // redirect_url must be ABSOLUTE — Clerk resolves relative paths against
-    // its own accounts.dev subdomain, so a relative "/dashboard" would
-    // land the guest on the wrong host. The route builds the URL from the
-    // request's host header (defaults to "localhost" in this test runtime).
-    expect(body.signInUrl).toContain(
-      `redirect_url=${encodeURIComponent("http://localhost/dashboard")}`,
-    );
+    // The handoff URL must be ABSOLUTE so it works after a window.location
+    // redirect from any origin. Built from the request's host header
+    // (defaults to "localhost" in this test runtime).
+    expect(body.signInUrl).toMatch(/^http:\/\/localhost\/demo\/handoff\?ticket=/);
 
     expect(createUser).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -296,9 +304,7 @@ describe("POST /api/demo/start — origin / referer guard (production only)", ()
     expect(res.status).toBe(201);
     const body = await res.json();
     // Malicious proto rejected → falls back to "http" because host is localhost.
-    expect(body.signInUrl).toContain(
-      `redirect_url=${encodeURIComponent("http://localhost/dashboard")}`,
-    );
+    expect(body.signInUrl).toMatch(/^http:\/\/localhost\/demo\/handoff\?ticket=/);
     expect(body.signInUrl).not.toContain("attacker.example");
   });
 
@@ -320,9 +326,7 @@ describe("POST /api/demo/start — origin / referer guard (production only)", ()
     );
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.signInUrl).toContain(
-      `redirect_url=${encodeURIComponent("https://thoth.app/dashboard")}`,
-    );
+    expect(body.signInUrl).toMatch(/^https:\/\/thoth\.app\/demo\/handoff\?ticket=/);
   });
 
   it("rejects non-http/https protos (javascript:, file:) and falls back to the host heuristic", async () => {
@@ -341,9 +345,7 @@ describe("POST /api/demo/start — origin / referer guard (production only)", ()
       expect(res.status).toBe(201);
       const body = await res.json();
       // All bad protos rejected → localhost fallback wins.
-      expect(body.signInUrl).toContain(
-        `redirect_url=${encodeURIComponent("http://localhost/dashboard")}`,
-      );
+      expect(body.signInUrl).toMatch(/^http:\/\/localhost\/demo\/handoff\?ticket=/);
       _resetRateLimitForTest();
     }
   });

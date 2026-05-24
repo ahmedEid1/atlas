@@ -184,22 +184,25 @@ export async function POST(req: Request) {
       userId: clerkUser.id,
       expiresInSeconds: 60,
     });
-    // redirect_url MUST be absolute. Clerk resolves relative paths against
-    // its own ticket-handling subdomain (e.g. https://*.accounts.dev/...),
-    // not against our app — passing "/dashboard" would land the guest on
-    // the wrong host. Build the absolute URL from the request so this
-    // works across dev (localhost) and every deploy environment without
-    // hardcoding a hostname.
+
+    // Build an absolute URL to OUR handoff page. We send the ticket to
+    // /demo/handoff (a tiny client component that calls signIn.ticket()
+    // and then navigates to /dashboard) instead of redirecting the browser
+    // directly to Clerk's accounts.dev ticket URL. Why:
+    //   - Clerk's accounts.dev ticket page processes the ticket but, on
+    //     dev instances or when the destination isn't whitelisted in the
+    //     Clerk dashboard's redirect-URL settings, ignores ?redirect_url=
+    //     and bounces the user to /default-redirect ("Welcome. You are
+    //     signed in. Now, it's time to connect Clerk to your application.").
+    //   - Consuming the ticket in our own app via the SDK is the documented
+    //     pattern, works regardless of dashboard config, and lets us show a
+    //     branded loading state instead of a Clerk-flavoured handoff page.
+    //
+    // Host is needed for the absolute URL. x-forwarded-proto is sanitized
+    // because proxies may set comma-separated chains and the header is
+    // attacker-controllable on misconfigured edges; only "http"/"https"
+    // pass through, anything else falls back to the loopback heuristic.
     const reqHost = req.headers.get("host") ?? "";
-    // Sanitize x-forwarded-proto BEFORE interpolating into a URL:
-    //   - Proxies may set comma-separated chains ("https,http"); take the
-    //     first token only — string-concatenating the whole chain produces
-    //     an invalid URL like "https,http://host/dashboard".
-    //   - The header is attacker-controllable on misconfigured edges, so
-    //     values like "javascript:" or "https://attacker.example" must be
-    //     rejected outright; otherwise the redirect_url would point off-site.
-    // Anything that isn't exactly "http" or "https" falls back to the
-    // localhost/IP heuristic (http for loopback hosts, https otherwise).
     const rawProto = req.headers.get("x-forwarded-proto");
     const firstProto = rawProto?.split(",")[0]?.trim().toLowerCase();
     const isValidProto = firstProto === "http" || firstProto === "https";
@@ -208,11 +211,11 @@ export async function POST(req: Request) {
       : reqHost.startsWith("localhost") || reqHost.startsWith("127.")
         ? "http"
         : "https";
-    // Construct via URL() so the output is guaranteed well-formed and
-    // any host-injection garbage (CR/LF, embedded credentials, etc.)
-    // throws here instead of silently producing a bad redirect_url.
-    const dashboardUrl = new URL("/dashboard", `${reqProto}://${reqHost}`).toString();
-    const signInUrl = `${ticket.url}&redirect_url=${encodeURIComponent(dashboardUrl)}`;
+    // URL() construction guarantees well-formed output even if reqHost
+    // carries garbage (CR/LF, embedded credentials, etc).
+    const handoffUrl = new URL("/demo/handoff", `${reqProto}://${reqHost}`);
+    handoffUrl.searchParams.set("ticket", ticket.token);
+    const signInUrl = handoffUrl.toString();
 
     return NextResponse.json(
       { signInUrl, message: "Demo provisioned. Redirect to signInUrl." },
