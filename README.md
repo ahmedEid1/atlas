@@ -12,8 +12,6 @@ Thoth turns a research question and a corpus of PDFs into an evidence-grounded l
 
 *Claude.ai connected to Thoth via the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth). After `list_reviews` surfaces a review with faithfulness 0.13, Claude calls `get_citation_audit` and identifies all 6 unsupported claims — every one citing the same paper, with invented percentages that aren't in the source. Try it: [Connect via MCP](#connect-via-mcp).*
 
-*GIFs predate the Thoth rebrand and will be re-recorded after the URL update.*
-
 ## Verified engineering proofs
 
 | | |
@@ -54,8 +52,6 @@ See [`docs/mcp/tools.md`](docs/mcp/tools.md) for the full tool reference and [`d
 **Setting it up** in claude.ai (Pro/Max — Connectors → Add custom connector → paste the URL → OAuth via Clerk + DCR, no manual client config needed):
 
 ![Adding Thoth as a custom MCP connector in claude.ai](docs/assets/m5-mcp-setup.gif)
-
-*GIFs predate the Thoth rebrand and will be re-recorded after the URL update.*
 
 ## Stack
 
