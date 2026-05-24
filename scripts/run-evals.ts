@@ -30,11 +30,15 @@ function gitSha(): string {
 /**
  * EVAL_GOLDENS: optional CSV of golden ids (e.g. "000,001,005"). Matched against
  * each golden's leading id prefix (everything before the first "-"), so users
- * don't have to type the full slug. Unset/empty = run every golden in evals/golden/.
+ * don't have to type the full slug. Unset/empty/"all" = run every golden in
+ * evals/golden/. The explicit "all" sentinel exists because the GitHub Actions
+ * workflow can't use an empty string to mean "no filter" — empty is falsy in
+ * Actions expressions and gets swallowed by `&& || ''` ternaries (the
+ * workflow_dispatch goldens=all path used to silently fall through to smoke).
  */
 function selectGoldens<T extends { id: string }>(all: T[]): T[] {
   const raw = process.env.EVAL_GOLDENS?.trim();
-  if (!raw) return all;
+  if (!raw || raw === "all") return all;
   const wanted = new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
   return all.filter((g) => wanted.has(g.id.split("-")[0] ?? g.id));
 }
@@ -86,6 +90,7 @@ async function main(): Promise<void> {
     const run = await createRun({ projectId: seed.projectId, question: g.question });
 
     let result;
+    let timeoutHandle: NodeJS.Timeout | undefined;
     try {
       const TIMEOUT = Symbol("golden-timeout");
       const runPromise = runHeadless({
@@ -94,9 +99,18 @@ async function main(): Promise<void> {
         question: g.question,
         corpusItemIds: seed.corpusItemIds,
       });
-      const timeoutPromise = new Promise<typeof TIMEOUT>((resolve) =>
-        setTimeout(() => resolve(TIMEOUT), perGoldenTimeout),
-      );
+      // Clear the handle in `finally` so a normal completion does not leave a
+      // live timer pinning the event loop. Without the clearTimeout, every
+      // completed golden would leak a ~15-min timer; once main() returns Node
+      // would refuse to exit until they all fired, hanging the next CI step.
+      // (NB: runHeadless still keeps running in the background after a
+      // timeout — there is no AbortSignal plumbed through the LangGraph + LLM
+      // call chain. This is a deferred fix; for now the next golden's first
+      // call may briefly contend with the prior golden's lingering Mistral
+      // request. Acceptable for the smoke set's free-tier scale.)
+      const timeoutPromise = new Promise<typeof TIMEOUT>((resolve) => {
+        timeoutHandle = setTimeout(() => resolve(TIMEOUT), perGoldenTimeout);
+      });
       const raced = await Promise.race([runPromise, timeoutPromise]);
       if (raced === TIMEOUT) {
         console.error(
@@ -108,6 +122,8 @@ async function main(): Promise<void> {
     } catch (err) {
       console.error(`  ✗ run failed: ${(err as Error).message}`);
       continue;
+    } finally {
+      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
     }
 
     // Translate Thoth's CorpusItem ids back to the YAML's paper ids so metrics line up
@@ -150,6 +166,20 @@ async function main(): Promise<void> {
   await writeFile("eval-results.json", JSON.stringify({ commitSha, rows: allRows }, null, 2));
   console.log(`\n✓ Wrote eval-results.json (${allRows.length} rows)`);
   await db.$disconnect();
+
+  // Empty-sweep guard: if every selected golden failed or timed out the
+  // sweep produced zero rows. The regression checker iterates current.rows
+  // and would otherwise exit 0 on `rows: []`, falsely greenlighting a
+  // dead sweep. Fail explicitly so CI surfaces the outage instead of
+  // hiding it behind a passing checkmark.
+  if (allRows.length === 0) {
+    console.error(
+      `\n✗ Eval sweep produced zero rows from ${golden.length} selected golden(s). ` +
+        `Every run either failed or hit the per-golden walltime cap; check the logs above. ` +
+        `CI is failing this run so the dashboard regression doesn't look like a passing sweep.`,
+    );
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

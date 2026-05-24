@@ -37,7 +37,7 @@ name: evals
 #   - The full 17-golden sweep is opt-in via `workflow_dispatch` with
 #     `goldens: all` — pick that when you've added a new golden or want
 #     a fresh complete baseline and you're OK burning more Mistral quota.
-#   - Per-golden walltime cap (EVAL_GOLDEN_TIMEOUT_MS, default 8 min in
+#   - Per-golden walltime cap (EVAL_GOLDEN_TIMEOUT_MS, default 15 min in
 #     scripts/run-evals.ts) means one stuck golden no longer kills the
 #     whole run.
 
@@ -71,9 +71,12 @@ jobs:
     env:
       LLM_PROVIDER: mistral
       # The cron always runs the smoke set. workflow_dispatch can override
-      # via the `goldens` input ("smoke" | "all"). "all" passes empty, so
-      # run-evals.ts falls through to running every YAML in evals/golden/.
-      EVAL_GOLDENS: ${{ github.event_name == 'workflow_dispatch' && inputs.goldens == 'all' && '' || '000,001,002,004,005,007' }}
+      # via the `goldens` input ("smoke" | "all"). The "all" branch passes
+      # the literal string "all" because GitHub Actions expressions treat
+      # an empty string as falsy and silently fall through the `||`
+      # operator — an earlier attempt to use '' here had goldens=all
+      # silently degrade to smoke. run-evals.ts treats "all" as no filter.
+      EVAL_GOLDENS: ${{ github.event_name == 'workflow_dispatch' && inputs.goldens == 'all' && 'all' || '000,001,002,004,005,007' }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
       MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}

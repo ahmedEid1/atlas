@@ -303,9 +303,14 @@ export default async function EvalsPage() {
                   Hard regression guard.
                 </dt>
                 <dd>
-                  Any metric dropping more than 10% versus the prior
-                  baseline fails the workflow — the dashboard moves only
-                  when a real change is intended.
+                  Each metric has its own drop tolerance versus the
+                  prior baseline: the deterministic set/substring
+                  metrics (recall, precision, coverage) fail at a 10%
+                  drop, while <code>claim_faithfulness</code> — scored
+                  by an LLM judge over ~10–20 claims per golden, where a
+                  single verdict flip is 7–10 points — gets a looser
+                  20% bound. The dashboard moves only when a real
+                  change is intended.
                 </dd>
               </div>
             </dl>
