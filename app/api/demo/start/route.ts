@@ -55,13 +55,14 @@ export async function POST() {
     );
   }
 
-  // Mint a globally unique guest email. Clerk requires a unique email,
-  // and we want the prefix to make these obvious in the dashboard +
-  // make them easy to filter for the cleanup cron later. We use the
-  // `.test` TLD because it's reserved by RFC 2606 specifically for
-  // testing purposes (`.demo` isn't a real TLD and Clerk rejects it).
+  // Mint a globally unique guest email. Clerk's email validator
+  // requires a real, resolvable domain — `.demo` and `.test` (RFC 2606
+  // reserved-for-testing) are both rejected. `@example.com` IS reserved
+  // by RFC 2606 for documentation use, resolves in DNS, and is accepted
+  // by Clerk. The `guest-<12hex>-` prefix keeps these obvious in the
+  // Clerk dashboard and easy to filter for the cleanup cron later.
   const guestSlug = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
-  const email = `guest-${guestSlug}@thoth.test`;
+  const email = `thoth-guest-${guestSlug}@example.com`;
 
   const clerk = await clerkClient();
 

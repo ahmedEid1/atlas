@@ -70,7 +70,7 @@ describe("POST /api/demo/start", () => {
     // Verify the pipeline
     expect(createUser).toHaveBeenCalledWith(
       expect.objectContaining({
-        emailAddress: [expect.stringMatching(/^guest-[a-f0-9]{12}@thoth\.test$/)],
+        emailAddress: [expect.stringMatching(/^thoth-guest-[a-f0-9]{12}@example\.com$/)],
         skipPasswordRequirement: true,
         publicMetadata: { isGuest: true, source: "demo-button" },
       }),
