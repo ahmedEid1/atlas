@@ -1,0 +1,250 @@
+id: 013-llm-benchmark-contamination
+question: How prevalent is benchmark data contamination in large language model evaluations, what detection methods work, and which mitigation strategies have proven effective?
+picoc:
+  population: Large language models evaluated on public NLP and code benchmarks at any scale
+  intervention: Detection methods including n-gram matching, perplexity-based comparison, chronological analysis, and prompting-based probes; mitigation strategies including dynamic benchmarks, private encrypted benchmarks, and benchmark-free evaluation
+  comparison: Standard public-benchmark evaluation that does not account for training-test overlap
+  outcome: Estimated contamination rate per benchmark, inflated performance attributable to contamination, and post-mitigation evaluation reliability
+  context: Empirical contamination studies and a 2024 systematic survey of benchmark data contamination
+papers:
+  - id: paper_001
+    title: "Benchmark Data Contamination of Large Language Models: A Survey"
+    summary: |
+      A 2024 systematic survey (arXiv 2406.04244) catalogues benchmark-data-contamination
+      research, organising it into detection techniques and mitigation strategies. The survey
+      identifies four severity levels (semantic, information, data, label), reviews
+      matching-based, comparison-based, and prompting-based detection, and surveys mitigation
+      via data curation (private benchmarks, LiveCodeBench), data refactoring (EvoEval, DyVal),
+      and benchmark-free evaluation (TreeEval, Chatbot Arena). Estimated contamination rates
+      across recent benchmarks range from 1% to 45%.
+    markdown: |
+      # Benchmark Data Contamination of Large Language Models: A Survey
+
+      ## Abstract
+      The rapid development of Large Language Models in recent years has brought about
+      significant advancements in various tasks. However, this progress has been accompanied
+      by a growing concern: Benchmark Data Contamination (BDC). When language models
+      inadvertently incorporate evaluation benchmark information from their training data,
+      reported performance becomes inflated and unreliable. We present a systematic survey
+      that organises existing research into two main categories: detection techniques and
+      mitigation strategies, and articulates the trade-offs each entails.
+
+      ## Methodology
+      We surveyed 187 primary studies on contamination published between 2020 and early 2024.
+      Detection techniques are grouped into matching-based (n-gram overlap, exact-string
+      match), comparison-based (perplexity gap, train-vs-test accuracy gap), and
+      prompting-based (test-set slot guessing, data-contamination quiz). Mitigation strategies
+      are grouped into data curation (private benchmarks, periodic refresh), data refactoring
+      (perturbation, paraphrasing), and benchmark-free evaluation (LLM-as-judge tournaments,
+      human preference voting).
+
+      ## Findings
+      Contamination is widespread: estimated rates across recent benchmarks range from 1% to
+      45%, with larger models disproportionately benefiting from contaminated test sets.
+      Mitigation effectiveness varies sharply: EvoEval achieved 39.4% reduction in inflated
+      HumanEval performance after multi-prompt refactoring, while TreeEval achieved high
+      correlation with established leaderboards using ~45 dynamically generated questions. No
+      single strategy eliminates semantic-level contamination, and secondary contamination
+      from AIGC-generated data remains inevitable. The survey concludes it is impracticable
+      to fully remove the risks associated with contamination.
+
+      ## Limitations
+      Contamination rate estimates depend on access to training-data corpora, which is
+      unavailable for closed models. Detection methods themselves have non-zero error rates.
+      The mitigation landscape is fast-moving; estimates may be outdated within months.
+
+      ## Implications
+      Reported benchmark scores must be interpreted alongside contamination evidence,
+      especially for closed models. The survey provides the taxonomy and citation map that
+      subsequent benchmark designers and consumers rely on.
+  - id: paper_002
+    title: "NLP Evaluation in Trouble: On the Need to Measure LLM Data Contamination for each Benchmark"
+    summary: |
+      Sainz et al. (2023, EMNLP Findings) argue that classical NLP benchmark evaluation is in
+      crisis because of LLM training-test contamination. The worst case occurs when an LLM is
+      trained on the test split of a benchmark and then evaluated on it. The authors propose
+      community guidelines: every paper using public benchmarks should measure contamination,
+      and the absence of such measurement should be treated as a methodological red flag.
+      The piece galvanised the field's attention and shaped subsequent evaluation norms.
+    markdown: |
+      # NLP Evaluation in Trouble: On the Need to Measure LLM Data Contamination for each Benchmark
+
+      ## Abstract
+      In this position paper, we argue that the classical evaluation on Natural Language
+      Processing tasks using annotated benchmarks is in trouble. The worst kind of data
+      contamination happens when a Large Language Model is trained on the test split of a
+      benchmark, and then evaluated in the same benchmark. The extent of the problem is
+      unknown, as it is not straightforward to measure. Contamination causes an
+      over-estimation of the performance of a contaminated model in a target benchmark and
+      associated task with respect to their non-contaminated counterparts.
+
+      ## Methodology
+      The paper synthesises prior contamination evidence from GPT-3, GPT-4, Llama, and other
+      models, and presents a set of community recommendations. The authors propose two
+      complementary measurement protocols: (a) for open-corpus models, direct check of
+      benchmark text appearing in the training corpus; (b) for closed models, model-based
+      probes including memorisation tests and prompting probes.
+
+      ## Findings
+      Contamination is pervasive and quantifiable in principle but is rarely measured in
+      practice. The community publishes scientific conclusions that may be wrong while
+      genuinely better methods are overlooked because their non-contaminated baselines look
+      weaker. Failing to measure contamination invalidates downstream scientific conclusions.
+
+      ## Limitations
+      The paper is a position piece and does not introduce a new measurement tool. Its
+      practical impact depends on community uptake. Some claims about specific benchmarks
+      are necessarily indirect.
+
+      ## Implications
+      The work galvanised the field's attention and is widely cited as the trigger for the
+      contamination-awareness norms that subsequent benchmark releases (LiveCodeBench,
+      GAIA) adopted.
+  - id: paper_003
+    title: "Extracting Training Data from Large Language Models"
+    summary: |
+      Carlini et al. (2021, USENIX Security) demonstrate the first practical training-data
+      extraction attack on a production LLM. With only query access to GPT-2 they extract
+      hundreds of verbatim training examples including personally identifiable information,
+      IRC logs, source code, and 128-bit UUIDs, even when sequences appear only once in the
+      training data. The headline finding is that larger models are more vulnerable than
+      smaller models, providing the foundational evidence underlying every contamination
+      detection technique built around memorisation.
+    markdown: |
+      # Extracting Training Data from Large Language Models
+
+      ## Abstract
+      It has become common to publish large pre-trained language models that have been trained
+      on private datasets. We demonstrate that in such settings, an adversary can perform a
+      training data extraction attack to recover individual training examples by querying the
+      language model. We extract hundreds of verbatim text sequences from the model's training
+      data, including personally identifiable information, source code, UUIDs, and chat logs,
+      even when each extracted sequence is included in just one document in the training
+      data.
+
+      ## Methodology
+      Our attack is based on a sample-then-check pipeline. We generate a large number of
+      candidate outputs from the target model under varied sampling settings, then score
+      candidates with a membership-inference proxy combining perplexity, lowercased
+      perplexity, zlib-compressibility, and small-model-comparison. The top-ranked candidates
+      are manually verified against the public training corpus.
+
+      ## Findings
+      We successfully extracted hundreds of verbatim training examples from GPT-2 including
+      names, phone numbers, email addresses, IRC conversations, source code, and 128-bit
+      UUIDs. Larger models are more vulnerable than smaller models -- larger models memorise
+      more training data. The attack succeeds even for sequences appearing only once in the
+      training corpus, refuting the intuition that memorisation requires high duplication.
+
+      ## Limitations
+      Verification requires access to the training corpus, which is impossible for closed
+      models. The attack is computationally expensive, requiring tens of thousands of
+      generations per extracted example. Newer alignment training may reduce extraction
+      success rates.
+
+      ## Implications
+      Memorisation in modern LLMs is more prevalent than previously believed. The work
+      provides the foundational empirical evidence underlying every contamination detection
+      technique that exploits memorisation signals.
+  - id: paper_004
+    title: "Quantifying Memorization Across Neural Language Models"
+    summary: |
+      Carlini et al. (2022) systematically quantify training-data memorisation across model
+      families and sizes. They establish three log-linear relationships: memorisation
+      increases with model capacity, with training-data duplication, and with prompt context
+      length. The findings establish that memorisation is not a quirk of GPT-2 but a
+      structural property of scaled neural language models, and they inform the design of
+      every contamination detector that uses generation-recall as a signal.
+    markdown: |
+      # Quantifying Memorization Across Neural Language Models
+
+      ## Abstract
+      Large language models have been shown to memorise parts of their training data and emit
+      them under prompted generation. We quantify memorisation across model families and
+      sizes, training-data duplication, and prompt-context length, establishing how
+      memorisation scales as a structural property of modern neural language models.
+
+      ## Methodology
+      We perform a controlled study across the GPT-Neo and GPT-2 model families (six sizes
+      from 125M to 6B parameters) and a curated set of training sequences with known
+      duplication counts. Memorisation is measured by checking whether the model reproduces a
+      ground-truth continuation given a 50-token prefix. We sweep prompt-context length and
+      stratify by duplicate count to isolate each variable.
+
+      ## Findings
+      Three log-linear relationships govern memorisation. First, memorisation increases
+      significantly as models grow larger -- the slope between log-parameters and memorisation
+      rate is positive and significant across all sizes tested. Second, examples that appear
+      more frequently in training are more likely to be memorised, with a clean log-linear
+      relationship over duplication counts. Third, longer prompts trigger greater
+      memorisation, indicating that contamination probes should use longer rather than
+      shorter prefixes. Memorisation is more prevalent than previously believed.
+
+      ## Limitations
+      The study covers two open model families; closed-model behaviour may differ. The
+      ground-truth-continuation metric counts only verbatim reproduction, not paraphrased
+      regurgitation. Causal claims about why memorisation scales remain open.
+
+      ## Implications
+      The log-linear scaling result establishes memorisation as a structural property of
+      modern LLMs. It informs the design of every contamination detector that uses
+      generation-recall as a signal.
+  - id: paper_005
+    title: "LiveCodeBench: Holistic and Contamination-Free Evaluation of Large Language Models for Code"
+    summary: |
+      Jain et al. (2024) introduce LiveCodeBench, a contamination-resistant code-LLM
+      benchmark that continuously ingests problems from LeetCode, AtCoder, and Codeforces
+      contests published after a known model cut-off date. The dataset is partitioned by
+      release date so that papers can report performance only on problems known to post-date
+      a target model. This makes LiveCodeBench arguably the strongest current example of
+      mitigation by data curation -- contamination shrinks as the test set grows beyond the
+      training cut-off.
+    markdown: |
+      # LiveCodeBench: Holistic and Contamination-Free Evaluation of LLMs for Code
+
+      ## Abstract
+      Large language models applied to code have made remarkable progress on standard code
+      benchmarks. However, mounting evidence suggests that headline benchmark scores are
+      inflated by training-test contamination. We introduce LiveCodeBench, a holistic and
+      contamination-free benchmark for code LLMs that continuously ingests problems from
+      LeetCode, AtCoder, and Codeforces and partitions them by release date so that
+      contamination can be controlled by date selection.
+
+      ## Methodology
+      LiveCodeBench scrapes new contest problems weekly, paired with hidden test cases. We
+      partition problems by their first appearance date so that each model's evaluation can
+      be restricted to problems known to post-date its training cut-off. The benchmark covers
+      four sub-tasks: code generation, self-repair, code execution prediction, and test
+      output prediction.
+
+      ## Findings
+      On problems released before known model cut-offs, frontier models show inflated scores
+      consistent with contamination -- accuracy drops by 5-20 points on problems released
+      after the cut-off. The drop is sharpest on the easy and medium difficulty bands, where
+      contamination has the largest effect. LiveCodeBench's date-partitioning design
+      eliminates the contamination confound by construction, demonstrating that benchmark
+      design and not just detection can mitigate contamination.
+
+      ## Limitations
+      LiveCodeBench is contest-style and may not represent everyday software engineering.
+      The date-based contamination control is only as accurate as the publicly stated
+      training cut-off, which may be incomplete. Open competitive-programming corpora may
+      still leak indirectly.
+
+      ## Implications
+      LiveCodeBench is the strongest current example of mitigation by data curation, and the
+      date-partition design has been adopted by subsequent benchmarks. It demonstrates that
+      benchmark design and not just detection can mitigate contamination.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_005
+expectedClaims:
+  - Contamination is widespread, with estimated rates ranging from 1% to 45% across recent benchmarks
+  - Larger models memorise more training data, making them disproportionately vulnerable to contamination
+  - Failing to measure contamination invalidates downstream scientific conclusions
+  - Benchmark design and not just detection can mitigate contamination
+metadata:
+  source: "Xu et al., Benchmark Data Contamination of Large Language Models: A Survey, arXiv:2406.04244 (2024)"
+  difficulty: medium

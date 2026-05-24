@@ -1,0 +1,250 @@
+id: 005-rag-vs-finetuning-knowledge
+question: When injecting new or domain-specific knowledge into a large language model, how does retrieval-augmented generation (RAG) compare to fine-tuning in terms of accuracy, robustness on rare facts, and complementarity?
+picoc:
+  population: Large language models targeted at knowledge-intensive question answering on new, domain-specific, or long-tail factual content
+  intervention: Retrieval-augmented generation pipelines, including dense, hybrid, and stimulus-style retrieval
+  comparison: Supervised or unsupervised fine-tuning on the same target knowledge, and combinations of fine-tuning plus RAG
+  outcome: Question-answering accuracy, factuality on rare entities, training cost, and ability to learn entirely new facts
+  context: Controlled empirical studies and industry case studies conducted between 2023 and 2025
+papers:
+  - id: paper_001
+    title: "Fine-Tuning or Retrieval? Comparing Knowledge Injection in LLMs"
+    summary: |
+      Ovadia et al. (2023) compare unsupervised fine-tuning against RAG as mechanisms to inject new
+      factual knowledge into LLMs. On a curated MMLU-style knowledge benchmark and a current-events
+      benchmark, RAG consistently outperforms unsupervised fine-tuning, both for facts encountered
+      during training and entirely new facts. The authors find that LLMs struggle to acquire new
+      factual information through unsupervised fine-tuning, and that exposing them to many variations
+      of the same fact during training only partially closes the gap with RAG.
+    markdown: |
+      # Fine-Tuning or Retrieval? Comparing Knowledge Injection in LLMs
+
+      ## Abstract
+      Large language models (LLMs) encapsulate a vast amount of factual information within their
+      pre-trained weights, as evidenced by their ability to answer diverse questions across different
+      domains. However, this knowledge is inherently limited, relying heavily on the characteristics
+      of the training data. Consequently, using external datasets to incorporate new information or
+      refine the capabilities of LLMs on previously seen information poses a significant challenge.
+      In this study, we compare two common approaches: unsupervised fine-tuning and
+      retrieval-augmented generation. We evaluate both approaches on a variety of knowledge-intensive
+      tasks across different topics.
+
+      ## Methodology
+      We construct a controlled benchmark covering MMLU-style multiple-choice questions across
+      anatomy, astronomy, college biology, college chemistry, and prehistory, plus a current-events
+      benchmark of news facts post-dating model training. For each LLM we compare three conditions:
+      base model, unsupervised fine-tuning on a domain corpus, and base model plus dense retrieval
+      from the same corpus. We also study the effect of paraphrasing each fact multiple times during
+      fine-tuning.
+
+      ## Findings
+      Our findings reveal that RAG consistently outperforms unsupervised fine-tuning, both for
+      knowledge encountered during training and entirely new knowledge. Unsupervised fine-tuning
+      provides only modest gains and sometimes regresses on facts the base model already knew.
+      Exposing the model to many paraphrased variations of the same fact partially closes the gap,
+      consistent with the view that LLMs struggle to learn new factual information through naive
+      fine-tuning. RAG remains the more reliable knowledge-injection mechanism across our settings.
+
+      ## Limitations
+      The study tests unsupervised continued pre-training rather than instruction-style supervised
+      fine-tuning, which may behave differently. The current-events benchmark is small and skewed
+      toward English-language Western news. RAG quality depends on the retriever; with a weak
+      retriever the conclusion could reverse.
+
+      ## Implications
+      For teams adding fresh or domain knowledge, RAG is the default choice and unsupervised
+      fine-tuning is a poor substitute. Investment in retrieval quality typically pays off more
+      than equivalent investment in continued pre-training of the base model.
+  - id: paper_002
+    title: "RAG vs Fine-tuning: Pipelines, Tradeoffs, and a Case Study on Agriculture"
+    summary: |
+      Balaguer et al. (2024) build end-to-end RAG and fine-tuning pipelines and benchmark them on a
+      large agricultural-knowledge case study with Llama2-13B, GPT-3.5, and GPT-4. Fine-tuning alone
+      raises accuracy by over 6 percentage points, and RAG adds another 5 percentage points on top --
+      gains are cumulative. Fine-tuned models also transfer location-specific knowledge across
+      geographies, raising answer-similarity scores from 47% to 72%. The work documents both the
+      complementarity of the two techniques and the engineering effort each requires.
+    markdown: |
+      # RAG vs Fine-tuning: Pipelines, Tradeoffs, and a Case Study on Agriculture
+
+      ## Abstract
+      There are two common ways in which developers are incorporating proprietary and domain-specific
+      data when building applications of LLMs: retrieval-augmented generation and fine-tuning. RAG
+      augments the prompt with external data, while fine-tuning incorporates additional knowledge
+      into the model itself. However, the pros and cons of both approaches are not well understood.
+      In this paper, we propose a pipeline for fine-tuning and RAG, present the trade-offs of both
+      for multiple popular LLMs, including Llama2-13B, GPT-3.5, and GPT-4, and conduct a case study
+      on agricultural Q&A.
+
+      ## Methodology
+      Our pipeline consists of multiple stages, including extracting information from PDFs,
+      generating questions and answers, using them for fine-tuning, and leveraging GPT-4 for
+      evaluating the results. We test six LLMs with the RAG-only, fine-tuning-only, and combined
+      configurations on a held-out set of agricultural questions covering crop choice, irrigation,
+      and pest management across regions.
+
+      ## Findings
+      We measure metrics such as accuracy, completeness, and answer-similarity. Fine-tuning alone
+      delivered an accuracy increase of over 6 percentage points; RAG further added 5 percentage
+      points cumulatively. Fine-tuned models also showed the ability to leverage information across
+      different geographical regions, raising answer-similarity scores from 47% to 72%. The
+      combination of fine-tuning and RAG outperformed either alone on knowledge-intensive QA.
+
+      ## Limitations
+      The case study covers one vertical (agriculture) and three closed-source proprietary models
+      plus one open Llama-2 variant. The GPT-4 grader can be biased toward verbose answers.
+      Fine-tuning was supervised on synthetic QA pairs; raw-text continued pre-training was not
+      directly compared.
+
+      ## Implications
+      Combining RAG with fine-tuning beats either alone for domain-specific QA. The paper provides
+      an early industry-style template for the joint pipeline and quantifies the cumulative gains
+      practitioners can expect.
+  - id: paper_003
+    title: "Fine Tuning vs. Retrieval Augmented Generation for Less Popular Knowledge"
+    summary: |
+      Soudani et al. (2024) study how RAG and fine-tuning compare specifically on long-tail entities
+      with low Wikipedia popularity, evaluating twelve language models of varying sizes. RAG
+      substantially outperforms fine-tuning for the least-popular factual knowledge, while
+      fine-tuning boosts performance more uniformly across popularity tiers at much higher
+      computational cost. They also propose Stimulus RAG, a variant matching fine-tuning quality
+      without the cost of data augmentation or model retraining.
+    markdown: |
+      # Fine Tuning vs. Retrieval Augmented Generation for Less Popular Knowledge
+
+      ## Abstract
+      Language models memorise a vast amount of factual knowledge, exhibiting strong performance
+      across diverse tasks and domains. However, it has been observed that the performance
+      diminishes when dealing with less-popular or low-frequency concepts and entities, for example
+      in domain-specific applications. The two prominent approaches to enhance the performance of
+      LMs on low-frequent topics are retrieval-augmented generation and fine-tuning over synthetic
+      data. This paper explores and evaluates the impact of RAG and FT on customising LMs in
+      handling low-frequency entities on question answering tasks.
+
+      ## Methodology
+      We construct a benchmark stratified by Wikipedia page-view popularity (head, body, tail
+      entities) using PopQA and EntityQuestions. Twelve LMs spanning 7B to 70B parameters are
+      evaluated under four conditions: base, fine-tuning on synthetic QA pairs, dense RAG, and
+      Stimulus RAG, our proposed retrieval variant. We measure exact-match accuracy per popularity
+      tier.
+
+      ## Findings
+      RAG substantially outperforms fine-tuning particularly for the least popular factual knowledge,
+      with the largest accuracy gap on the tail tier. Fine-tuning improves performance more
+      uniformly across popularity tiers but demands significant computational resources and the
+      gains on tail entities are smaller than RAG's. Both approaches amplify with better retrievers
+      and data augmentation. Stimulus RAG matches fine-tuning effectiveness without costly
+      retraining.
+
+      ## Limitations
+      Popularity is operationalised via Wikipedia page-views, which may not reflect true frequency
+      in a target domain corpus. Synthetic QA pairs for fine-tuning are model-generated and may
+      contain hallucinated facts. The benchmark is English-language only.
+
+      ## Implications
+      For long-tail knowledge, RAG is the more cost-effective option than fine-tuning. Practitioners
+      working in domains dominated by rare entities should prioritise retriever quality over
+      additional fine-tuning passes.
+  - id: paper_004
+    title: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"
+    summary: |
+      Lewis et al. (2020) introduce the original RAG framework, combining a pre-trained seq2seq
+      generator with a dense Wikipedia retriever. RAG achieves state-of-the-art results on three
+      open-domain QA benchmarks, outperforming parametric-only baselines and task-specific
+      retrieve-and-extract systems. The paper establishes RAG as a general recipe for grounding LLM
+      generation in non-parametric memory and frames the trade-offs that later studies revisit.
+    markdown: |
+      # Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks
+
+      ## Abstract
+      Large pre-trained language models have been shown to store factual knowledge in their parameters,
+      and achieve state-of-the-art results when fine-tuned on downstream NLP tasks. However, their
+      ability to access and precisely manipulate knowledge is still limited, and hence on
+      knowledge-intensive tasks, their performance lags behind task-specific architectures. We
+      explore a general-purpose fine-tuning recipe for retrieval-augmented generation (RAG) models
+      which combine pre-trained parametric and non-parametric memory for language generation. We
+      introduce RAG models where the parametric memory is a pre-trained seq2seq model and the
+      non-parametric memory is a dense vector index of Wikipedia, accessed with a pre-trained neural
+      retriever.
+
+      ## Methodology
+      We compare two RAG formulations -- RAG-Sequence (one set of retrieved passages per
+      generation) and RAG-Token (allowing different passages per generated token) -- against
+      parametric-only baselines (BART, T5) and against retrieve-and-extract architectures (REALM,
+      DPR). Tasks include Natural Questions, TriviaQA, WebQuestions, CuratedTrec, and a generation
+      benchmark on Jeopardy questions.
+
+      ## Findings
+      RAG sets new state-of-the-art results on three open-domain QA benchmarks, outperforming both
+      parametric baselines and retrieve-and-extract pipelines. For generation tasks, RAG produces
+      more specific, diverse, and factual language than a parametric-only seq2seq baseline of the
+      same scale. The two formulations show complementary strengths, with RAG-Sequence better on
+      QA and RAG-Token better on long-form generation.
+
+      ## Limitations
+      Retrieval is over a fixed Wikipedia snapshot, so freshness depends on the underlying index.
+      The framework requires non-trivial engineering and a competent retriever to outperform
+      strong parametric baselines. The work pre-dates instruction-tuned LLMs, so the comparison
+      base is weaker than today's models.
+
+      ## Implications
+      The paper establishes RAG as a general recipe for grounding LLM generation in non-parametric
+      memory, and frames the parametric-vs-retrieval trade-off that later studies revisit. Every
+      subsequent RAG-vs-fine-tuning comparison sits in the design space this paper opened.
+  - id: paper_005
+    title: "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"
+    summary: |
+      Asai et al. (2023) introduce Self-Reflective Retrieval-Augmented Generation (Self-RAG), which
+      trains a single LM to adaptively decide when to retrieve, generate, and critique outputs via
+      special reflection tokens. Self-RAG 7B and 13B substantially outperform ChatGPT and
+      retrieval-enhanced Llama2-chat on open-domain QA, reasoning, and fact verification, with
+      stronger factuality and citation accuracy on long-form generation. The approach also exposes a
+      controllable inference-time knob for tuning the model behaviour on the fly.
+    markdown: |
+      # Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection
+
+      ## Abstract
+      Despite their remarkable capabilities, large language models often produce responses containing
+      factual inaccuracies due to their sole reliance on the parametric knowledge they encapsulate.
+      Retrieval-augmented generation (RAG) reduces such issues by augmenting LMs with retrieved
+      relevant knowledge. However, indiscriminately retrieving and incorporating a fixed number of
+      passages, regardless of whether retrieval is necessary or the passages are relevant, diminishes
+      LM versatility or can lead to unhelpful response generation. We introduce a new framework
+      called Self-Reflective Retrieval-Augmented Generation (Self-RAG) that enhances an LM's quality
+      and factuality through retrieval and self-reflection.
+
+      ## Methodology
+      Our framework trains a single arbitrary LM that adaptively retrieves passages on-demand and
+      generates and reflects on retrieved passages and its own generations using special tokens,
+      called reflection tokens. Generating reflection tokens makes the LM controllable during the
+      inference phase, enabling it to tailor its behaviour to diverse task requirements.
+
+      ## Findings
+      Experiments show that Self-RAG (7B and 13B parameters) significantly outperforms
+      state-of-the-art LLMs and retrieval-augmented models on a diverse set of tasks. Specifically,
+      Self-RAG outperforms ChatGPT and retrieval-augmented Llama2-chat on open-domain QA, reasoning,
+      and fact verification tasks, and shows significant gains in improving factuality and citation
+      accuracy for long-form generations relative to these models.
+
+      ## Limitations
+      Self-RAG requires fine-tuning data annotated with reflection tokens, which is non-trivial to
+      produce. Inference cost grows with the number of reflection turns. Adaptive retrieval can
+      mis-fire, occasionally retrieving when it shouldn't.
+
+      ## Implications
+      Self-RAG demonstrates that the choice between fine-tuning and retrieval is not exclusive: the
+      best results came from training a model whose architecture and decoder behaviour are
+      explicitly retrieval-aware. This further muddies the simple "RAG vs fine-tuning" framing.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_005
+expectedClaims:
+  - RAG consistently outperforms unsupervised fine-tuning for injecting new factual knowledge
+  - LLMs struggle to acquire new facts through naive unsupervised fine-tuning
+  - Combining RAG with fine-tuning beats either alone for domain-specific QA
+  - RAG advantage is largest on long-tail or low-popularity entities
+metadata:
+  source: Ovadia et al., Fine-Tuning or Retrieval? Comparing Knowledge Injection in LLMs, arXiv:2312.05934 (2023)
+  difficulty: hard

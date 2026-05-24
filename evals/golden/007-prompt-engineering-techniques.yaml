@@ -1,0 +1,234 @@
+id: 007-prompt-engineering-techniques
+question: Which prompt engineering techniques produce the largest measured accuracy gains on reasoning and problem-solving benchmarks, and how do techniques like chain-of-thought, self-consistency, tree-of-thoughts, and ReAct compare?
+picoc:
+  population: Pre-trained large language models prompted to perform reasoning, planning, and tool-use tasks
+  intervention: Prompt engineering techniques including chain-of-thought (CoT), self-consistency, tree-of-thoughts (ToT), ReAct, and zero-shot CoT
+  comparison: Standard direct-answer few-shot or zero-shot prompting without intermediate reasoning, search, or tool interaction
+  outcome: Accuracy on arithmetic (GSM8K, MultiArith, SVAMP), planning (Game of 24), QA (HotpotQA), and interactive decision-making (ALFWorld, WebShop) benchmarks
+  context: Empirical studies and a systematic survey of prompt engineering methods published from 2022 to 2024
+papers:
+  - id: paper_001
+    title: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"
+    summary: |
+      Wei et al. (2022) demonstrate that providing step-by-step reasoning exemplars in the prompt
+      substantially improves LLM accuracy on arithmetic, commonsense, and symbolic reasoning. A
+      540B-parameter PaLM model with eight CoT exemplars reaches state-of-the-art GSM8K accuracy
+      (56.9% vs 17.9% baseline). The effect is emergent: smaller models gain little, while models
+      above roughly 60B parameters benefit substantially. The work establishes CoT as the canonical
+      prompting baseline that all subsequent techniques are compared against.
+    markdown: |
+      # Chain-of-Thought Prompting Elicits Reasoning in Large Language Models
+
+      ## Abstract
+      We explore how generating a chain of thought -- a series of intermediate reasoning steps --
+      significantly improves the ability of large language models to perform complex reasoning. In
+      particular, we show how such reasoning abilities emerge naturally in sufficiently large
+      language models via a simple method called chain-of-thought prompting, where a few chain of
+      thought demonstrations are provided as exemplars in prompting.
+
+      ## Methodology
+      We compare standard few-shot prompting (question, answer) against chain-of-thought few-shot
+      prompting (question, reasoning chain, answer) across LaMDA, GPT-3, and PaLM on arithmetic,
+      commonsense, and symbolic reasoning benchmarks: GSM8K, SVAMP, ASDiv, AQuA, MAWPS, MultiArith,
+      CSQA, StrategyQA, Last Letter Concatenation, and Coin Flip.
+
+      ## Findings
+      Chain-of-thought prompting substantially improves arithmetic and symbolic reasoning at scale.
+      For PaLM-540B, GSM8K accuracy rises from 17.9% to 56.9%, MultiArith from 7.6% to 91.7%, and
+      SVAMP from 69.9% to 79.0%. The gains are emergent at scale: CoT hurts or barely helps models
+      below roughly 10B parameters. Manual error analysis shows that more than half of the
+      remaining GSM8K errors are minor arithmetic slips rather than reasoning failures.
+
+      ## Limitations
+      CoT depends on model scale and on careful exemplar selection. Hand-authoring high-quality
+      exemplars is labour-intensive and may not transfer across tasks. Some gains may reflect
+      benchmark contamination during pre-training.
+
+      ## Implications
+      CoT becomes the canonical prompting baseline against which all subsequent techniques are
+      compared, and the emergent-at-scale pattern reshapes thinking about model size as a
+      qualitative threshold rather than a smooth dial.
+  - id: paper_002
+    title: "Self-Consistency Improves Chain of Thought Reasoning in Language Models"
+    summary: |
+      Wang et al. (2022) propose self-consistency: sample many CoT reasoning paths under temperature
+      decoding, then majority-vote on the final answer. Self-consistency boosts GSM8K accuracy by
+      +17.9 points, SVAMP by +11.0, AQuA by +12.2, StrategyQA by +6.4, and ARC-challenge by +3.9
+      over greedy CoT. The intuition: a complex problem admits many correct routes but one correct
+      conclusion, so marginalising over reasoning paths is a strong implicit verifier.
+    markdown: |
+      # Self-Consistency Improves Chain of Thought Reasoning in Language Models
+
+      ## Abstract
+      Chain-of-thought prompting combined with pre-trained large language models has achieved
+      encouraging results on complex reasoning tasks. In this paper, we propose a new decoding
+      strategy, self-consistency, to replace the naive greedy decoding used in chain-of-thought
+      prompting. It first samples a diverse set of reasoning paths instead of only taking the
+      greedy one, and then selects the most consistent answer by marginalising out the sampled
+      reasoning paths.
+
+      ## Methodology
+      We reuse the CoT prompts of Wei et al. and switch the decoder from greedy to temperature
+      sampling, drawing typically 40 chains per problem. The final answer is chosen by majority
+      vote over chain conclusions. We evaluate across UL2, GPT-3, LaMDA, and PaLM at sizes spanning
+      0.5B to 540B parameters and over arithmetic, commonsense, and symbolic reasoning benchmarks.
+
+      ## Findings
+      Self-consistency boosts CoT performance with a striking margin: GSM8K +17.9, SVAMP +11.0,
+      AQuA +12.2, StrategyQA +6.4, ARC-challenge +3.9. Gains grow monotonically with the number of
+      sampled chains and are largest on the hardest tasks. Self-consistency is complementary to
+      both CoT and to model scale.
+
+      ## Limitations
+      Self-consistency multiplies inference cost roughly by the number of sampled chains. Majority
+      voting can be misled when the model is confidently wrong on a stereotyped problem family.
+      The method requires the answer to admit a small canonical form so votes can be tallied.
+
+      ## Implications
+      Self-consistency establishes inference-time sampling and aggregation as a reliable accuracy
+      lever, complementing CoT. It is widely cited as evidence that LLM reasoning is, in part, a
+      search-and-verify process.
+  - id: paper_003
+    title: "Tree of Thoughts: Deliberate Problem Solving with Large Language Models"
+    summary: |
+      Yao et al. (2023) generalise CoT to a tree of intermediate thoughts, with explicit search,
+      evaluation, and backtracking. On Game of 24, Tree-of-Thoughts (ToT) reaches 74% success rate
+      versus 4% for CoT. On Creative Writing and Mini Crosswords, ToT also substantially outperforms
+      CoT. The framework enables deliberate decision-making across multiple paths and demonstrates
+      that LLMs can perform search over their own reasoning when given an explicit scaffold.
+    markdown: |
+      # Tree of Thoughts: Deliberate Problem Solving with Large Language Models
+
+      ## Abstract
+      Language models are increasingly being deployed for general problem solving across a wide
+      range of tasks, but are still confined to token-level, left-to-right decision-making processes
+      during inference. This means they can fall short in tasks that require exploration, strategic
+      lookahead, or where initial decisions play a pivotal role. To surmount these challenges, we
+      introduce a new framework for language model inference, Tree of Thoughts (ToT), which
+      generalises over the popular Chain of Thought approach to prompting language models, and
+      enables exploration over coherent units of text (thoughts) that serve as intermediate steps
+      toward problem solving.
+
+      ## Methodology
+      ToT decomposes problems into thought steps, generates multiple candidate thoughts at each
+      step, evaluates them with the LLM acting as a state evaluator, and applies a search
+      algorithm (BFS or DFS) with backtracking. We evaluate on Game of 24, Creative Writing, and
+      Mini Crosswords, comparing to CoT and to self-consistency CoT baselines.
+
+      ## Findings
+      ToT enables Tree-of-Thoughts allows search and backtracking over reasoning, lifting Game of
+      24 success from 4% (CoT) to 74% (ToT), and improving Mini Crosswords accuracy roughly 4x.
+      Creative Writing is judged superior by human evaluators in 41% of paired comparisons,
+      compared with 21% for CoT. ToT's gains come at substantially higher token cost, with the
+      benchmark settings requiring 5-100x more tokens than CoT.
+
+      ## Limitations
+      ToT requires designing the thought decomposition and state evaluator per task family. The
+      search budget must be tuned, and the LLM-as-evaluator can systematically misjudge thought
+      quality. Token cost is high.
+
+      ## Implications
+      ToT extends the prompting design space from a single chain to a search graph and shows that
+      LLMs can implement classical search algorithms over their own outputs when given the right
+      scaffold. It became a major reference point for inference-time reasoning research.
+  - id: paper_004
+    title: "ReAct: Synergizing Reasoning and Acting in Language Models"
+    summary: |
+      Yao et al. (2022) propose ReAct, which interleaves natural-language reasoning traces with
+      tool-using actions in a single prompt. On HotpotQA and Fever the method mitigates
+      hallucination by querying Wikipedia, and on ALFWorld and WebShop it outperforms baselines by
+      34% and 10% absolute, respectively, using very few in-context examples. ReAct provides the
+      template for almost every later agentic-prompting framework, demonstrating that combining
+      reasoning with action calls is more reliable than either alone.
+    markdown: |
+      # ReAct: Synergizing Reasoning and Acting in Language Models
+
+      ## Abstract
+      While large language models have demonstrated impressive capabilities across tasks in language
+      understanding and interactive decision making, their abilities for reasoning (e.g.
+      chain-of-thought prompting) and acting (e.g. action plan generation) have primarily been
+      studied as separate topics. In this paper, we explore the use of LLMs to generate both
+      reasoning traces and task-specific actions in an interleaved manner, allowing for greater
+      synergy between the two: reasoning traces help the model induce, track, and update action
+      plans as well as handle exceptions, while actions allow it to interface with external sources,
+      such as knowledge bases or environments, to gather additional information.
+
+      ## Methodology
+      ReAct prompts the LLM with example trajectories of (Thought, Action, Observation) triples and
+      interfaces with a Wikipedia search tool on HotpotQA and Fever, and with environment
+      observations on ALFWorld and WebShop. We compare to chain-of-thought-only, action-only, and
+      imitation-learning baselines.
+
+      ## Findings
+      On HotpotQA and Fever, ReAct mitigates hallucination relative to CoT-only baselines and
+      improves answer accuracy by 2-5 points. On ALFWorld and WebShop, ReAct outperforms baselines
+      by 34% and 10% absolute success rate, respectively, while using only one or two in-context
+      trajectories. The combined approach is consistently more interpretable and easier to debug
+      than action-only or reasoning-only baselines.
+
+      ## Limitations
+      ReAct depends on a well-instrumented action environment with low-latency observations. Long
+      trajectories can exceed context windows. The technique was originally tuned on PaLM-540B; the
+      gains on smaller models are mixed.
+
+      ## Implications
+      ReAct establishes the modern agentic-prompting template, demonstrating that combining
+      reasoning with action calls is more reliable than either alone and providing the conceptual
+      basis for tool-using LLM agents at scale.
+  - id: paper_005
+    title: "Large Language Models are Zero-Shot Reasoners"
+    summary: |
+      Kojima et al. (2022) demonstrate that simply adding "Let's think step by step" to the prompt
+      elicits strong zero-shot reasoning. On MultiArith, accuracy rises from 17.7% to 78.7% on
+      InstructGPT, and on GSM8K from 10.4% to 40.7%. The single-phrase trigger is competitive with
+      hand-crafted few-shot CoT and shows that latent reasoning capability is already present in
+      modern instruction-tuned LLMs without task-specific exemplar crafting.
+    markdown: |
+      # Large Language Models are Zero-Shot Reasoners
+
+      ## Abstract
+      Pretrained large language models are widely used in many sub-fields of natural language
+      processing and generally known as excellent few-shot learners with task-specific exemplars.
+      Notably, chain of thought prompting, a recent technique for eliciting complex multi-step
+      reasoning through step-by-step answer examples, achieved the state-of-the-art performances in
+      arithmetics and symbolic reasoning, difficult system-2 tasks that do not follow the standard
+      scaling laws for LLMs. While these successes are often attributed to LLMs' ability for
+      few-shot learning, we show that LLMs are decent zero-shot reasoners by simply adding "Let's
+      think step by step" before each answer.
+
+      ## Methodology
+      We compare standard zero-shot prompting against zero-shot CoT (single-phrase trigger), and
+      against few-shot CoT. Models tested include InstructGPT (text-davinci-002) and PaLM 540B. The
+      evaluation spans arithmetic, symbolic reasoning, and logical reasoning.
+
+      ## Findings
+      Zero-shot CoT raises MultiArith accuracy from 17.7% to 78.7% on InstructGPT and from 25.5%
+      to 66.1% on PaLM. GSM8K accuracy rises from 10.4% to 40.7% on InstructGPT. The single-phrase
+      trigger is competitive with hand-crafted few-shot CoT on several benchmarks while being
+      task-agnostic. Zero-shot CoT via a single trigger phrase unlocks much of the CoT gain without
+      exemplars.
+
+      ## Limitations
+      Zero-shot CoT still trails carefully hand-crafted few-shot CoT on the hardest tasks. The
+      method depends on instruction-tuned base models. Results are sensitive to the exact wording
+      of the trigger phrase.
+
+      ## Implications
+      A single trigger phrase unlocks substantial reasoning capability without exemplar crafting,
+      pushing the field toward systematic prompt-template study and inspiring instruction-tuning
+      datasets that bake step-by-step reasoning into the model itself.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+  - paper_005
+expectedClaims:
+  - Chain-of-thought prompting substantially improves arithmetic and symbolic reasoning at scale
+  - Self-consistency boosts CoT performance with a striking margin on hard benchmarks
+  - Tree-of-Thoughts allows search and backtracking over reasoning, dramatically improving planning tasks
+  - ReAct combining reasoning with action calls is more reliable than either alone on tool-use tasks
+  - Zero-shot CoT via a single trigger phrase unlocks much of the CoT gain without exemplars
+metadata:
+  source: Sahoo et al., A Systematic Survey of Prompt Engineering in Large Language Models, arXiv:2402.07927 (2024)
+  difficulty: medium

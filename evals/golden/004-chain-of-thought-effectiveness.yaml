@@ -1,0 +1,200 @@
+id: 004-chain-of-thought-effectiveness
+question: How effective is chain-of-thought prompting at improving large language model reasoning, and how does its benefit depend on model scale, task type, and the availability of reasoning-tuned models?
+picoc:
+  population: Pre-trained large language models prompted to perform multi-step reasoning tasks
+  intervention: Chain-of-thought (CoT) prompting, zero-shot CoT, and self-consistency decoding
+  comparison: Standard direct-answer prompting without intermediate reasoning steps
+  outcome: Accuracy on arithmetic, symbolic, and commonsense reasoning benchmarks (GSM8K, SVAMP, MultiArith, AQuA, StrategyQA)
+  context: Survey and empirical studies of CoT-style prompting from 2022 through 2025, across non-reasoning and reasoning-tuned models
+papers:
+  - id: paper_001
+    title: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"
+    summary: |
+      Wei et al. (2022) introduce chain-of-thought (CoT) prompting, in which a few in-context examples
+      walk through the intermediate reasoning steps to a final answer. CoT substantially improves LLM
+      performance on arithmetic, commonsense, and symbolic reasoning benchmarks. Prompting a
+      540B-parameter PaLM model with just eight CoT exemplars achieves state-of-the-art accuracy on
+      GSM8K, lifting it from 17.9% (standard prompting) to 56.9% (CoT) and to 58% with a calculator.
+      Critically, CoT gains only emerge at sufficient model scale; smaller models benefit little or
+      not at all.
+    markdown: |
+      # Chain-of-Thought Prompting Elicits Reasoning in Large Language Models
+
+      ## Abstract
+      We explore how generating a chain of thought -- a series of intermediate reasoning steps --
+      significantly improves the ability of large language models to perform complex reasoning. In
+      particular, we show how such reasoning abilities emerge naturally in sufficiently large
+      language models via a simple method called chain-of-thought prompting, where a few chain of
+      thought demonstrations are provided as exemplars in prompting. Experiments on three large
+      language models show that chain-of-thought prompting improves performance on a range of
+      arithmetic, commonsense, and symbolic reasoning tasks. The empirical gains can be striking.
+      For instance, prompting a 540B-parameter language model with just eight chain of thought
+      exemplars achieves state-of-the-art accuracy on the GSM8K benchmark of math word problems,
+      surpassing even fine-tuned GPT-3 with a verifier.
+
+      ## Methodology
+      We compare standard few-shot prompting (question, answer) with chain-of-thought few-shot
+      prompting (question, reasoning chain, answer) across LaMDA, GPT-3, PaLM, and Codex on seven
+      reasoning benchmarks: GSM8K, SVAMP, ASDiv, AQuA, MAWPS, MultiArith, and a symbolic-reasoning
+      suite. We hand-author eight CoT exemplars per task and otherwise hold the prompts and decoding
+      parameters constant.
+
+      ## Findings
+      CoT improves PaLM-540B accuracy on GSM8K from 17.9% to 56.9%, on MultiArith from 7.6% to
+      91.7%, and on SVAMP from 69.9% to 79.0%. Importantly, the gains are emergent at scale: CoT
+      hurts or barely helps models below roughly 10B parameters and helps dramatically at 62B and
+      540B. Manual error analysis shows that, on GSM8K, more than half of CoT errors are minor
+      arithmetic slips rather than reasoning failures.
+
+      ## Limitations
+      CoT is an emergent capability that depends on model scale and on careful exemplar selection.
+      Hand-authoring high-quality exemplars is labour-intensive and may not transfer across tasks.
+      Some gains may reflect benchmark contamination during pre-training, which the authors do not
+      directly measure.
+
+      ## Implications
+      Chain-of-thought prompting substantially improves arithmetic and symbolic reasoning at scale,
+      establishing prompting itself as a first-class research subject. The emergent-at-scale pattern
+      also reshaped the conversation about what large models can do that small models cannot.
+  - id: paper_002
+    title: "Self-Consistency Improves Chain of Thought Reasoning in Language Models"
+    summary: |
+      Wang et al. (2022) propose self-consistency, a decoding strategy that samples a diverse set of
+      reasoning paths under CoT prompting and selects the most consistent final answer by majority
+      vote. Self-consistency lifts GSM8K accuracy by +17.9 points, SVAMP by +11.0, AQuA by +12.2,
+      StrategyQA by +6.4, and ARC-challenge by +3.9 over greedy-decoded CoT. The intuition is that a
+      complex reasoning problem admits many correct routes but typically only one correct final
+      answer, so marginalising over reasoning paths is a strong implicit verifier.
+    markdown: |
+      # Self-Consistency Improves Chain of Thought Reasoning in Language Models
+
+      ## Abstract
+      Chain-of-thought prompting combined with pre-trained large language models has achieved
+      encouraging results on complex reasoning tasks. In this paper, we propose a new decoding
+      strategy, self-consistency, to replace the naive greedy decoding used in chain-of-thought
+      prompting. It first samples a diverse set of reasoning paths instead of only taking the greedy
+      one, and then selects the most consistent answer by marginalising out the sampled reasoning
+      paths. Self-consistency leverages the intuition that a complex reasoning problem typically
+      admits multiple different ways of thinking leading to its unique correct answer.
+
+      ## Methodology
+      We use the same CoT prompts as Wei et al. and switch the decoder from greedy to temperature
+      sampling, drawing typically 40 chains per problem. The final answer is selected by majority
+      vote over chain conclusions. We evaluate across UL2, GPT-3, LaMDA, and PaLM at sizes spanning
+      0.5B to 540B parameters and over arithmetic, commonsense, and symbolic reasoning benchmarks.
+
+      ## Findings
+      Self-consistency boosts CoT performance with a striking margin: GSM8K +17.9 points, SVAMP
+      +11.0, AQuA +12.2, StrategyQA +6.4, and ARC-challenge +3.9. Gains grow monotonically with the
+      number of sampled chains and are largest on the hardest tasks. Self-consistency is
+      complementary to CoT and to model scale; it does not subsume either.
+
+      ## Limitations
+      Self-consistency multiplies inference cost roughly by the number of sampled chains, which
+      limits practical applicability. Majority voting can be misled when the model is confidently
+      wrong on a stereotyped problem family. The method requires the answer to admit a small
+      canonical form (number, label) so that votes can be tallied.
+
+      ## Implications
+      Self-consistency demonstrates that aggregating multiple reasoning paths reliably improves
+      headline reasoning benchmarks at inference time, complementing CoT. It also helped popularise
+      the notion that LLM reasoning is, in part, a search-and-verify process.
+  - id: paper_003
+    title: "Large Language Models are Zero-Shot Reasoners"
+    summary: |
+      Kojima et al. (2022) show that simply adding "Let's think step by step" to the prompt elicits
+      strong zero-shot reasoning from large LLMs, with no in-context exemplars. On MultiArith, accuracy
+      rises from 17.7% to 78.7%, and on GSM8K from 10.4% to 40.7%, with InstructGPT and PaLM-540B.
+      The result simplifies CoT to a single phrase and shows that the latent reasoning capability is
+      already present in instruction-tuned LLMs without task-specific demonstration crafting.
+    markdown: |
+      # Large Language Models are Zero-Shot Reasoners
+
+      ## Abstract
+      Pretrained large language models (LLMs) are widely used in many sub-fields of natural language
+      processing and generally known as excellent few-shot learners with task-specific exemplars.
+      Notably, chain of thought (CoT) prompting, a recent technique for eliciting complex multi-step
+      reasoning through step-by-step answer examples, achieved the state-of-the-art performances in
+      arithmetics and symbolic reasoning, difficult system-2 tasks that do not follow the standard
+      scaling laws for LLMs. While these successes are often attributed to LLMs' ability for
+      few-shot learning, we show that LLMs are decent zero-shot reasoners by simply adding "Let's
+      think step by step" before each answer.
+
+      ## Methodology
+      We compare standard zero-shot prompting against zero-shot CoT (single-phrase trigger), and
+      against few-shot CoT. Models tested include InstructGPT (text-davinci-002) and PaLM 540B. The
+      evaluation spans arithmetic (MultiArith, GSM8K, AQuA, SVAMP), symbolic reasoning (Last Letter
+      Concatenation, Coin Flip), and logical reasoning (Date Understanding, Tracking Shuffled
+      Objects).
+
+      ## Findings
+      Zero-shot CoT raises MultiArith accuracy from 17.7% to 78.7% on InstructGPT and from 25.5% to
+      66.1% on PaLM. GSM8K accuracy rises from 10.4% to 40.7% on InstructGPT. Gains are particularly
+      pronounced on symbolic reasoning, where Last Letter Concatenation accuracy rises from 0.2% to
+      57.6%. The single-phrase trigger is competitive with hand-crafted few-shot CoT on several
+      benchmarks while being task-agnostic.
+
+      ## Limitations
+      Zero-shot CoT still trails carefully hand-crafted few-shot CoT on the hardest tasks. The
+      method depends on instruction-tuned base models; pure base LMs benefit less. Results are
+      sensitive to the exact wording of the trigger phrase.
+
+      ## Implications
+      A single trigger phrase unlocks substantial reasoning capability without exemplar crafting,
+      pushing the field toward systematic prompt-template study and inspiring instruction-tuning
+      datasets that bake step-by-step reasoning into the model itself.
+  - id: paper_004
+    title: "Prompting Science Report 2: The Decreasing Value of Chain of Thought in Prompting"
+    summary: |
+      A 2025 empirical report finds that chain-of-thought prompting yields shrinking gains on modern
+      models, especially those instruction-tuned or fine-tuned with explicit reasoning traces. For
+      reasoning-tuned models, CoT delivers marginal or negligible accuracy gains while substantially
+      increasing token usage and latency. For non-reasoning models CoT still helps on hard tasks but
+      introduces greater answer variability and can flip otherwise-correct answers. The authors
+      argue that CoT's role should be reassessed as reasoning-tuned models become standard.
+    markdown: |
+      # The Decreasing Value of Chain of Thought in Prompting
+
+      ## Abstract
+      CoT is a widely adopted method for improving reasoning tasks. However, our findings reveal a
+      more nuanced picture of its effectiveness on current-generation models. We benchmark a range
+      of frontier and open-weight models on standard reasoning benchmarks with and without CoT, and
+      quantify the accuracy, latency, and cost trade-offs.
+
+      ## Methodology
+      We measure exact-match accuracy on MMLU, GSM8K, MATH, and several Big-Bench-Hard tasks under
+      two conditions: standard direct-answer prompting and an explicit CoT prompt. For each
+      condition we track output tokens, end-to-end latency, and per-call dollar cost. We separate
+      results between general (non-reasoning-tuned) and reasoning-tuned models.
+
+      ## Findings
+      For non-reasoning models, CoT typically yields modest performance improvements, especially
+      where the model does not inherently reason step by step. The technique introduces greater
+      answer variability and can occasionally cause errors on questions the model would otherwise
+      answer correctly. For reasoning-tuned models, CoT prompting delivers marginal or negligible
+      accuracy gains. In both cases, CoT demands substantially more tokens, increasing
+      computational cost and response time.
+
+      ## Limitations
+      The evaluation snapshot is a moment in time and frontier models continue to evolve. Token
+      counts depend on the specific phrasing of the CoT trigger. The benchmarks are mostly
+      English-language and academic; effects on real workflows may differ.
+
+      ## Implications
+      As reasoning capability moves inside the model via tuning, the marginal value of external CoT
+      prompting falls. Practitioners should A/B test CoT for their specific model rather than
+      assume it is universally beneficial, and should weigh the doubled token cost when serving at
+      scale.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+expectedClaims:
+  - Chain-of-thought prompting substantially improves arithmetic and symbolic reasoning at scale
+  - Self-consistency boosts CoT performance with a striking margin on hard benchmarks
+  - Zero-shot CoT via a single trigger phrase unlocks much of the gain without exemplars
+  - The marginal value of CoT shrinks on reasoning-tuned modern models
+metadata:
+  source: Yu et al., Towards Better Chain-of-Thought Prompting Strategies, arXiv:2310.04959 (2023)
+  difficulty: medium

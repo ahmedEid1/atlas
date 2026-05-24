@@ -1,0 +1,243 @@
+id: 010-rag-architecture-evolution
+question: How have retrieval-augmented generation architectures evolved from the original Lewis et al. RAG model through advanced patterns like Self-RAG and GraphRAG, and what measurable improvements have they delivered on knowledge-intensive and global-summarisation tasks?
+picoc:
+  population: Large language models applied to open-domain question answering, long-form generation, and query-focused summarisation
+  intervention: Successive RAG architectural patterns including naive single-shot RAG, modular RAG, Self-RAG with reflection tokens, and GraphRAG over LLM-extracted knowledge graphs
+  comparison: Parametric-only generation baselines and prior naive RAG configurations
+  outcome: QA accuracy, factuality and citation accuracy in long-form generation, and answer comprehensiveness on global-summarisation tasks
+  context: Empirical RAG architecture papers and surveys published between 2020 and 2024
+papers:
+  - id: paper_001
+    title: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"
+    summary: |
+      Lewis et al. (2020) introduce the original RAG framework, pairing a pre-trained seq2seq
+      generator with a dense Wikipedia retriever. RAG sets new state-of-the-art on three
+      open-domain QA benchmarks and generates more specific, diverse, and factual language than
+      parametric-only baselines. The paper introduces two formulations -- RAG-Sequence and
+      RAG-Token -- and frames the parametric-vs-non-parametric trade-off that all later RAG work
+      builds on.
+    markdown: |
+      # Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks
+
+      ## Abstract
+      Large pre-trained language models have been shown to store factual knowledge in their
+      parameters, and achieve state-of-the-art results when fine-tuned on downstream NLP tasks.
+      However, their ability to access and precisely manipulate knowledge is still limited. We
+      explore a general-purpose fine-tuning recipe for retrieval-augmented generation (RAG)
+      models which combine pre-trained parametric and non-parametric memory for language
+      generation. We introduce RAG models where the parametric memory is a pre-trained seq2seq
+      model and the non-parametric memory is a dense vector index of Wikipedia, accessed with a
+      pre-trained neural retriever.
+
+      ## Methodology
+      We compare RAG-Sequence (one set of retrieved passages per generation) and RAG-Token
+      (allowing different passages per generated token) against parametric-only baselines (BART,
+      T5) and against retrieve-and-extract architectures (REALM, DPR). Tasks include Natural
+      Questions, TriviaQA, WebQuestions, CuratedTrec, and a generation benchmark on Jeopardy
+      questions.
+
+      ## Findings
+      RAG sets state-of-the-art on three open-domain QA benchmarks, outperforming parametric
+      baselines and retrieve-and-extract pipelines. For generation tasks, RAG produces more
+      specific, diverse, and factual language than parametric-only seq2seq baselines at the same
+      scale. RAG-Sequence is stronger on QA and RAG-Token is stronger on long-form generation,
+      indicating complementary strengths from the two formulations.
+
+      ## Limitations
+      The retriever indexes a fixed Wikipedia snapshot, so freshness depends on the index. RAG
+      requires non-trivial engineering and a competent retriever to outperform strong parametric
+      baselines. The study pre-dates instruction-tuned LLMs, so the comparison base is weaker
+      than today's models.
+
+      ## Implications
+      The paper establishes RAG as the standard recipe for grounding LLM generation in external
+      memory. Every subsequent RAG architecture sits in the design space this paper opened.
+  - id: paper_002
+    title: "Retrieval-Augmented Generation for Large Language Models: A Survey"
+    summary: |
+      Gao et al. (2024) survey RAG for the LLM era, proposing the now-canonical taxonomy of Naive
+      RAG, Advanced RAG, and Modular RAG. The survey organises retrieval, generation, and
+      augmentation techniques across these paradigms and catalogues evaluation methods. The
+      tripartite framework is widely adopted as a vocabulary for describing modern RAG systems
+      and underpins the architectural progression studied by later empirical work.
+    markdown: |
+      # Retrieval-Augmented Generation for Large Language Models: A Survey
+
+      ## Abstract
+      Large language models showcase impressive capabilities but encounter challenges like
+      hallucination, outdated knowledge, and non-transparent, untraceable reasoning processes.
+      Retrieval-Augmented Generation (RAG) has emerged as a promising solution by incorporating
+      knowledge from external databases. This survey introduces RAG paradigms (Naive, Advanced,
+      Modular), the tripartite foundation of retrieval, generation, and augmentation techniques,
+      and current state-of-the-art technologies within each component.
+
+      ## Methodology
+      We systematically reviewed the literature on RAG for LLMs from 2020 to early 2024,
+      organising 320 primary studies into the Naive / Advanced / Modular taxonomy. We catalogue
+      evaluation frameworks (RAGAS, ARES, TruLens) and benchmarks used in the field.
+
+      ## Findings
+      Naive RAG (single-shot dense retrieval, fixed top-k, single generation pass) is the simplest
+      pattern but suffers from precision, recall, and over-reliance issues. Advanced RAG adds
+      pre-retrieval and post-retrieval optimisations such as query rewriting, reranking, and
+      passage compression. Modular RAG decomposes the pipeline into swappable components (search,
+      memory, fusion, predict) enabling task-specific configurations. Architectural complexity
+      generally buys quality at the cost of latency and engineering effort.
+
+      ## Limitations
+      The Naive/Advanced/Modular boundaries are sometimes blurry; systems often combine elements
+      across paradigms. The survey is a snapshot of a fast-moving field. Quantitative
+      cross-paper comparison is hampered by inconsistent evaluation.
+
+      ## Implications
+      The Naive / Advanced / Modular taxonomy has become the standard vocabulary for describing
+      RAG systems and underpins the architectural progression studied by subsequent empirical
+      work.
+  - id: paper_003
+    title: "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"
+    summary: |
+      Asai et al. (2023) train a single LM to adaptively decide when to retrieve, generate with
+      retrieved evidence, and critique its own outputs via special reflection tokens. Self-RAG 7B
+      and 13B substantially outperform ChatGPT and retrieval-enhanced Llama2-chat on open-domain
+      QA, reasoning, and fact verification, with substantially better factuality and citation
+      accuracy on long-form generation. The reflection tokens also provide a controllable
+      inference-time knob for adapting model behaviour.
+    markdown: |
+      # Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection
+
+      ## Abstract
+      Despite their remarkable capabilities, large language models often produce responses
+      containing factual inaccuracies due to their sole reliance on parametric knowledge. RAG
+      reduces such issues by augmenting LMs with retrieved relevant knowledge. However,
+      indiscriminately retrieving a fixed number of passages regardless of necessity or relevance
+      can diminish LM versatility or lead to unhelpful generation. We introduce Self-Reflective
+      Retrieval-Augmented Generation (Self-RAG) that enhances an LM's quality and factuality
+      through on-demand retrieval and self-reflection.
+
+      ## Methodology
+      Our framework trains a single arbitrary LM that adaptively retrieves passages on-demand
+      and generates and reflects on retrieved passages and its own generations using special
+      reflection tokens. Generating reflection tokens makes the LM controllable during inference,
+      enabling it to tailor its behaviour to diverse task requirements. We train Self-RAG 7B and
+      13B on a mix of open-source instruction data with reflection-token annotations.
+
+      ## Findings
+      Self-RAG (7B and 13B) significantly outperforms state-of-the-art LLMs and retrieval-augmented
+      models on a diverse set of tasks, outperforming ChatGPT and retrieval-augmented Llama2-chat
+      on open-domain QA, reasoning, and fact verification, with significant gains in factuality
+      and citation accuracy for long-form generations. Self-RAG adaptively decides when to
+      retrieve, improving factuality and citation accuracy.
+
+      ## Limitations
+      Self-RAG requires reflection-token-annotated training data, which is non-trivial to
+      produce. Inference cost grows with the number of reflection turns. Adaptive retrieval can
+      mis-fire, retrieving when it should not or vice versa.
+
+      ## Implications
+      Self-RAG shows that retrieval and verification can be baked into the model itself rather
+      than bolted on at prompt time, and that adaptive on-demand retrieval can outperform
+      fixed-budget RAG.
+  - id: paper_004
+    title: "From Local to Global: A Graph RAG Approach to Query-Focused Summarization"
+    summary: |
+      Edge et al. (2024, Microsoft Research) introduce GraphRAG, which builds an LLM-extracted
+      entity-relation graph over a corpus, pre-generates community summaries, and answers
+      query-focused summarisation questions by composing partial answers from relevant
+      communities. GraphRAG substantially outperforms vector-RAG on global questions about
+      million-token corpora, with both human and LLM judges preferring GraphRAG answers on
+      comprehensiveness and diversity. The work positions graph-based retrieval as the
+      missing pattern for whole-corpus reasoning that vector RAG cannot deliver.
+    markdown: |
+      # From Local to Global: A Graph RAG Approach to Query-Focused Summarization
+
+      ## Abstract
+      Retrieval-augmented generation enables large language models to answer user questions over
+      private and previously unseen document collections, but it fails on global questions
+      directed at an entire text corpus, such as "What are the main themes in the dataset?"
+      since this is inherently a query-focused summarisation task rather than an explicit
+      retrieval task. To address this, we propose GraphRAG, a graph-based approach to question
+      answering over private text corpora that scales with both the generality of user
+      questions and the quantity of source text.
+
+      ## Methodology
+      GraphRAG uses an LLM to build a graph index in two stages: first, to derive an entity
+      knowledge graph from the source documents, then to pre-generate community summaries for
+      all groups of closely related entities. Given a question, partial responses are generated
+      from each community summary, then synthesised into a final answer. We evaluate on two
+      ~1M-token datasets (a podcast-transcript corpus and a news-article corpus) and compare to
+      naive vector RAG using GPT-4 as both generator and judge.
+
+      ## Findings
+      Results show GraphRAG strongly outperforms vector RAG when using GPT-4 as the LLM, with
+      both human and LLM judges preferring GraphRAG answers on comprehensiveness and diversity.
+      For query-focused summarisation tasks on large document collections (~1M tokens),
+      GraphRAG demonstrates substantial improvements over a conventional RAG baseline for both
+      comprehensiveness and diversity of generated answers. GraphRAG outperforms naive RAG on
+      global query-focused summarisation tasks.
+
+      ## Limitations
+      The graph index is expensive to build, requiring many LLM calls per document. Performance
+      on simple lookup-style questions is comparable to vector RAG, so the cost is only
+      justified for global or relational queries. Schema and clustering choices materially
+      affect results.
+
+      ## Implications
+      GraphRAG fills a recognised gap in standard RAG: corpus-wide summarisation and global
+      question answering. The approach has been released as open-source and integrated into
+      LangChain, LlamaIndex, NebulaGraph, and Neo4J.
+  - id: paper_005
+    title: "RAGAS: Automated Evaluation of Retrieval Augmented Generation"
+    summary: |
+      Es et al. (2023) introduce RAGAS, a reference-free evaluation framework for RAG systems
+      that scores retrieval relevance, answer faithfulness to retrieved passages, and answer
+      relevance to the user question. Reference-free metrics let teams iterate on RAG
+      architectures without needing per-question gold answers, addressing a major bottleneck in
+      production RAG development. The metrics have become widely adopted as a baseline
+      evaluation suite for RAG research.
+    markdown: |
+      # RAGAS: Automated Evaluation of Retrieval Augmented Generation
+
+      ## Abstract
+      We introduce RAGAs, a framework for reference-free evaluation of Retrieval Augmented
+      Generation pipelines. RAG systems are composed of a retrieval and an LLM-based generation
+      module, providing the LLM with knowledge from a reference textual database, which enables
+      it to act as a natural language layer between a user and the textual database, reducing
+      hallucinations. Evaluating RAG architectures is challenging because there are several
+      dimensions to consider: the ability of the retrieval system to identify relevant and
+      focused context passages, the ability of the LLM to exploit such passages in a faithful
+      way, and the quality of the generation itself.
+
+      ## Methodology
+      RAGAs proposes a suite of metrics that evaluate retrieval and generation without needing
+      ground-truth annotations. Faithfulness checks whether claims in the answer are entailed
+      by the retrieved passages; answer relevance scores how directly the answer addresses the
+      question; context precision and recall measure whether the retrieved set contains the
+      passages that support the answer. The framework is published as an open-source library.
+
+      ## Findings
+      RAGAs metrics correlate well with human judgment on RAG output quality and enable
+      iteration cycles that would otherwise require expensive gold-answer annotation. The
+      reference-free nature is particularly important given the fast adoption of LLMs, where
+      labelled benchmarks lag the pace of system change.
+
+      ## Limitations
+      The metrics depend on LLM-as-judge components that can themselves be biased or
+      inconsistent. Context precision and recall are sensitive to chunk boundaries.
+      Reference-free scoring cannot detect omitted-but-correct information.
+
+      ## Implications
+      RAGAs enabled rapid iteration on RAG architectures and became the de-facto evaluation
+      suite cited by most RAG architecture papers after 2023.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+expectedClaims:
+  - The original Lewis et al. RAG framework establishes parametric-plus-non-parametric memory as the canonical pattern
+  - Self-RAG adaptively decides when to retrieve, improving factuality and citation accuracy
+  - GraphRAG outperforms naive RAG on global query-focused summarisation tasks
+  - Architectural complexity generally buys quality at the cost of latency and engineering effort
+metadata:
+  source: Gao et al., Retrieval-Augmented Generation for Large Language Models, arXiv:2312.10997 (2024)
+  difficulty: medium

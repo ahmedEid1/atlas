@@ -1,0 +1,264 @@
+id: 003-llm-code-generation-humaneval
+question: How have large language models for code generation progressed on the HumanEval and MBPP benchmarks, and what training and prompting strategies drive the largest accuracy gains?
+picoc:
+  population: Large language models evaluated on functional-correctness code generation benchmarks
+  intervention: Code-specialised pre-training, instruction tuning, and inference-time strategies such as repeated sampling and self-debugging
+  comparison: General-purpose LLMs without code specialisation, and earlier code models such as GPT-3 or GPT-J without targeted training
+  outcome: Pass@1 and Pass@k functional-correctness scores on HumanEval and MBPP across model generations
+  context: Open and closed code-LLM publications and benchmark releases from 2021 through 2024
+papers:
+  - id: paper_001
+    title: "Evaluating Large Language Models Trained on Code"
+    summary: |
+      Chen et al. (2021) introduce Codex, a GPT language model fine-tuned on public GitHub code, and release
+      HumanEval, a 164-problem benchmark of hand-written Python tasks paired with unit tests. They report
+      that Codex solves 28.8% of HumanEval problems pass@1, while GPT-3 solves 0% and GPT-J 11.4%. Repeated
+      sampling proves highly effective: with 100 samples per problem, the model solves 70.2%. The work
+      establishes functional correctness via unit tests as the dominant evaluation paradigm for code LLMs
+      and documents both capability gains and safety concerns from auto-completion of code.
+    markdown: |
+      # Evaluating Large Language Models Trained on Code
+
+      ## Abstract
+      We introduce Codex, a GPT language model fine-tuned on publicly available code from GitHub, and
+      study its Python code-writing capabilities. A distinct production version of Codex powers GitHub
+      Copilot. On HumanEval, a new evaluation set we release to measure functional correctness for
+      synthesising programs from docstrings, our model solves 28.8% of the problems, while GPT-3 solves
+      0% and GPT-J solves 11.4%. Furthermore, we find that repeated sampling from the model is a
+      surprisingly effective strategy for producing working solutions to difficult prompts. Using this
+      method, we solve 70.2% of our problems with 100 samples per problem. Careful investigation of our
+      model reveals its limitations, including difficulty with docstrings describing long chains of
+      operations and with binding operations to variables.
+
+      ## Introduction and Methodology
+      Programming is a uniquely useful application of language models because programs admit objective,
+      executable evaluation: a candidate program is either functionally correct against a held-out test
+      suite or it is not. We construct HumanEval from 164 hand-written programming problems, each with
+      a function signature, docstring, body, and several unit tests written by the authors. Crucially,
+      problems are not scraped from the public internet, reducing the risk of training-set contamination.
+      We define pass@k as the probability that at least one of k generated samples passes the unit
+      tests, and report unbiased estimates using sample-then-rerun statistics.
+
+      ## Findings
+      Codex-12B reaches 28.8% pass@1, while a smaller Codex-300M reaches 13.2%. Repeated sampling with
+      reranking is highly effective: pass@100 reaches 72.3% for Codex-12B with oracle reranking and
+      57.7% with the model's own log-probabilities. We also document that the model often produces
+      syntactically valid but semantically wrong programs, and that performance degrades sharply when
+      the natural-language specification involves multiple chained operations or rare APIs.
+
+      ## Limitations
+      HumanEval is small and skews toward self-contained algorithmic problems; performance on real-world
+      software engineering tasks is not directly measured. Functional correctness against the provided
+      tests can over-estimate true correctness because edge cases may be missed. The Codex training set
+      may contain near-duplicates of public coding-interview material, so contamination is a real risk.
+
+      ## Implications
+      Functional-correctness benchmarking exposes a wide capability gap between general LLMs and
+      code-specialised models, and shows that scale plus repeated sampling can lift practical
+      performance dramatically. These results set the evaluation paradigm followed by nearly every
+      subsequent code-LLM paper.
+  - id: paper_002
+    title: "Program Synthesis with Large Language Models"
+    summary: |
+      Austin et al. (2021) explore the limits of LLMs for program synthesis in general-purpose languages,
+      releasing the MBPP benchmark (974 mostly-basic Python problems) and MathQA-Python (23,914 problems).
+      Synthesis performance scales log-linearly with model size: their largest 137B-parameter model reaches
+      59.6% accuracy on MBPP under few-shot prompting and 83.8% on MathQA-Python after fine-tuning. Human
+      feedback halves the error rate compared to the model's initial prediction, while models struggle to
+      predict program execution outputs.
+    markdown: |
+      # Program Synthesis with Large Language Models
+
+      ## Abstract
+      This paper explores the limits of the current generation of large language models for program
+      synthesis in general-purpose programming languages. We evaluate a collection of such models
+      ranging in size from 244M to 137B parameters on two new benchmarks, MBPP and MathQA-Python, in
+      both the few-shot and fine-tuning regimes. MBPP, the Mostly Basic Programming Problems dataset,
+      contains 974 short Python programs constructed by crowd-sourcing to an internal pool of crowd
+      workers who had basic knowledge of Python. The MathQA-Python dataset contains 23,914 problems
+      that evaluate the ability of the models to synthesise code from more complex text.
+
+      ## Methodology
+      Each MBPP problem includes a short English description, a reference solution, and three test
+      cases. We measure synthesis success by execution against the held-out tests after few-shot
+      prompting with example problems and after supervised fine-tuning where applicable. For
+      MathQA-Python we use translated mathematical word problems whose targets are short Python
+      functions returning numerical answers.
+
+      ## Findings
+      Synthesis performance scales log-linearly with model size on both benchmarks. Our largest
+      137B-parameter model reaches 59.6% accuracy on MBPP under few-shot prompting and 83.8% on
+      MathQA-Python after fine-tuning. We observe that few-shot performance lags fine-tuned
+      performance by a roughly constant offset, suggesting fine-tuning extracts capability already
+      latent in the pre-trained model. Adding a single human-feedback turn -- the user describes what
+      is wrong with an incorrect solution -- halves the error rate. Importantly, models perform poorly
+      at predicting the output of running a given program, indicating that natural-language synthesis
+      success does not imply genuine execution understanding.
+
+      ## Limitations
+      MBPP problems are short and Python-specific; generalisation to long, multi-file, or polyglot
+      software engineering is not measured. Crowd-sourced problems may overlap with code in the
+      training corpus. Pass-rate against three test cases overstates true semantic correctness.
+
+      ## Implications
+      MBPP becomes the de-facto companion benchmark to HumanEval, providing broader topical coverage
+      with similar low cost. The log-linear scaling result anchors the expectation that code-LLM
+      gains will continue with model scale, while the execution-prediction gap motivates work on
+      execution-aware training.
+  - id: paper_003
+    title: "Code Llama: Open Foundation Models for Code"
+    summary: |
+      Roziere et al. (2023) release Code Llama, a family of code-specialised LLaMA-2 derivatives at 7B,
+      13B, 34B, and 70B parameters. Code Llama-Instruct 34B reaches 48.8% pass@1 on HumanEval and 55.0%
+      on MBPP, and the 70B Code Llama-Python reaches 57.3% pass@1 on HumanEval. The paper demonstrates
+      that targeted code pre-training, long-context fine-tuning (up to 100K tokens), and instruction
+      tuning each contribute substantial gains, providing the strongest open-weight code models at
+      release time.
+    markdown: |
+      # Code Llama: Open Foundation Models for Code
+
+      ## Abstract
+      We release Code Llama, a family of large language models for code based on Llama 2 providing
+      state-of-the-art performance among open models, infilling capabilities, support for large input
+      contexts, and zero-shot instruction following ability for programming tasks. We provide multiple
+      flavours to cover a wide range of applications: foundation models (Code Llama), Python
+      specialisations (Code Llama - Python), and instruction-following models (Code Llama - Instruct)
+      with 7B, 13B, 34B, and 70B parameters each. All models are trained on sequences of 16k tokens
+      and show improvements on inputs with up to 100k tokens. The 7B, 13B, and 70B Code Llama and Code
+      Llama - Instruct variants support infilling based on surrounding content.
+
+      ## Methodology
+      Code Llama is derived from Llama 2 via continued pre-training on a code-heavy corpus, with
+      additional infilling-objective training and long-context fine-tuning. The instruction variant is
+      tuned on a mix of human and self-instruct programming dialogues. We evaluate on HumanEval, MBPP,
+      and the multilingual HumanEval extension across Python, C++, Java, PHP, TypeScript, C#, and
+      Bash.
+
+      ## Findings
+      Code Llama - Python 70B reaches 57.3% pass@1 on HumanEval and 65.6% on MBPP. Code
+      Llama - Instruct 34B reaches 48.8% pass@1 on HumanEval and 55.0% on MBPP. The instruction
+      variants are competitive with proprietary models of similar size and substantially outperform
+      Llama 2 baselines. Long-context fine-tuning preserves short-context performance while enabling
+      coherent generation over 100k-token inputs. Code Llama dominates the open-weight code model
+      landscape at release.
+
+      ## Limitations
+      Evaluation focuses on Python with multilingual coverage as a secondary axis. The benchmarks are
+      short-problem; real software engineering ability is not directly probed. Some training-set
+      overlap with public benchmarks cannot be ruled out and the paper notes this caveat.
+
+      ## Implications
+      Code-specialised continued pre-training on top of strong general LLMs is a reliable recipe for
+      state-of-the-art open code models. Code-specialised pre-training and instruction tuning each
+      drive substantial accuracy gains over general models. The release also normalises long-context
+      fine-tuning as a deployment requirement.
+  - id: paper_004
+    title: "AlphaCode: Competition-Level Code Generation with Transformer Models"
+    summary: |
+      Li et al. (2022) introduce AlphaCode, a transformer-based code generation system evaluated on
+      live programming contests on Codeforces. AlphaCode achieves an average ranking of top 54.3% in
+      simulated competitions, the first system to reach competitive performance on competitive
+      programming tasks. The paper introduces the n@k evaluation metric and the CodeContests dataset,
+      and reports that massive sampling (up to a million candidates per problem) combined with
+      filtering and clustering is essential to the result.
+    markdown: |
+      # Competition-Level Code Generation with AlphaCode
+
+      ## Abstract
+      Programming is a powerful and ubiquitous problem-solving tool. Systems that can assist
+      programmers or even generate programs themselves could make programming more productive and
+      accessible. Recent transformer-based neural network models show impressive code generation
+      abilities, yet still perform poorly on more complex tasks requiring problem-solving skills,
+      such as competitive programming problems. Here we introduce AlphaCode, a system for code
+      generation that achieves an average ranking of top 54.3% in simulated evaluations on recent
+      programming competitions on the Codeforces platform. AlphaCode solves problems by generating
+      millions of diverse programs using specially trained transformer-based networks and then
+      filtering and clustering those programs to a maximum of just 10 submissions.
+
+      ## Methodology
+      We pre-train transformer encoder-decoder models on a large GitHub code corpus, then fine-tune
+      on the CodeContests dataset of competitive-programming problems. At inference we sample on the
+      order of 10^5 to 10^6 candidate programs per problem, filter out those that fail provided
+      sample tests, and cluster the survivors by behavioural equivalence on synthetic inputs before
+      submitting the 10 cluster representatives. We evaluate by replaying live Codeforces contests
+      and computing per-contest percentile ranks.
+
+      ## Findings
+      AlphaCode achieves an average ranking in the top 54.3% across 10 contests, with a 9B-parameter
+      model. Performance scales smoothly with both model size and sampling budget. We also evaluate
+      on HumanEval (17.1% pass@1 for the 1.1B model) and APPS (introductory, interview, and
+      competition splits). The work demonstrates that LLM-based code generation can reach genuinely
+      competitive levels on hard algorithmic problems given sufficient compute.
+
+      ## Limitations
+      Competitive-programming problems are narrow relative to real software engineering; results may
+      not generalise. The sampling-and-filtering pipeline is compute-heavy and not directly deployable
+      for everyday programming assistance. Some training-set leakage from public contest archives is
+      possible.
+
+      ## Implications
+      AlphaCode shows that scaling compute and inference-time sampling, combined with execution-based
+      filtering, can lift LLM code generation to competitive-programming territory. It also seeds the
+      now-standard practice of treating code generation as a search-and-rerank problem rather than a
+      single-shot prediction.
+  - id: paper_005
+    title: "LDB: A Large Language Model Debugger via Verifying Runtime Execution Step-by-Step"
+    summary: |
+      LDB (2024) is an inference-time framework that lifts LLM HumanEval pass@1 to 95.1% on the
+      strongest base model evaluated. It works by inserting print statements, running tests, and
+      having the LLM reason over runtime traces to correct mistakes. The result is one of the highest
+      published HumanEval scores and exemplifies the trend that inference-time scaffolds -- not just
+      bigger models -- continue to drive headline-benchmark gains.
+    markdown: |
+      # LDB: Large Language Model Debugger via Step-by-Step Runtime Verification
+
+      ## Abstract
+      Large language models are leading substantial progress in code generation. Beyond one-pass code
+      generation, recent works further integrate unit tests and program verifiers into LLMs to
+      iteratively refine the generated programs. However, these works consider the generated programs
+      as an indivisible entity, which falls short for LLMs in debugging the programs, especially when
+      the programs contain complex logic flows and data operations. In contrast, when human
+      developers debug programs, they typically set breakpoints and selectively examine runtime
+      execution information. The execution flow and the intermediate variables play a crucial role
+      in the debugging process, yet they are underutilised in the existing literature on code
+      generation. In this study, we introduce Large Language Model Debugger (LDB), a novel debugging
+      framework that enables LLMs to refine their generated programs with runtime execution
+      information.
+
+      ## Methodology
+      LDB segments programs into basic blocks and tracks the values of intermediate variables after
+      each block during runtime execution. This allows LDM to focus on simpler code units, verify
+      their correctness against the task description block by block, and locate any potential errors
+      efficiently. We integrate LDB with several base LLMs and evaluate on HumanEval, MBPP, and
+      TransCoder.
+
+      ## Findings
+      LDB consistently enhances the baseline performance by up to 9.8% across the HumanEval, MBPP,
+      and TransCoder benchmarks, with the strongest configuration reaching 95.1% pass@1 on HumanEval
+      and achieving new state-of-the-art performance among code-debugging methods. The framework is
+      complementary to model scale: gains stack on top of stronger base models rather than diminishing.
+
+      ## Limitations
+      The benchmarks remain short-problem and Python-centric, leaving open how the debugging loop
+      transfers to longer or multi-file programs. The framework adds inference cost proportional to
+      the number of debugging rounds. HumanEval saturation also raises concerns about benchmark
+      contamination and headroom.
+
+      ## Implications
+      With LDB pushing HumanEval pass@1 above 95%, the benchmark approaches saturation, and the
+      community is shifting toward harder benchmarks such as SWE-bench. The result reinforces that
+      inference-time reasoning scaffolds, not just bigger models, continue to drive headline
+      benchmark gains.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_005
+expectedClaims:
+  - HumanEval pass@1 has risen from under 30% in 2021 to over 90% by 2024
+  - Code-specialised pre-training and instruction tuning each drive substantial accuracy gains over general models
+  - Repeated sampling and inference-time scaffolds materially improve pass@k beyond single-shot generation
+  - Synthesis performance scales log-linearly with model size on MBPP and HumanEval
+metadata:
+  source: Zheng et al., A Survey on Large Language Models for Code Generation, arXiv:2406.00515 (2024)
+  difficulty: medium

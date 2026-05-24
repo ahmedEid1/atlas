@@ -1,0 +1,241 @@
+id: 006-llm-hallucination-mitigation
+question: What are the most effective techniques for mitigating hallucinations in large language models, and how do retrieval-based, verification-based, and self-reflection approaches compare in measured factuality gains?
+picoc:
+  population: Large language models used for knowledge-intensive generation tasks where factual grounding is required
+  intervention: Hallucination-mitigation techniques including retrieval-augmented generation, chain-of-verification (CoVe), self-consistency-style verification, and adaptive retrieval with reflection tokens
+  comparison: Vanilla LLM generation without grounding, verification, or retrieval mechanisms
+  outcome: Factuality scores on QA and long-form generation, citation accuracy, and rate of hallucinated entities
+  context: Empirical studies and surveys of hallucination mitigation in LLMs from 2020 through 2024
+papers:
+  - id: paper_001
+    title: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"
+    summary: |
+      Lewis et al. (2020) introduce RAG, combining a pre-trained seq2seq generator with a dense
+      Wikipedia retriever. RAG sets new state-of-the-art on three open-domain QA benchmarks and
+      generates more specific, diverse, and factual language than a parametric-only baseline,
+      providing the foundational architectural pattern that almost every later hallucination-mitigation
+      technique builds on. The work frames the parametric-vs-non-parametric trade-off that subsequent
+      mitigation research revisits.
+    markdown: |
+      # Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks
+
+      ## Abstract
+      Large pre-trained language models have been shown to store factual knowledge in their
+      parameters, and achieve state-of-the-art results when fine-tuned on downstream NLP tasks.
+      However, their ability to access and precisely manipulate knowledge is still limited, and on
+      knowledge-intensive tasks their performance lags behind task-specific architectures. We
+      introduce a general-purpose fine-tuning recipe for retrieval-augmented generation (RAG)
+      models which combine pre-trained parametric and non-parametric memory for language generation.
+
+      ## Methodology
+      We compare two RAG formulations against parametric-only baselines (BART, T5) and against
+      retrieve-and-extract architectures (REALM, DPR) on Natural Questions, TriviaQA, WebQuestions,
+      CuratedTrec, and a generation benchmark on Jeopardy questions.
+
+      ## Findings
+      RAG sets new state-of-the-art on three open-domain QA benchmarks, outperforming parametric
+      baselines and retrieve-and-extract pipelines. For generation tasks, RAG produces more
+      specific, diverse, and factual language than a parametric-only seq2seq baseline at the same
+      scale. Retrieval-augmented generation reduces hallucinated content relative to parametric-only
+      baselines.
+
+      ## Limitations
+      Retrieval is over a fixed Wikipedia snapshot, so freshness is bounded by the index. RAG
+      requires non-trivial engineering and a competent retriever to deliver its advantage. The
+      study pre-dates large instruction-tuned LLMs, so the baselines are weaker than modern ones.
+
+      ## Implications
+      The work establishes RAG as the dominant architectural pattern for grounding LLM generation
+      in external memory, and frames the trade-offs that every subsequent hallucination-mitigation
+      technique navigates.
+  - id: paper_002
+    title: "Chain-of-Verification Reduces Hallucination in Large Language Models"
+    summary: |
+      Dhuliawala et al. (2023) introduce Chain-of-Verification (CoVe), a four-stage prompting
+      procedure: draft an initial response, plan verification questions, answer them independently,
+      then produce a verified final response. CoVe substantially reduces hallucinations on
+      list-based Wikidata questions, closed-book MultiSpanQA, and long-form biography generation,
+      without external retrieval. Independent answering of verification questions is essential --
+      naive self-criticism fails because the model anchors on its own draft.
+    markdown: |
+      # Chain-of-Verification Reduces Hallucination in Large Language Models
+
+      ## Abstract
+      Generation of plausible yet incorrect factual information, termed hallucination, is an
+      unsolved issue in large language models. We study the ability of language models to deliberate
+      on the responses they give in order to correct their mistakes. We develop the
+      Chain-of-Verification (CoVe) method whereby the model first drafts an initial response; then
+      plans verification questions to fact-check its draft; answers those questions independently so
+      the answers are not biased by other responses; and generates its final verified response.
+
+      ## Methodology
+      We evaluate CoVe on three task families: list-based questions from Wikidata, closed-book QA
+      via MultiSpanQA, and longform biography generation. We compare to baseline single-pass
+      generation and to naive self-criticism baselines that allow the verifier to see the original
+      draft. Llama-65B serves as the primary model.
+
+      ## Findings
+      CoVe decreases hallucinations across all three task families. On list-based Wikidata
+      questions, CoVe increases the F1 of correct list entries by roughly 23%. On MultiSpanQA the
+      method improves F1 by 3-7 points depending on configuration. On long-form biography
+      generation, FactScore (the rate of supported atomic facts) rises by approximately 28 points.
+      Critically, independent answering of verification questions is essential -- naive
+      self-criticism without isolation fails because the model anchors on its own draft.
+
+      ## Limitations
+      CoVe roughly quadruples inference cost because of the four stages. The technique can suppress
+      true claims that look uncertain to the verifier. CoVe assumes the underlying model has
+      relevant parametric knowledge to verify against; it cannot fix knowledge it never had.
+
+      ## Implications
+      Self-verification with structural separation can materially reduce hallucinations without
+      external retrieval, a complementary axis to RAG. CoVe is now a common ingredient in
+      hallucination-mitigation pipelines.
+  - id: paper_003
+    title: "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"
+    summary: |
+      Asai et al. (2023) train a single LM that adaptively decides when to retrieve, generates with
+      retrieved evidence, and critiques its own outputs through special reflection tokens. Self-RAG
+      7B and 13B substantially outperform ChatGPT and retrieval-enhanced Llama2-chat on open-domain
+      QA, reasoning, and fact verification, with substantially better factuality and citation
+      accuracy in long-form generation. The framework also exposes a controllable inference-time
+      knob for adapting the model behaviour to task requirements.
+    markdown: |
+      # Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection
+
+      ## Abstract
+      Despite their remarkable capabilities, large language models often produce responses
+      containing factual inaccuracies due to their sole reliance on the parametric knowledge they
+      encapsulate. Retrieval-augmented generation reduces such issues by augmenting LMs with
+      retrieved relevant knowledge. However, indiscriminately retrieving and incorporating a fixed
+      number of passages, regardless of whether retrieval is necessary or the passages are
+      relevant, diminishes LM versatility or can lead to unhelpful response generation. We
+      introduce a new framework called Self-Reflective Retrieval-Augmented Generation (Self-RAG)
+      that enhances an LM's quality and factuality through retrieval and self-reflection.
+
+      ## Methodology
+      Our framework trains a single arbitrary LM that adaptively retrieves passages on-demand and
+      generates and reflects on retrieved passages and its own generations using special tokens,
+      called reflection tokens. Generating reflection tokens makes the LM controllable during the
+      inference phase, enabling it to tailor its behaviour to diverse task requirements.
+
+      ## Findings
+      Self-RAG (7B and 13B parameters) significantly outperforms state-of-the-art LLMs and
+      retrieval-augmented models on a diverse set of tasks. Specifically, Self-RAG outperforms
+      ChatGPT and retrieval-augmented Llama2-chat on open-domain QA, reasoning, and fact
+      verification tasks, and shows significant gains in improving factuality and citation
+      accuracy for long-form generations relative to these models.
+
+      ## Limitations
+      Self-RAG requires fine-tuning data annotated with reflection tokens, which is non-trivial to
+      produce. Inference cost grows with the number of reflection turns. Adaptive retrieval can
+      mis-fire, occasionally retrieving when it should not.
+
+      ## Implications
+      Self-RAG demonstrates that retrieval and verification can be baked into the model itself
+      rather than bolted on at prompt time. Adaptive retrieval and self-reflection improve
+      factuality beyond fixed-budget RAG.
+  - id: paper_004
+    title: "A Comprehensive Survey of Hallucination Mitigation Techniques in Large Language Models"
+    summary: |
+      Tonmoy et al. (2024) survey 32 hallucination-mitigation techniques across retrieval-based,
+      verification-based, decoding-time, knowledge-injection, and feedback-based families. They
+      organise techniques by feedback mechanism, retriever type, and task. Retrieval-augmented
+      generation, knowledge retrieval, CoNLI, and CoVe are highlighted as the most empirically
+      validated families. The survey also documents the absence of standardised evaluation, with
+      different mitigation papers reporting on different benchmarks under different operational
+      definitions of hallucination.
+    markdown: |
+      # A Comprehensive Survey of Hallucination Mitigation Techniques in LLMs
+
+      ## Abstract
+      As Large Language Models continue to advance in their ability to write human-like text, a key
+      challenge remains around their tendency to hallucinate -- generating content that appears
+      factual but is ungrounded. This issue is critical as it undermines the reliability of LLMs in
+      real-world applications. In this paper, we present a comprehensive survey of over thirty-two
+      techniques developed to mitigate hallucination in LLMs. Notable among these are
+      Retrieval-Augmented Generation (Lewis et al., 2021), Knowledge Retrieval (Varshney et al.,
+      2023), CoNLI (Lei et al., 2023), and CoVe (Dhuliawala et al., 2023).
+
+      ## Methodology
+      We follow a systematic protocol to identify mitigation methods proposed between 2020 and
+      2024. Methods are classified by retriever type (dense, sparse, hybrid), feedback mechanism
+      (human, model self-feedback, classifier feedback), task target (QA, summarisation,
+      open-ended), and integration point (input, decoding, post-hoc).
+
+      ## Findings
+      We organise our review by introducing a detailed taxonomy categorising these methods based
+      on various parameters, such as dataset utilisation, common tasks, feedback mechanisms, and
+      retriever types. The survey identifies retrieval-augmented generation and chain-of-verification
+      style methods as the most empirically validated families across diverse settings. We also
+      analyse the challenges and limitations inherent in these techniques, providing a solid
+      foundation for future research in addressing hallucinations in LLMs.
+
+      ## Limitations
+      The field lacks standard evaluation: different mitigation papers report on different
+      benchmarks under different operational definitions of hallucination, making head-to-head
+      comparison fraught. The survey is necessarily a snapshot; methods released after early 2024
+      are not covered.
+
+      ## Implications
+      No single technique solves hallucination; the practical solution stacks retrieval, verification,
+      and adaptive decoding. The survey provides the taxonomy and citation map newcomers need to
+      navigate the field.
+  - id: paper_005
+    title: "A Survey on Hallucination in Large Language Models: Principles, Taxonomy, Challenges, and Open Questions"
+    summary: |
+      Huang et al. (2024, ACM TOIS) survey hallucination in LLMs through the lenses of principle,
+      taxonomy, detection, mitigation, and open challenges. The survey introduces an LLM-era
+      hallucination taxonomy distinct from prior task-specific definitions, separating factual from
+      faithfulness hallucinations, and analyses contributing factors across pre-training, alignment,
+      and inference. Detection and mitigation strategies are systematically catalogued, and the
+      limits of retrieval-augmented approaches are explicitly discussed.
+    markdown: |
+      # A Survey on Hallucination in Large Language Models
+
+      ## Abstract
+      The emergence of large language models has marked a significant breakthrough in natural
+      language processing, fueling a paradigm shift in information acquisition. Nevertheless, LLMs
+      are prone to hallucination, generating plausible yet nonfactual content. This phenomenon
+      raises significant concerns over the reliability of LLMs in real-world information retrieval
+      systems. In this survey, we aim to provide a thorough and in-depth overview of recent
+      advances in the field of LLM hallucinations.
+
+      ## Methodology
+      We follow a systematic literature mapping that organises hallucination research along five
+      axes: definitions and types, root causes across the LLM lifecycle, detection benchmarks and
+      methods, mitigation strategies, and open questions. We synthesise results from over 200
+      primary studies published between 2020 and 2024.
+
+      ## Findings
+      We start with an innovative taxonomy of LLM hallucinations -- factual vs faithfulness
+      hallucinations -- then delve into the factors contributing to hallucinations across
+      pre-training (data quality, dedup), alignment (RLHF reward hacking), and inference (decoding
+      strategies). Subsequently, we present a comprehensive overview of hallucination detection
+      methods and benchmarks, and explicitly discuss the limitations of retrieval-augmented
+      approaches in addressing hallucination -- notably the failure modes when retrieved passages
+      are partially relevant or contradictory. Additionally, we examine current approaches to
+      mitigating hallucinations and propose future research directions.
+
+      ## Limitations
+      The taxonomy is normative and authors will disagree on edge cases. The survey covers a fast
+      moving field; methods released after early 2024 are out of scope. Quantitative comparison
+      across mitigation methods is difficult because reported evaluation protocols differ widely.
+
+      ## Implications
+      The survey establishes the now-standard factual-vs-faithfulness distinction and clarifies
+      that retrieval is not a silver bullet -- contradictory or partial evidence can itself induce
+      hallucination. The taxonomy is widely cited by subsequent benchmarks and detectors.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_005
+expectedClaims:
+  - Retrieval-augmented generation reduces hallucinated content relative to parametric-only baselines
+  - Chain-of-verification with independent verification reduces hallucinations without external retrieval
+  - Adaptive retrieval and self-reflection improve factuality beyond fixed-budget RAG
+  - No single technique solves hallucination; the practical solution stacks retrieval, verification, and adaptive decoding
+metadata:
+  source: Tonmoy et al., A Comprehensive Survey of Hallucination Mitigation Techniques in Large Language Models, arXiv:2401.01313 (2024)
+  difficulty: hard

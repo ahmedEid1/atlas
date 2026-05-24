@@ -1,0 +1,235 @@
+id: 008-llm-agent-evaluation
+question: How do current benchmarks evaluate the reliability of LLM-based agents on software engineering, web navigation, and tool-use tasks, and what do measured success rates reveal about the limits of agentic systems?
+picoc:
+  population: LLM-based autonomous agents that combine reasoning, tool use, and multi-step planning
+  intervention: Standardised agent benchmarks including SWE-bench, GAIA, BFCL, WebArena, and tau-Bench
+  comparison: Single-turn LLM evaluation without tool use, action loops, or environment state, and prior tool-use benchmarks such as ToolBench
+  outcome: Task-completion success rate (Pass@1), end-to-end resolution rate on real GitHub issues, function-calling accuracy, and consistency across repeated runs
+  context: Empirical evaluations and a 2025 survey of LLM-agent benchmarks
+papers:
+  - id: paper_001
+    title: "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?"
+    summary: |
+      Jimenez et al. (2024) introduce SWE-bench, an evaluation framework of 2,294 real GitHub issues
+      drawn from 12 popular Python repositories. Each task requires producing a patch that resolves
+      the issue and passes the project's existing tests. At release, the strongest baseline (Claude
+      2) resolved only 1.96% of the issues, and a fine-tuned SWE-Llama model resolved a similarly
+      tiny fraction. The benchmark exposes a stark gap between LLM coding-question performance and
+      end-to-end real-world software engineering ability.
+    markdown: |
+      # SWE-bench: Can Language Models Resolve Real-World GitHub Issues?
+
+      ## Abstract
+      Language models have outpaced our ability to evaluate them effectively, but for their future
+      development it is essential to study the frontier of their capabilities. We find real-world
+      software engineering to be a rich, sustainable, and challenging testbed for evaluating the
+      next generation of language models. To this end, we introduce SWE-bench, an evaluation
+      framework consisting of 2,294 software engineering problems drawn from real GitHub issues and
+      corresponding pull requests across 12 popular Python repositories.
+
+      ## Methodology
+      Each SWE-bench task pairs a natural-language issue description with a target repository
+      snapshot and a hidden test patch. The agent must produce a code patch that, when applied,
+      makes the previously failing tests pass without breaking previously passing tests. We
+      evaluate frontier models (GPT-4, Claude 2) and fine-tuned open models (SWE-Llama) in a
+      retrieval-augmented oracle setting and in a more realistic agent setting.
+
+      ## Findings
+      Resolving issues in SWE-bench frequently requires understanding and coordinating changes
+      across multiple functions, classes, and even files simultaneously. The best model tested,
+      Claude 2, resolved only 1.96% of the issues. SWE-bench reveals that current LLMs struggle on
+      real-world multi-file software engineering tasks, even with retrieval and explicit hints.
+      Both state-of-the-art proprietary models and our fine-tuned model SWE-Llama can resolve only
+      the simplest issues.
+
+      ## Limitations
+      The benchmark covers only 12 Python repositories, so language and ecosystem generalisation is
+      limited. Test-set leakage into pre-training corpora is plausible because the GitHub data is
+      public. The benchmark measures only whether tests pass, not patch quality or maintainability.
+
+      ## Implications
+      SWE-bench reshapes the agent-evaluation conversation: HumanEval-style isolated coding tasks
+      are saturated, but real software engineering remains hard. The benchmark has driven a wave
+      of agent-architecture research and is now the de-facto headline benchmark for coding agents.
+  - id: paper_002
+    title: "GAIA: A Benchmark for General AI Assistants"
+    summary: |
+      Mialon et al. (2023) introduce GAIA, a benchmark of 466 real-world questions requiring
+      multi-modal handling, web browsing, and tool use. Humans achieve 92% accuracy; GPT-4 with
+      plugins reaches only 15%. The benchmark inverts the usual scaling logic: tasks conceptually
+      simple for humans expose a striking generalisation gap in frontier LLM-based assistants. 300
+      of the 466 questions are held out as a leaderboard set on Hugging Face.
+    markdown: |
+      # GAIA: A Benchmark for General AI Assistants
+
+      ## Abstract
+      We introduce GAIA, a benchmark for General AI Assistants that, if solved, would represent a
+      milestone in AI research. GAIA proposes real-world questions that require a set of
+      fundamental abilities such as reasoning, multi-modality handling, web browsing, and generally
+      tool-use proficiency. GAIA questions are conceptually simple for humans yet challenging for
+      most advanced AIs: we show that human respondents obtain 92% vs. 15% for GPT-4 equipped with
+      plugins.
+
+      ## Methodology
+      GAIA contains 466 questions across three difficulty levels, with answers that are short and
+      unambiguous to enable factual grading. Tasks require chaining web searches, document
+      reading, basic arithmetic, image analysis, and code execution. We publicly release 166
+      questions with answers and retain 300 questions whose answers form a Hugging Face
+      leaderboard.
+
+      ## Findings
+      Humans achieve 92% accuracy across the benchmark, while the best LLM-based assistant tested
+      (GPT-4 with plugins) reaches only 15%. The gap is largest on Level-3 tasks involving long
+      tool-use chains. GAIA reveals a striking generalisation gap on tasks that are conceptually
+      easy for humans, contrasting with the usual narrative that LLMs are superhuman on specialist
+      professional exams.
+
+      ## Limitations
+      466 questions is a modest sample relative to web-scale evaluation. The benchmark's reliance
+      on the open web means answers can drift over time as web content changes. Tool availability
+      varies across LLM products and confounds direct comparison.
+
+      ## Implications
+      GAIA reframes the AGI conversation around robust everyday-task performance rather than
+      specialised benchmarks. The held-out leaderboard structure has become a model for
+      benchmark-contamination resistance.
+  - id: paper_003
+    title: "Berkeley Function Calling Leaderboard"
+    summary: |
+      Yan et al. (2024) introduce the Berkeley Function Calling Leaderboard (BFCL), a benchmark
+      that measures LLM tool-use ability across single-call, parallel-call, multi-step, and
+      multi-turn settings. Initial BFCL exposes that even frontier models hit ceilings well below
+      human accuracy on multi-turn tasks; BFCL v2 and v3 expand to multi-turn interactions and
+      reveal that consistent state management across turns is a major failure mode that does not
+      correlate cleanly with model scale.
+    markdown: |
+      # Berkeley Function Calling Leaderboard
+
+      ## Abstract
+      Function calling enables large language models to interact with external tools, APIs, and
+      services, vastly expanding their practical utility. The Berkeley Function Calling Leaderboard
+      (BFCL) is a comprehensive evaluation framework that measures the function-calling
+      capabilities of language models across a wide range of scenarios, including simple function
+      invocation, parallel function calls, multi-step planning, and multi-turn interactions with
+      tool environments.
+
+      ## Methodology
+      BFCL evaluates models on roughly 2,000 hand-curated function-calling scenarios, each paired
+      with one or more reference function-call traces. The benchmark grades function selection,
+      argument formatting, parallel/sequential ordering, and multi-turn state coherence. The
+      leaderboard reports per-category accuracy and an aggregate score.
+
+      ## Findings
+      Tool-use accuracy varies widely across model families and even within model versions.
+      Frontier closed-source models lead on simple single-call invocation, but their advantage
+      narrows on multi-turn scenarios where state must be maintained across calls. BFCL v3
+      explicitly stress-tests multi-turn interactions and reveals that even top models lose
+      double-digit points relative to single-turn baselines. Long-horizon tool use and consistent
+      state management remain major failure modes for frontier models.
+
+      ## Limitations
+      Synthetic and hand-curated scenarios may not reflect real-world tool ecosystems. The grading
+      rubric for parallel and multi-turn calls is non-trivial and grader bugs have surfaced
+      historically. Function schemas are English-only.
+
+      ## Implications
+      BFCL became the canonical reference point for function-calling capability claims and exposed
+      that single-call accuracy materially overstates real agentic ability. Its multi-turn
+      extensions clarified where future agent research must focus.
+  - id: paper_004
+    title: "WebArena: A Realistic Web Environment for Building Autonomous Agents"
+    summary: |
+      Zhou et al. (2024) introduce WebArena, a self-hosted web environment with realistic
+      e-commerce, software development, content management, and forum sites. It contains 812
+      long-horizon tasks specified in natural language. GPT-4 achieves only 14.4% end-to-end task
+      success, while humans achieve 78.2%, exposing a large gap between LLM agents and human
+      operators in realistic web settings.
+    markdown: |
+      # WebArena: A Realistic Web Environment for Building Autonomous Agents
+
+      ## Abstract
+      With generative AI advances, the exciting potential for autonomous agents to manage daily
+      tasks via natural language commands has emerged. However, current agents are primarily
+      created and tested in simplified synthetic environments, leading to a disconnect with
+      real-world scenarios. We introduce WebArena, a realistic and reproducible web environment
+      designed to facilitate the development of autonomous agents.
+
+      ## Methodology
+      WebArena hosts four fully functional web applications (an e-commerce platform, an online
+      forum, a content management system, and a software development site, all open source). It
+      provides 812 long-horizon tasks specified in natural language, with execution-based grading
+      via predicate scripts over the back-end state. Tasks span navigation, form filling,
+      content creation, and cross-site workflows.
+
+      ## Findings
+      Even the strongest tested agent, a GPT-4 baseline, achieved end-to-end task success of only
+      14.4%, while humans reached 78.2%. Error analysis shows that agents fail most often on
+      multi-page navigation requiring memory and on tasks that involve recovery from unexpected
+      page states. The benchmark exposes that current LLM-based agents are far from reliable on
+      realistic web workflows.
+
+      ## Limitations
+      WebArena is a closed, fixed-site environment, so generalisation to the open web is not
+      directly measured. The grading scripts can give credit for incidental side-effects. Tasks
+      are English-only.
+
+      ## Implications
+      WebArena is now a standard reference for web-agent capability claims and has driven research
+      on long-horizon planning, memory, and recovery from errors. The 14.4% vs 78.2% gap framed
+      web automation as an open problem rather than a solved one.
+  - id: paper_005
+    title: "tau-Bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains"
+    summary: |
+      Yao et al. (2024) introduce tau-Bench, which evaluates LLM agents on multi-turn tool-use
+      conversations with simulated users in airline and retail domains. The benchmark exposes
+      both poor single-shot success rates and very high run-to-run inconsistency: the best model
+      tested resolves only about half of airline tasks, and consistency across repeated runs at
+      the same task is below 50%, revealing reliability as a first-class problem distinct from
+      single-run accuracy.
+    markdown: |
+      # tau-Bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains
+
+      ## Abstract
+      Existing benchmarks do not test language agents on their interaction with human users or
+      their ability to follow domain-specific rules, both of which are vital for deploying them in
+      real applications. We propose tau-Bench, a benchmark emulating dynamic conversations between
+      a user (simulated by language models) and a language agent provided with domain-specific API
+      tools and policy guidelines.
+
+      ## Methodology
+      We employ an efficient and faithful evaluation process that compares the database state at
+      the end of a conversation with the annotated goal state. We also propose a new metric,
+      pass^k, to evaluate the reliability of agent behaviour over multiple trials. Two domains are
+      released: an airline customer-service domain and a retail e-commerce domain, with tools
+      that mutate persistent state.
+
+      ## Findings
+      Our experiments show that even state-of-the-art function-calling agents (like GPT-4o)
+      succeed on less than 50% of the tasks in the airline domain, and are highly inconsistent
+      (pass^8 below 25%). Agent reliability is a first-class problem distinct from single-run
+      accuracy: agents that occasionally succeed on a task often fail on repeated attempts at the
+      same task, and consistency does not improve smoothly with model size.
+
+      ## Limitations
+      The user simulator is itself an LLM, which introduces bias and may make tasks artificially
+      easier or harder. Two domains are a narrow slice of real customer-service work. Pass^k
+      requires k times the inference budget, limiting how widely it can be reported.
+
+      ## Implications
+      tau-Bench made agent reliability and consistency a measured quantity rather than an
+      aspiration, and pass^k has been adopted by subsequent agent benchmarks as a standard
+      reliability metric.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+  - paper_005
+expectedClaims:
+  - SWE-bench reveals that current LLMs struggle on real-world multi-file software engineering tasks
+  - GAIA reveals a striking generalisation gap on tasks that are conceptually easy for humans
+  - Long-horizon tool use and consistent state management remain major failure modes for frontier models
+  - Agent reliability is a first-class problem distinct from single-run accuracy
+metadata:
+  source: Yehudai et al., Survey on Evaluation of LLM-based Agents, arXiv:2503.16416 (2025)
+  difficulty: hard

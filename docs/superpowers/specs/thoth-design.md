@@ -340,7 +340,7 @@ Results are written to the `EvalRun` table (`goldenId, metric, score, runId?, co
 
 ### Current state
 
-3 synthetic golden questions are checked in today, with their corpora inlined directly into the YAML (no PDF upload). **30 real-paper golden questions is the M6 deliverable**, along with the trend-line UI on `/evals` and the CI workflow that fails on regressions; the existing 3 goldens exercise the harness end-to-end (headless graph runner → metrics → `EvalRun` rows → dashboard render → regression script) so the gap is "more data and the CI hookup," not "missing capability."
+17 golden questions are checked in today — 3 synthetic seed goldens carried over from the harness's first ship plus 14 real-paper questions covering LLM / ML / software-engineering systematic reviews (each cited paper sourced from arXiv with a verifiable arXiv ID or DOI in `metadata.source`). Each paper's `markdown` is the title + abstract + one or two key paragraphs (~280-400 words) — enough surface for cite_check to verify claims without bloating eval cost. The set is wired into `.github/workflows/evals.yml` on a weekly cron so `/evals` reflects an honest current baseline, not a snapshot.
 
 ---
 

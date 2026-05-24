@@ -1,0 +1,196 @@
+id: 015-code-smells-quality
+question: How do code smells empirically relate to software quality attributes such as maintainability and defect-proneness, and how effective are current detection techniques at finding them?
+picoc:
+  population: Object-oriented software projects, predominantly in Java, studied in empirical software-engineering research
+  intervention: Detection and analysis of code smells using metric-based, search-based, machine-learning, and visualisation-based techniques
+  comparison: Source code without identified smells, and codebases evaluated before refactoring
+  outcome: Maintainability, defect-proneness, change-proneness, comprehensibility, and detector precision and recall
+  context: Empirical studies of object-oriented code smells and systematic reviews published between 2007 and 2024
+papers:
+  - id: paper_001
+    title: "Code Smells Detection and Visualization: A Systematic Literature Review"
+    summary: |
+      Sobrinho et al. (2021, arXiv:2012.08842) systematically review 83 primary studies on code-smell
+      detection and visualisation. Search-based (30.1%) and metric-based (24.1%) approaches dominate;
+      machine-learning techniques appear in 35% of studies. Java is the most-studied language
+      (77.1%) and the most-targeted smells are God Class (51.8%), Feature Envy (33.7%), and Long
+      Method (26.5%). Roughly 80% of studies focus only on detection without supporting
+      visualisation, and the field still lacks shared oracles and reproducible benchmarks.
+    markdown: |
+      # Code Smells Detection and Visualization: A Systematic Literature Review
+
+      ## Abstract
+      Code smells tend to compromise software quality and also demand more effort by developers to
+      maintain and evolve the application throughout its life-cycle. They have long been catalogued
+      with corresponding mitigating solutions called refactoring operations. This SLR has a twofold
+      goal: the first is to identify the main code smells detection techniques and tools discussed
+      in the literature, and the second is to analyse to which extent visual techniques have been
+      applied to support the former.
+
+      ## Methodology
+      Over 83 primary studies indexed in major scientific repositories were identified by our search
+      string in this SLR. Then, following existing best practices for secondary studies, we applied
+      inclusion and exclusion criteria to select the most relevant works, extract their features
+      and classify them across approach, language, smell categories, evaluation strategy, and
+      visualisation support.
+
+      ## Findings
+      The most commonly used approaches to code-smell detection are search-based (30.1%) and
+      metric-based (24.1%). Most studies (83.1%) use open-source software, with Java in the first
+      position (77.1%). In terms of code smells, God Class (51.8%), Feature Envy (33.7%), and Long
+      Method (26.5%) are the most covered. Machine-learning techniques appear in 35% of the studies.
+      Around 80% of studies only detect code smells without providing visualisation techniques. The
+      detection of code smells is a non-trivial task with substantial subjectivity in smell
+      definitions across detectors.
+
+      ## Limitations
+      The review covers studies indexed through 2020 and may miss recent neural-detection work.
+      Search-string sensitivity is a known issue with SLRs; some relevant studies may have been
+      missed. Detector comparison is hampered by inconsistent ground-truth datasets.
+
+      ## Implications
+      The field has converged on a handful of canonical smells in Java but lacks shared oracles
+      and reproducible benchmarks, and the integration of detection with visualisation remains a
+      gap that practitioners should expect to fill themselves.
+  - id: paper_002
+    title: "A Systematic Literature Review on Empirical Analysis of the Relationship Between Code Smells and Software Quality Attributes"
+    summary: |
+      Kaur and Singh (2019, Springer) review 319 papers on empirical analysis of how code smells
+      relate to software-quality attributes. The relationship is not uniform: the same smell can
+      have opposite effects on different quality attributes, and many smells correlate with reduced
+      maintainability and increased change- and defect-proneness, while a smaller subset show no
+      detectable effect. The review documents the difficulty of generalising about smell impact
+      without context.
+    markdown: |
+      # A Systematic Literature Review on Empirical Analysis of the Relationship Between Code Smells and Software Quality Attributes
+
+      ## Abstract
+      Code smells indicate problems in design or code which make software hard to change and
+      maintain, and have become a sign of software systems that cause complications in maintaining
+      software quality. Empirical studies on the impact of code smells on software-quality
+      attributes have proliferated, but their results are heterogeneous and often contradictory.
+      This systematic literature review aggregates the findings of 319 primary studies addressing
+      the empirical relationship between code smells and software-quality attributes.
+
+      ## Methodology
+      Searches across IEEE Xplore, ACM Digital Library, ScienceDirect, SpringerLink, and Wiley
+      identified empirical studies through 2018 examining quantitative relationships between
+      code smells and quality attributes. Inclusion criteria required quantitative measurement of
+      at least one smell and at least one external or internal quality attribute. We coded each
+      study by smell category, quality attribute, study type, and reported direction of effect.
+
+      ## Findings
+      The impact of code smells on software quality is not uniform: different code smells have the
+      opposite effect on different software-quality attributes. Smells most consistently linked to
+      negative outcomes include God Class, Long Method, and Feature Envy, which correlate with
+      reduced maintainability and increased change- and defect-proneness. Other smells (e.g., Data
+      Class) have weaker or context-dependent effects. The review highlights that smell impact must
+      be interpreted relative to project context, including team size, domain, and project age.
+
+      ## Limitations
+      Heterogeneity of metrics and operational definitions across studies limits quantitative
+      pooling. Publication bias may inflate negative-impact reporting. Most evidence comes from
+      open-source Java projects, limiting external validity to other ecosystems.
+
+      ## Implications
+      Code smells generally degrade maintainability but the effect varies sharply by smell type and
+      context. Blanket "smells are bad" guidance is empirically too coarse; refactoring effort
+      should be prioritised by smell type and project context rather than uniformly.
+  - id: paper_003
+    title: "Code Smells and Refactoring: A Tertiary Systematic Review of Challenges and Observations"
+    summary: |
+      Lacerda et al. (2020, arXiv:2004.10777) conduct a tertiary review of secondary studies on code
+      smells and refactoring, synthesising findings across 40 prior surveys and SLRs. They argue that
+      code smells and refactoring are two faces of the same coin and identify 13 unresolved
+      questions for future work. Refactoring interventions produce more clearly measurable effects
+      on quality attributes than smell identification alone, reinforcing that detection without
+      remediation has limited value.
+    markdown: |
+      # Code Smells and Refactoring: A Tertiary Systematic Review of Challenges and Observations
+
+      ## Abstract
+      In this paper, we present a tertiary systematic literature review of previous surveys,
+      secondary systematic literature reviews, and systematic mappings on code smells and
+      refactoring. The goal is to identify recurring observations, open challenges, and
+      cross-cutting findings across the secondary literature, and to provide a roadmap for both
+      researchers and practitioners.
+
+      ## Methodology
+      We searched for secondary studies (surveys, SLRs, systematic mappings) on code smells and
+      refactoring across ACM Digital Library, IEEE Xplore, Scopus, SpringerLink, Web of Science,
+      and Wiley Online Library. Forty secondary studies met our inclusion criteria. We extracted
+      reported findings, gaps, and challenges, and synthesised them across studies.
+
+      ## Findings
+      Code smells and refactoring connect strongly with several quality characteristics, including
+      understandability, maintainability, testability, complexity, functionality, and reusability.
+      Code smells and refactoring could be considered as the two faces of the same coin.
+      Refactoring interventions produce measurable effects on quality attributes more significantly
+      than code-smell identification alone. We identify 13 unresolved research questions including
+      the need for standard smell definitions, ecosystem-specific evidence, and quantitative
+      cross-study synthesis.
+
+      ## Limitations
+      Tertiary reviews depend on the quality and overlap of underlying secondary studies. The
+      40-study sample is biased toward English-language venues. Quantitative cross-study synthesis
+      is impossible because included reviews use different operational definitions.
+
+      ## Implications
+      The tertiary review provides a high-level map of the code-smell research landscape and is the
+      natural starting point for newcomers to the area. It also reinforces that detection without
+      remediation has limited value.
+  - id: paper_004
+    title: "When and Why Your Code Starts to Smell Bad (and Whether the Smells Go Away)"
+    summary: |
+      Tufano et al. (2017, IEEE TSE) empirically study the lifecycle of code smells across 200
+      open-source projects with 0.5 million commits. They find that smells are most often
+      introduced when files are created rather than incrementally added over time, that the median
+      smell persists for the lifetime of its file, and that refactoring rarely removes existing
+      smells -- developers typically address smells indirectly through other changes. The findings
+      challenge the assumption that smells are a maintenance debt teams systematically pay down.
+    markdown: |
+      # When and Why Your Code Starts to Smell Bad (and Whether the Smells Go Away)
+
+      ## Abstract
+      Code smells are widely believed to compromise software maintainability and to be progressively
+      introduced as projects evolve under deadline and complexity pressure. However, little large-scale
+      empirical evidence exists about when smells actually enter a codebase and whether they are
+      typically removed. We perform a longitudinal study of the introduction and removal of 12
+      common smells across 200 open-source Java projects with 0.5 million commits.
+
+      ## Methodology
+      We mined commit histories of 200 open-source Java projects and ran the DECOR detector on
+      each historical revision to track when each smell instance appeared and disappeared. We
+      cross-referenced smell-removal events with explicit refactoring commits identified by
+      RefactoringMiner and developer-tagged commit messages.
+
+      ## Findings
+      Most smells are introduced when files are created, not added later: roughly 80% of smell
+      instances are present in the first commit of their containing file. The median smell
+      persists for the lifetime of its file; very few smells are removed through targeted
+      refactoring. When smells are removed, it is typically as a side effect of unrelated changes
+      rather than as the explicit goal of a refactoring commit. Code smells are predominantly
+      introduced at file creation, and they rarely go away through targeted refactoring.
+
+      ## Limitations
+      DECOR has known false-positive rates for some smells. The 200-project sample is
+      English-language open-source Java. Refactoring detection from history is imperfect.
+
+      ## Implications
+      The findings undercut the "incremental debt" model of code smells: most smell instances are
+      design choices encoded at file birth, not later regressions. Refactoring is rare in practice,
+      raising questions about how detection tooling can drive remediation rather than merely
+      identification.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+expectedClaims:
+  - The impact of code smells on software quality is not uniform across smell types and attributes
+  - Search-based and metric-based detection approaches dominate the code-smell tooling literature
+  - Refactoring interventions produce measurable effects on quality attributes more significantly than smell identification alone
+  - Code smells are predominantly introduced at file creation and rarely go away through targeted refactoring
+metadata:
+  source: "Sobrinho et al., Code Smells Detection and Visualization: A Systematic Literature Review, arXiv:2012.08842 (2021)"
+  difficulty: easy

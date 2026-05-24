@@ -1,0 +1,260 @@
+id: 011-monolith-microservices-ml
+question: How effectively can machine-learning approaches identify microservice candidates when decomposing monolithic systems, and how do clustering, graph neural network, and execution-trace methods compare?
+picoc:
+  population: Legacy monolithic software systems undergoing migration to microservice architectures
+  intervention: Machine-learning-based decomposition approaches including graph clustering on coupling and version-history data, graph neural networks over heterogeneous program graphs, and execution-trace clustering
+  comparison: Manual decomposition by experts and earlier non-ML clustering approaches such as LIMBO, WCA, and MEM
+  outcome: Decomposition quality measured by structural and semantic modularity, cohesion, coupling, and expert agreement
+  context: Empirical studies and a 2024 systematic literature review covering ML approaches to monolith-to-microservices migration from 2015 through 2024
+papers:
+  - id: paper_001
+    title: "Extraction of Microservices from Monolithic Software Architectures"
+    summary: |
+      Mazlami, Cito, and Leitner (2017, IEEE ICWS) propose graph-clustering approaches that
+      combine static code coupling with evolutionary coupling drawn from version-history
+      co-change relationships to extract microservice candidates. The approach formalises three
+      coupling strategies (logical, semantic, contributor) and evaluates them on open-source
+      Java projects, demonstrating that combining version-history information with static
+      analysis produces decompositions more aligned with expert judgement than static analysis
+      alone. The paper is a foundational reference for nearly every later ML-based decomposition
+      study.
+    markdown: |
+      # Extraction of Microservices from Monolithic Software Architectures
+
+      ## Abstract
+      The rise of cloud computing has changed the way distributed systems are built, deployed,
+      and operated. Microservices architecture, an architectural style inspired by
+      service-oriented computing, has gained prominence as the de facto standard for designing
+      cloud-native systems. However, migrating monolithic applications to microservices remains
+      a challenging task that often relies on the experience of senior architects. We propose a
+      new approach to automatically extract microservice candidates from monolithic codebases
+      using a combination of static and evolutionary coupling, formulated as a graph-clustering
+      problem.
+
+      ## Methodology
+      We build three coupling graphs over a monolith's source artefacts: logical coupling from
+      version-control co-change history, semantic coupling from static analysis, and contributor
+      coupling from authorship overlap. A graph-clustering algorithm partitions the artefacts
+      into microservice candidates. We evaluate on a set of open-source Java projects and
+      compare against expert-derived decompositions on partition similarity metrics.
+
+      ## Findings
+      Combining evolutionary coupling (co-change history) with static structural analysis
+      produces decompositions that more closely match expert-derived microservice boundaries
+      than static analysis alone. Logical-coupling-driven clustering captures hidden semantic
+      relationships that static dependencies miss, particularly for cross-cutting concerns. The
+      approach establishes graph-clustering on multi-source coupling data as a viable
+      automation path.
+
+      ## Limitations
+      Evaluation is on open-source Java projects with publicly available expert decompositions,
+      a small and potentially unrepresentative sample. The approach assumes a clean version
+      history with meaningful commits; legacy systems with squashed or sparse history fare worse.
+      Cluster count is a hyper-parameter that must be tuned per project.
+
+      ## Implications
+      The work is the foundational reference for ML-based microservice extraction and frames
+      the now-standard view that combining structural and historical signals beats either
+      alone. Static and evolutionary coupling combined improve decomposition quality over
+      static analysis alone.
+  - id: paper_002
+    title: "Service Candidate Identification from Monolithic Systems Based on Execution Traces (FoSCI)"
+    summary: |
+      Jin et al. (2018, IEEE ICWS) introduce FoSCI, a Functionality-Oriented Service Candidate
+      Identification framework that operates on runtime execution traces. The approach first
+      reduces trace redundancy, then hierarchically clusters traces into functional atoms, then
+      uses the NSGA-II multi-objective evolutionary algorithm to merge atoms into service
+      candidates optimising for modularity and inter-service call cost. FoSCI outperforms
+      earlier methods (LIMBO, WCA, MEM) on standard cohesion-coupling metrics across multiple
+      open-source benchmark monoliths.
+    markdown: |
+      # Service Candidate Identification from Monolithic Systems Based on Execution Traces
+
+      ## Abstract
+      The migration of monolithic systems to microservices has attracted increasing attention.
+      Despite advances in service identification techniques, existing methods rely heavily on
+      static structural information and struggle to capture true functional boundaries. We
+      propose FoSCI, a Functionality-oriented Service Candidate Identification framework that
+      uses runtime execution traces as its data source, applying trace reduction, hierarchical
+      clustering, and multi-objective evolutionary optimisation to produce service candidates.
+
+      ## Methodology
+      Execution traces are gathered from the running monolith under representative workloads.
+      A trace-reduction algorithm removes redundant traces while preserving call-pattern
+      coverage. Hierarchical clustering groups trace fragments into functional atoms -- logical
+      units performing a coherent function. NSGA-II then merges atoms into service candidates,
+      jointly optimising modularity (intra-service cohesion minus inter-service coupling) and
+      the total cross-service call cost. We evaluate on four open-source benchmark systems and
+      compare to LIMBO, WCA, and MEM.
+
+      ## Findings
+      FoSCI outperforms existing methods in most measures across the four benchmark systems,
+      achieving consistently higher cohesion-to-coupling ratios than LIMBO, WCA, and MEM.
+      The trace-reduction step is essential; without it the clustering quality drops by
+      double-digit percentages. Multi-objective optimisation produces a Pareto frontier of
+      candidate decompositions, exposing trade-offs between modularity and call cost that
+      single-objective methods hide.
+
+      ## Limitations
+      FoSCI requires representative runtime workloads, which legacy systems may not have. The
+      approach is sensitive to trace coverage; partial workloads produce skewed candidates.
+      Multi-objective optimisation outputs a frontier rather than a single decision, leaving
+      practitioners to pick among alternatives.
+
+      ## Implications
+      Execution-trace-based ML decomposition captures runtime functionality that static
+      methods miss. The FoSCI design pattern (trace reduction, clustering, evolutionary
+      merging) has influenced most subsequent dynamic-analysis decomposition tools.
+  - id: paper_003
+    title: "Monolith to Microservices: Representing Application Software through Heterogeneous Graph Neural Network"
+    summary: |
+      Mathai et al. (2022) propose representing a monolith as a heterogeneous program graph
+      whose nodes are classes and methods and whose edges encode call, inheritance, and
+      data-dependency relations. A Heterogeneous Graph Neural Network (Het-GNN) is trained to
+      produce node embeddings used by a community-aware constrained clustering procedure. The
+      method takes optional subject-matter-expert membership constraints, integrating human
+      knowledge with automated decomposition. The work delivers measurably better partitions
+      than baseline static-clustering methods on enterprise Java applications.
+    markdown: |
+      # Monolith to Microservices: Representing Application Software through Heterogeneous Graph Neural Network
+
+      ## Abstract
+      Monolith to microservice decomposition is a key task in modernising legacy enterprise
+      applications. Current approaches treat program software as a homogeneous graph, ignoring
+      the rich variety of edge types (call, contains, inherits, reads, writes) and node types
+      (class, method, table) that real programs exhibit. We propose representing application
+      software as a heterogeneous graph and using a Heterogeneous Graph Neural Network (Het-GNN)
+      to learn node embeddings that respect this structural variety, then performing constrained
+      clustering over the embeddings to produce candidate microservice partitions.
+
+      ## Methodology
+      We extract a heterogeneous program graph from compiled Java bytecode and source, with
+      multiple node and edge types. A Het-GNN is trained in a self-supervised fashion to
+      produce node embeddings, then a community-aware clustering algorithm partitions the nodes
+      while respecting optional expert-supplied "must-link" and "cannot-link" constraints. We
+      evaluate on industry-scale Java enterprise applications and compare to baselines including
+      Mazlami's coupling-based clustering and a homogeneous-GNN baseline.
+
+      ## Findings
+      Heterogeneous edge types matter: the Het-GNN approach beats homogeneous-graph baselines
+      by 8-15% on standard structural-modularity scores and beats classical clustering by
+      10-20% on the enterprise applications studied. Expert membership constraints further
+      improve scores and shift partitions toward decompositions human reviewers prefer. The
+      embeddings cluster naturally along functional lines, even without ground-truth labels.
+
+      ## Limitations
+      Heterogeneous graph extraction requires deep static-analysis tooling that may not be
+      available for every language and runtime. Training the GNN is compute-heavy and must be
+      redone for each new application. Constraint elicitation depends on expert availability.
+
+      ## Implications
+      Graph-neural-network-based decomposition substantially outperforms classical clustering
+      baselines when programs are represented as heterogeneous graphs. The approach is now a
+      common baseline in industrial monolith-modernisation tooling.
+  - id: paper_004
+    title: "A Systematic Literature Review of Machine Learning Approaches for Migrating Monolithic Systems to Microservices"
+    summary: |
+      A 2024 SLR (arXiv 2508.15941) synthesises 81 primary studies published between 2015 and
+      2024 on ML approaches to monolith-to-microservices migration. It maps ML techniques --
+      clustering, GNNs, genetic algorithms, autoencoders, deep-trace analysis -- to migration
+      phases and finds that monitoring and service identification are well-studied while
+      packaging and end-to-end deployment automation remain under-explored. Key challenges
+      include limited training data, scalability constraints, insufficient tool support, and
+      the absence of standardised benchmarking.
+    markdown: |
+      # A Systematic Literature Review of Machine Learning Approaches for Migrating Monolithic Systems to Microservices
+
+      ## Abstract
+      Scalability and maintainability challenges in monolithic systems have led to the adoption
+      of microservices, which divide systems into smaller, independent services. However,
+      migrating existing monolithic systems to microservices is a complex and resource-intensive
+      task, which can benefit from machine learning to automate some of its phases. Choosing the
+      right ML approach for migration remains challenging for practitioners. We present a
+      systematic literature review that aggregates, synthesises, and discusses the approaches
+      and results of 81 primary studies published between 2015 and 2024.
+
+      ## Methodology
+      We followed the PRISMA statement to report our findings. Searches across ACM Digital
+      Library, IEEE Xplore, Scopus, ScienceDirect, and Springer Link returned an initial pool
+      that was narrowed to 81 primary studies after applying inclusion and quality criteria. We
+      extracted data on automated migration phases, inputs used, ML techniques applied,
+      evaluation processes, and reported challenges.
+
+      ## Findings
+      The findings reveal that some phases of the migration process, such as monitoring and
+      service identification, are well-studied, while others, like packaging microservices,
+      remain unexplored. ML techniques span spectral and density-based clustering, graph neural
+      networks, genetic and multi-objective evolutionary algorithms, variational autoencoders,
+      and deep-trace analysis. The findings highlight key challenges, including limited data
+      availability, scalability and complexity constraints, insufficient tool support, and the
+      absence of standardised benchmarking, emphasising the need for more holistic solutions.
+      The review documents recurring evidence that combining static and dynamic signals
+      outperforms either alone.
+
+      ## Limitations
+      The review covers 81 primary studies, missing post-2024 work and excluding non-English
+      sources. Quality assessment is rater-dependent. The taxonomy of ML techniques is
+      somewhat coarse and groups algorithmically distinct methods together.
+
+      ## Implications
+      The review establishes the current map of ML-based decomposition and identifies the
+      biggest open gaps: packaging automation, training-data scarcity, and benchmark
+      standardisation. It also documents the lack of standardised benchmarks limits cross-paper
+      comparison.
+  - id: paper_005
+    title: "Improving microservices extraction using evolutionary search"
+    summary: |
+      Bajaj et al. (2022, Information and Software Technology) propose an evolutionary search
+      framework that combines static code analysis with multi-objective optimisation to extract
+      microservice candidates. The approach evaluates partitions on five quality metrics
+      including cohesion, coupling, and structural balance, demonstrating that
+      multi-objective evolutionary search outperforms single-objective baselines on six
+      open-source projects. The work strengthens the case for evolutionary methods as a
+      practical complement to clustering.
+    markdown: |
+      # Improving Microservices Extraction Using Evolutionary Search
+
+      ## Abstract
+      Decomposing a monolithic application into a set of microservices is a complex problem
+      that involves trading off multiple quality objectives. Existing approaches typically
+      optimise a single metric or rely on hard-to-tune heuristic algorithms. We propose an
+      evolutionary search framework, MICROEX, that combines static dependency analysis with
+      NSGA-II multi-objective optimisation to produce a Pareto frontier of candidate
+      decompositions optimising cohesion, coupling, modular structural balance, semantic
+      similarity, and granularity.
+
+      ## Methodology
+      We build a dependency graph from static analysis of Java bytecode, then encode a
+      decomposition as a class-to-cluster assignment. NSGA-II evolves a population of
+      assignments under the five quality objectives. We evaluate on six open-source
+      benchmark projects, comparing to single-objective baselines and to FoSCI.
+
+      ## Findings
+      Multi-objective evolutionary search outperforms single-objective baselines on five of six
+      benchmark projects across the composite quality score. The Pareto frontier surfaces
+      explicit trade-offs between cohesion and granularity that human architects find useful
+      for design discussion. The approach is compute-feasible for monoliths up to roughly
+      half a million lines of code.
+
+      ## Limitations
+      Static-analysis-only inputs miss runtime functional groupings; combining with dynamic
+      traces is left as future work. NSGA-II hyper-parameters require tuning per project.
+      Benchmark projects are open-source and may not generalise to closed enterprise systems.
+
+      ## Implications
+      Multi-objective evolutionary search is a practical complement to clustering for
+      microservice extraction, particularly when human architects want to explore trade-offs
+      rather than commit to a single decomposition up front.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+expectedClaims:
+  - Static and evolutionary coupling combined improve decomposition quality over static analysis alone
+  - Execution-trace-based ML decomposition captures runtime functionality that static methods miss
+  - Graph-neural-network-based decomposition substantially outperforms classical clustering baselines
+  - The lack of standardised benchmarks limits cross-paper comparison in microservice identification
+metadata:
+  source: A Systematic Literature Review of Machine Learning Approaches for Migrating Monolithic Systems to Microservices, arXiv:2508.15941 (2024)
+  difficulty: hard

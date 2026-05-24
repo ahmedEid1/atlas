@@ -1,0 +1,202 @@
+id: 009-llm-copilot-developer-productivity
+question: How do LLM-based coding assistants like GitHub Copilot affect software developer productivity in controlled experiments and field studies, and where are the gains concentrated?
+picoc:
+  population: Software developers writing code in production or controlled experimental settings
+  intervention: LLM-based coding assistants, especially GitHub Copilot and other tab-completion or chat-based IDE integrations
+  comparison: Developers writing the same tasks without LLM assistance
+  outcome: Task completion time, throughput, code quality, developer satisfaction, and cognitive load
+  context: Industrial controlled experiments and a 2025 systematic literature review covering studies from 2014 through 2024
+papers:
+  - id: paper_001
+    title: "The Impact of AI on Developer Productivity: Evidence from GitHub Copilot"
+    summary: |
+      Peng et al. (2023, GitHub/MIT) report a randomised controlled trial with 95 professional
+      developers implementing an HTTP server in JavaScript. The treatment group with Copilot
+      completed the task 55.8% faster than the control group, a strongly significant effect.
+      Heterogeneity analysis suggests gains are larger for less-experienced developers, with
+      implications for accelerating onboarding into software engineering careers.
+    markdown: |
+      # The Impact of AI on Developer Productivity: Evidence from GitHub Copilot
+
+      ## Abstract
+      Generative AI tools hold promise to increase human productivity. This paper presents results
+      from a controlled experiment with GitHub Copilot, an AI pair programmer. Recruited software
+      developers were asked to implement an HTTP server in JavaScript as quickly as possible. The
+      treatment group, with access to the AI pair programmer, completed the task 55.8% faster
+      than the control group. Observed heterogeneous effects show promise for AI pair programmers
+      to help people transition into software development careers.
+
+      ## Methodology
+      We recruited 95 professional developers via Upwork and randomly assigned them to a treatment
+      group (with Copilot enabled in VS Code) or a control group (no Copilot). All participants
+      received the same task spec: implement an HTTP server in JavaScript. We pre-registered the
+      primary outcome (task completion time) and analysed it by intent-to-treat. Secondary
+      outcomes include self-reported flow and satisfaction.
+
+      ## Findings
+      GitHub Copilot reduces task completion time by about 56% in a controlled experiment. The
+      effect is statistically significant at p < 0.01 and robust to alternative specifications.
+      Heterogeneity analysis indicates that developers with less professional experience and
+      developers who write JavaScript less frequently see larger gains. Self-reported satisfaction
+      is also higher in the treatment arm.
+
+      ## Limitations
+      The experiment uses a single task type with a clear-cut completion criterion, which is not
+      representative of all software work. Self-reported experience is noisy. Participants were
+      Upwork freelancers, which may differ from in-house developers. The study measures speed but
+      not long-term code quality or maintenance cost.
+
+      ## Implications
+      The first robust randomised trial provides credible evidence that LLM-based coding assistants
+      can dramatically speed certain coding tasks, with the largest gains for less-experienced
+      developers. This study is the most-cited single piece of evidence in the productivity
+      debate.
+  - id: paper_002
+    title: "The Impact of LLM-Assistants on Software Developer Productivity: A Systematic Literature Review"
+    summary: |
+      Sergeyuk et al. (2025) conduct a systematic literature review of 39 peer-reviewed studies
+      published from 2014 through 2024 on the impact of LLM-assistants on developer productivity.
+      Most studies report substantial benefits including accelerated development, minimised code
+      search, and automation of trivial tasks; a notable subset identifies risks including
+      cognitive offloading and reduced team collaboration. The review finds that whether
+      LLM-assistants improve or degrade code quality remains unresolved, with contradictory
+      outcomes depending on context and evaluation criteria.
+    markdown: |
+      # The Impact of LLM-Assistants on Software Developer Productivity: A Systematic Literature Review
+
+      ## Abstract
+      Large language model assistants present new opportunities to transform software development.
+      Developers are increasingly adopting these tools across tasks, including coding, testing,
+      debugging, documentation, and design. Yet, despite growing interest, there is no synthesis
+      of how LLM-assistants affect software developer productivity. In this paper, we present a
+      systematic review and mapping of 39 peer-reviewed studies published between January 2014 and
+      December 2024 that examine this impact.
+
+      ## Methodology
+      We follow Kitchenham's SLR guidelines and PRISMA reporting. Searches across IEEE Xplore,
+      ACM Digital Library, Scopus, and Web of Science returned 1,247 candidate papers, narrowed
+      to 39 after inclusion screening. We extract study type, intervention, outcomes, and mapping
+      to the SPACE productivity framework (Satisfaction, Performance, Activity, Communication,
+      Efficiency).
+
+      ## Findings
+      Most studies report considerable benefits from LLM-assistants; a notable subset identifies
+      critical risks. Commonly reported gains include accelerated development, minimised code
+      search, and automation of trivial and repetitive tasks. Concerns around cognitive
+      offloading and reduced team collaboration are also documented. Whether LLM-based assistants
+      improve or degrade code quality remains unresolved. While 90% of studies adopt a
+      multi-dimensional perspective by examining at least two SPACE dimensions, only 15% extend
+      beyond three dimensions. Satisfaction, Performance, and Efficiency dominate; Communication
+      and Activity remain under-explored. Most studies are exploratory (59%) and methodologically
+      diverse, but lack longitudinal and team-based evaluations.
+
+      ## Limitations
+      The review depends on the SPACE framework as a mapping target, which may not capture all
+      productivity facets. Publication bias likely under-counts null or negative findings. The
+      heterogeneity of evaluation prevents quantitative meta-analysis.
+
+      ## Implications
+      LLM-assistant productivity gains are real but uneven, and the question of code-quality
+      effects is open. Future research needs longitudinal and team-level studies and more
+      coverage of communication and activity dimensions.
+  - id: paper_003
+    title: "GitHub Copilot AI pair programmer: Asset or Liability?"
+    summary: |
+      Imai (2022) and Nguyen and Nadi (2022) study Copilot's correctness on fundamental algorithmic
+      problems. Copilot can produce solutions for nearly all classical algorithmic tasks, but
+      correctness rates are below those of human developers, and a significant fraction of
+      Copilot's solutions contain reproducible bugs. Importantly, buggy Copilot solutions require
+      less repair effort than equivalent human errors -- the bugs are typically shallow. The work
+      tempers earlier enthusiasm by quantifying both Copilot's strengths and its concrete failure
+      modes.
+    markdown: |
+      # GitHub Copilot AI Pair Programmer: Asset or Liability?
+
+      ## Abstract
+      Automatic program synthesis is a long-lasting dream in software engineering. Recently, a
+      tool, called Copilot, has been launched by GitHub which is built on top of Codex, a deep
+      neural network trained on a large corpus of public source code. We evaluate Copilot's
+      capabilities along two dimensions: (a) the correctness of its solutions to fundamental
+      algorithmic problems, and (b) a head-to-head comparison with human-authored solutions to the
+      same problems.
+
+      ## Methodology
+      We selected 33 fundamental algorithmic tasks (sorting, searching, data structures, graph
+      problems) and prompted Copilot to produce solutions in Python and JavaScript. We compared
+      Copilot's outputs to human solutions on LeetCode and to a control group of student
+      programmers. Correctness was measured against problem-specific test suites; repairability
+      was measured by minimum-edit distance from a buggy version to a passing version.
+
+      ## Findings
+      Copilot is capable of providing solutions for almost all fundamental algorithmic problems,
+      though quality varies. Buggy Copilot solutions required less repair effort compared to
+      human errors. However, some generated solutions contain bugs and cannot be reliably
+      reproduced, and Copilot has some difficulties in combining multiple methods to generate a
+      solution. The correct ratio of human solutions is greater than Copilot's suggestions
+      overall.
+
+      ## Limitations
+      Algorithmic problems are a narrow slice of real software engineering. The study uses one
+      snapshot of Copilot; capability evolves rapidly. Test suites can miss subtle correctness
+      bugs.
+
+      ## Implications
+      Copilot is a capable but imperfect assistant: strong on isolated problem-solving, weaker on
+      compositional tasks. The repair-effort finding suggests Copilot mistakes are easier to
+      audit than novice human mistakes, which is operationally useful.
+  - id: paper_004
+    title: "A Study of Adoption and Effects of DevOps Practices"
+    summary: |
+      A 2022 cross-industry survey (Zarour et al., n=123) examined the adoption and impact of 14
+      DevOps practices including TDD and trunk-based development. The study reports broadly
+      positive perceived effects on software-delivery and organisational performance, with some
+      negative impacts including decreased predictability in product delivery and reduced job
+      satisfaction in certain configurations. The paper is included here as a control: it covers
+      developer-productivity-related practices but not LLM assistants, so it tests whether the
+      retriever correctly identifies the AI-coding-assistant scope.
+    markdown: |
+      # A Study of Adoption and Effects of DevOps Practices
+
+      ## Abstract
+      DevOps practices have been widely adopted in software development organisations. This paper
+      examines DevOps adoption across organisations to understand how individual practices affect
+      performance. We identify 14 DevOps practices comprising 47 subpractices through literature
+      review, then survey 123 respondents across 11 industries to measure adoption and maturity
+      levels.
+
+      ## Methodology
+      We conducted an online survey of 123 software-development practitioners across 11 industry
+      verticals. Respondents reported on the adoption frequency of 47 DevOps subpractices and on
+      perceived effects on delivery and organisational outcomes. We compared adoption to
+      independently measured organisational DevOps maturity.
+
+      ## Findings
+      13 of the 14 DevOps practices are adopted by 50% of respondents most or all of the time. A
+      positive correlation exists between adoption of all practices and independently measured
+      organisational maturity, though practices like sandbox deployment, test-driven development,
+      and trunk-based development showed lower correlations. Overall perceptions lean positive
+      regarding software delivery and organisational performance, but some negative impacts are
+      reported, including decreased predictability in product delivery and reduced job
+      satisfaction. This study does not address LLM-based coding assistants.
+
+      ## Limitations
+      Self-report survey methodology is subject to social-desirability bias. The sample is biased
+      toward respondents in DevOps-mature organisations. Effects on individual productivity are
+      not directly measured.
+
+      ## Implications
+      DevOps practices broadly correlate with organisational maturity and self-reported delivery
+      improvement, with notable trade-offs. The study is not about LLM coding assistants and is
+      included to test whether the question correctly excludes adjacent developer-productivity
+      topics.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+expectedClaims:
+  - GitHub Copilot reduces task completion time by about 56% in a controlled experiment
+  - LLM-assistant productivity gains are real but uneven, with code-quality effects unresolved
+  - Copilot solutions are sometimes buggy but easier to repair than human errors
+metadata:
+  source: Sergeyuk et al., The Impact of LLM-Assistants on Software Developer Productivity, arXiv:2507.03156 (2025)
+  difficulty: easy

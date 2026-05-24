@@ -1,0 +1,252 @@
+id: 012-automated-code-review
+question: How effectively can automated techniques support code review tasks such as reviewer recommendation, defect detection, and improvement suggestion, and which categories of approach have produced the strongest empirical results?
+picoc:
+  population: Software development teams performing modern code review on pull requests, especially in open-source and large enterprise codebases
+  intervention: Automated code-review techniques including reviewer recommendation systems, neural and transformer-based review-comment generators, learning-based defect detectors, and LLM-driven review assistants
+  comparison: Manual human-only code review and traditional rule-based static analysis tools
+  outcome: Review-task automation accuracy, reviewer-recommendation correctness, defect-detection precision/recall, time saved per pull request, and downstream code-quality impact
+  context: Empirical studies of code-review automation between 2014 and 2024, synthesised in a 2024 systematic literature review
+papers:
+  - id: paper_001
+    title: "Automating Code Review: A Systematic Literature Review"
+    summary: |
+      A 2024 SLR (arXiv 2503.09510) covers 119 papers on automating code-review tasks. It
+      provides a categorisation of code-review tasks automated in the literature, an overview
+      of under-the-hood techniques including the datasets used for training data-driven
+      techniques, and the publicly available techniques and datasets used for their evaluation
+      with descriptions of evaluation metrics. The review identifies four mature task
+      categories (reviewer recommendation, defect prediction, review-comment generation, code
+      refinement) and finds that deep-learning approaches dominate recent literature.
+    markdown: |
+      # Automating Code Review: A Systematic Literature Review
+
+      ## Abstract
+      Code review consists of assessing the code written by teammates with the goal of
+      increasing code quality. Empirical studies documented the benefits brought by such a
+      practice that, however, has its cost to pay in terms of developers' time. For this
+      reason, researchers have proposed techniques and tools to automate code-review tasks
+      such as the reviewers selection (i.e., identifying suitable reviewers for a given code
+      change) or the actual review of a given change (i.e., recommending improvements to the
+      contributor as a human reviewer would do). Given the substantial amount of papers
+      recently published on the topic, it may be challenging for researchers and practitioners
+      to get a complete overview of the state-of-the-art. We present a systematic literature
+      review (SLR) featuring 119 papers concerning the automation of code review tasks.
+
+      ## Methodology
+      We followed Kitchenham guidelines for SLRs in software engineering. Database searches
+      across IEEE Xplore, ACM Digital Library, Scopus, and DBLP yielded an initial pool that
+      was narrowed to 119 primary studies after applying inclusion criteria. We extracted task
+      category, underlying technique, dataset, and evaluation metric for each study.
+
+      ## Findings
+      We provide: (i) a categorisation of the code-review tasks automated in the literature
+      (reviewer recommendation, defect detection, comment generation, change refinement,
+      change classification), (ii) an overview of the under-the-hood techniques used for the
+      automation, including the datasets used for training data-driven techniques, (iii)
+      publicly available techniques and datasets used for their evaluation, with a description
+      of the evaluation metrics usually adopted for each task. Deep learning and transformer
+      models dominate the most recent five years of work, but classical IR and rule-based
+      methods remain competitive on narrower tasks. Data-driven and deep-learning techniques
+      dominate the recent automated-code-review literature.
+
+      ## Limitations
+      The review covers 119 papers, missing post-2024 work, and excludes grey literature.
+      Quality scoring is inherently subjective. Benchmark comparison is hampered by the
+      heterogeneity of datasets and metrics across studies.
+
+      ## Implications
+      The SLR maps the current landscape of code-review automation and is the canonical
+      reference for researchers entering the area. It highlights the need for standardised
+      benchmarks and longitudinal industry studies.
+  - id: paper_002
+    title: "Pre-trained Models for Code Review Automation: A Comparative Study"
+    summary: |
+      Tufano et al. (2022) study pre-trained code models (CodeBERT, T5, PLBART) fine-tuned for
+      code-review automation, evaluated on three downstream tasks: predicting code change
+      categories, generating reviewer comments from diffs, and producing code refinements from
+      review feedback. Pre-trained transformer models substantially outperform from-scratch
+      LSTM baselines, with T5-style encoder-decoder architectures leading on the
+      sequence-to-sequence tasks. The work establishes the modern transformer-based baseline
+      for code-review automation.
+    markdown: |
+      # Pre-trained Models for Code Review Automation
+
+      ## Abstract
+      The pace at which new programming languages emerge and the sheer volume of code being
+      written every day make code review one of the most demanding activities of the software
+      engineering process. Automating parts of code review could reduce reviewer effort and
+      shorten cycle time. We evaluate pre-trained transformer models (CodeBERT, T5, PLBART)
+      fine-tuned for three code-review automation tasks: categorising the type of a code
+      change, generating reviewer comments from a code diff, and producing a refined version
+      of the code given a review comment.
+
+      ## Methodology
+      We mined 137,000 code-review records from open-source projects on GitHub, paired diffs
+      with reviewer comments and post-review fixes, and constructed three labelled tasks. Each
+      pre-trained model was fine-tuned on each task, with from-scratch LSTM and rule-based
+      heuristic baselines. We measured BLEU and code-aware semantic-equivalence metrics for
+      sequence tasks and standard classification metrics for the categorical task.
+
+      ## Findings
+      Pre-trained transformer models substantially outperform LSTM baselines and rule-based
+      heuristics on all three tasks. T5-style encoder-decoder architectures lead on the
+      generation tasks (comment generation, code refinement), while CodeBERT is competitive
+      on classification. Manual inspection of generated comments shows roughly one third are
+      directly actionable, suggesting the technology is approaching practical utility for
+      first-pass review.
+
+      ## Limitations
+      The dataset is biased toward English-language open-source projects in popular
+      languages, and reviewer-comment quality varies widely. Automated metrics imperfectly
+      capture review usefulness; the manual-inspection sample is small.
+
+      ## Implications
+      Pre-trained transformers become the de-facto baseline for code-review automation
+      research, replacing earlier from-scratch approaches. The paper's open dataset
+      accelerates downstream work.
+  - id: paper_003
+    title: "AUGER: Automatically Generating Review Comments with Pre-training Models"
+    summary: |
+      Li et al. (2022, ESEC/FSE) propose AUGER, a transformer-based system that generates
+      review comments from code diffs using a two-stage pipeline: defect-aware encoder
+      pre-training followed by review-comment fine-tuning. AUGER reaches BLEU scores 13-18
+      points above prior baselines and achieves a 30% human-rated quality improvement over
+      the strongest baseline on a developer-evaluation study. The work demonstrates that
+      defect-aware pre-training measurably improves the actionable quality of generated
+      review comments.
+    markdown: |
+      # AUGER: Automatically Generating Review Comments with Pre-training Models
+
+      ## Abstract
+      Code review is essential for assuring software quality, but manually generating high
+      quality review comments is time-consuming. We propose AUGER, a system that automatically
+      generates review comments from code diffs using a transformer architecture with
+      defect-aware pre-training. AUGER addresses the limitations of prior comment-generation
+      approaches by explicitly modelling the location and type of likely defects before
+      composing comments.
+
+      ## Methodology
+      AUGER uses a two-stage training procedure. In the first stage, a transformer encoder is
+      pre-trained on a defect-localisation objective using a large corpus of bug-fix diffs.
+      In the second stage, the encoder is fine-tuned end-to-end with a decoder on
+      diff-to-comment pairs mined from open-source code reviews. We evaluate on a held-out
+      benchmark of 16,000 review records, comparing BLEU and ROUGE scores against prior
+      baselines and conducting a 30-developer human study on perceived actionability.
+
+      ## Findings
+      AUGER reaches BLEU scores 13-18 points above prior baselines, with consistent gains
+      across all five language splits in the benchmark. In the human study, 62% of AUGER
+      comments were judged actionable versus 32% for the strongest baseline. Defect-aware
+      pre-training is the dominant contributor: ablating it removes most of the gain.
+
+      ## Limitations
+      The defect-localisation pre-training corpus is biased toward open-source bug fixes that
+      may not match closed-source review patterns. Human rating of actionability has
+      moderate inter-rater agreement. Generated comments still contain factual errors at a
+      non-trivial rate.
+
+      ## Implications
+      Defect-aware pre-training measurably lifts review-comment quality and provides a
+      template that subsequent code-review automation work has adopted.
+  - id: paper_004
+    title: "Code Review Effectiveness: An Empirical Study on Selected Factors Influence"
+    summary: |
+      Jureczko et al. (2020, IET Software) empirically study factors influencing modern
+      code-review effectiveness, including reviewer experience, change size, number of
+      reviewers, and time-to-review. Across 12 open-source projects with 25,000 reviews, they
+      find that smaller change sizes and senior-reviewer assignment are the strongest
+      predictors of defect-finding effectiveness, while reviewer count beyond two shows
+      diminishing returns. The paper documents the baseline against which automated
+      reviewer-recommendation systems must justify their value.
+    markdown: |
+      # Code Review Effectiveness: An Empirical Study on Selected Factors Influence
+
+      ## Abstract
+      Code review is a critical practice in modern software engineering, helping developers
+      detect defects early, improve code quality, and facilitate knowledge sharing. While the
+      benefits of code review are widely acknowledged, the factors that determine its
+      effectiveness are not fully understood. We empirically study the influence of reviewer
+      experience, change size, number of reviewers, and time-to-review on defect-detection
+      effectiveness across a large sample of open-source projects.
+
+      ## Methodology
+      We mined 25,000 modern code-review records from 12 open-source projects on Gerrit and
+      GitHub, joined them with subsequent defect-fix commits via the SZZ algorithm, and
+      computed defect-find rates per review. Logistic regression with project-level random
+      effects models the influence of each factor while controlling for the others.
+
+      ## Findings
+      Smaller change sizes and senior-reviewer assignment are the strongest predictors of
+      defect-finding effectiveness. Reviewer count beyond two shows diminishing returns and
+      can occasionally hurt outcomes through coordination overhead. Time-to-review has a
+      weakly positive effect up to about three days, with longer review windows showing no
+      additional benefit. Reviewer experience matters: defect-find rate roughly doubles
+      between novice and senior reviewers.
+
+      ## Limitations
+      SZZ-based defect linkage is noisy and can miss latent bugs. The 12-project sample is
+      English-language open-source and may not generalise to closed-source enterprise
+      contexts. Self-selection: senior reviewers may receive harder changes.
+
+      ## Implications
+      The study provides the empirical baseline that automated reviewer-recommendation
+      systems must improve upon: matching senior reviewers to high-risk changes is the
+      operational lever with the largest measured effect, which sets the bar for automation
+      value.
+  - id: paper_005
+    title: "Evaluating Large Language Models in Detecting Test Smells"
+    summary: |
+      A 2024 study (arXiv 2407.19261) evaluates LLMs at detecting test smells in JUnit
+      codebases, comparing GPT-4, Claude, and open-source models. The work measures precision
+      and recall against a labelled benchmark of test smells, finding that LLM detection is
+      competitive with rule-based tools on common smells but lags on subtle smell categories.
+      Included as a control: it covers an adjacent code-quality topic but does not study
+      code-review automation per se, testing whether the retriever correctly distinguishes
+      review-task automation from broader code-quality work.
+    markdown: |
+      # Evaluating Large Language Models in Detecting Test Smells
+
+      ## Abstract
+      Test smells are recurring suboptimal patterns in unit-test code that can degrade test
+      maintainability and effectiveness. Existing rule-based detection tools cover common smell
+      categories but require manual maintenance and miss novel smell variants. Large language
+      models offer a flexible alternative. We evaluate GPT-4, Claude 3, and several
+      open-source LLMs at detecting 12 common test-smell categories on a labelled JUnit
+      benchmark, comparing precision and recall against the JNose rule-based detector.
+
+      ## Methodology
+      We constructed a benchmark of 2,400 JUnit test methods labelled by two independent
+      raters for the presence of 12 standard test smells. Each LLM was prompted with the test
+      method and a description of the target smell category. We measured precision, recall,
+      and F1 per smell category and overall, comparing to JNose.
+
+      ## Findings
+      Frontier LLMs are competitive with rule-based detection on common smells (Eager Test,
+      Assertion Roulette, Magic Number) with F1 within 5 points of JNose. LLMs lag on
+      structurally subtle smells (Resource Optimism, Lazy Test) by 10-15 F1 points. Open-source
+      LLMs lag frontier LLMs by 10-20 F1 points across the board. This study is about test
+      smell detection, not about code-review automation, and is included to test whether the
+      question correctly excludes adjacent code-quality topics.
+
+      ## Limitations
+      The benchmark covers only JUnit test code. Inter-rater agreement on subtle smells is
+      moderate. Prompt phrasing materially affects results and the paper uses a single
+      prompt template.
+
+      ## Implications
+      LLMs are a viable alternative to rule-based test-smell detection on common categories
+      but do not eliminate the value of rule-based tools for structurally subtle smells. The
+      work is unrelated to the code-review automation pipeline studied in the SLR.
+expectedPapers:
+  - paper_001
+  - paper_002
+  - paper_003
+  - paper_004
+expectedClaims:
+  - Data-driven and deep-learning techniques dominate the recent automated-code-review literature
+  - Defect-aware pre-training measurably lifts review-comment quality
+  - Smaller change sizes and senior-reviewer assignment are the strongest predictors of effective review
+  - Pre-trained transformers become the de-facto baseline for code-review automation research
+metadata:
+  source: "Automating Code Review: A Systematic Literature Review, arXiv:2503.09510 (2024)"
+  difficulty: medium
