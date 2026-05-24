@@ -93,6 +93,13 @@ export default function Home() {
                 <span aria-hidden="true">→</span>
               </Link>
             </Show>
+            <Link
+              href="/showcase"
+              className="inline-flex items-center gap-2 px-5 py-3 text-sm font-medium text-[var(--thoth-blue-ink)] border border-[var(--thoth-rule)] rounded-md hover:border-[var(--thoth-blue)] hover:text-[var(--thoth-blue)] transition-colors"
+            >
+              See a sample review
+              <span aria-hidden="true">→</span>
+            </Link>
             <a
               href="https://github.com/ahmedEid1/thoth#connect-via-mcp"
               target="_blank"

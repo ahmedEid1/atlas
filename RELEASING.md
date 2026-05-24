@@ -88,6 +88,25 @@ curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth" \
 
 Namespace `io.github.ahmedEid1/thoth` requires logging in as **`ahmedEid1`** (capital E — namespace is case-sensitive). Description is hard-capped at 100 chars.
 
+## Showcase review (`/showcase`)
+
+The pinned exemplar review at `https://thoth-slr.vercel.app/showcase`
+is rendered from a fixed showcase user (`user_thoth_showcase`,
+`isGuest=false` so it's never swept by the guest-cleanup cron).
+Hand-curated, no LLM calls.
+
+Reseed it (idempotent — wipes + reinserts the showcase project) any
+time the DB is rebuilt or after a migration that touches `User`,
+`Project`, `Run`, `IncludedPaper`, `ExtractedClaim`, or `ClaimCheck`:
+
+```bash
+pnpm seed:showcase
+```
+
+Source: `scripts/seed-showcase-review.ts`. The content is deliberately
+designed to include two `UNSUPPORTED` `ClaimCheck` verdicts so the
+cite_check value prop is visible to a recruiter without signing in.
+
 ## Eval CI workflow secrets
 
 The weekly `.github/workflows/evals.yml` job needs the same secrets as
