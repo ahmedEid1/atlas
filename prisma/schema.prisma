@@ -16,6 +16,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   projects  Project[]
+  mcpCalls  McpCall[]
 
   @@index([clerkId])
   @@index([isGuest, createdAt])         // for the cleanup cron's "guests older than 24h" query
@@ -224,6 +225,7 @@ model EvalRun {
 model McpCall {
   id          String        @id @default(cuid())
   userId      String                          // Thoth User.id (NOT Clerk id)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   toolName    String
   inputHash   String                          // SHA-256(canonical-JSON(input))
   reviewId    String?                         // copied from input when present
