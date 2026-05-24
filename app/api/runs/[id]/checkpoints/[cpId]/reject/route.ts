@@ -27,68 +27,66 @@ export async function POST(
   const reason = body.reason ?? "rejected";
   const decisionPayload = { approved: false, rejectionReason: reason };
 
-  // F2 + F3: All three operations (PENDING -> REJECTED transition, wait-token
-  // probe, resolveWaitToken delivery, waitToken null-out) run inside a single
-  // transaction holding a per-checkpoint advisory lock. See approve/route.ts
-  // for full rationale on holding the Trigger.dev call inside the lock.
-  type ResolveResult =
-    | { status: "delivered"; recovered: false }
-    | { status: "delivered"; recovered: true }
-    | { status: "already_resolved" };
-  const result = await db.$transaction(
-    async (tx): Promise<ResolveResult> => {
+  // Round-4 fix: see approve/route.ts for full rationale. Split into
+  // Phase 1 (commit decision, no external call) + Phase 2 (deliver
+  // persisted payload to Trigger.dev). The persisted decisionPayload is
+  // immutable after Phase 1 commits, so an audit-divergent retry (e.g.
+  // an APPROVE that committed Phase 1 then crashed during Phase 2,
+  // followed by a REJECT retry) can never substitute its own payload —
+  // Phase 2 always reads and re-delivers the original committed payload.
+  const phase1 = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
+    const updated = await tx.humanCheckpoint.updateMany({
+      where: { id: cpId, status: "PENDING" },
+      data: {
+        status: "REJECTED",
+        decisionPayload,
+        rejectionReason: reason,
+        decidedAt: new Date(),
+      },
+    });
+    return { decided: updated.count > 0 };
+  });
+
+  const phase2 = await db.$transaction(
+    async (tx): Promise<{ outcome: "delivered" | "already_delivered" | "not_found" }> => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
-      const updated = await tx.humanCheckpoint.updateMany({
-        where: { id: cpId, status: "PENDING" },
-        data: {
-          status: "REJECTED",
-          decisionPayload,
-          rejectionReason: reason,
-          decidedAt: new Date(),
-        },
-      });
       const row = await tx.humanCheckpoint.findUnique({
         where: { id: cpId },
-        select: { waitToken: true, decisionPayload: true },
+        select: { waitToken: true, decisionPayload: true, status: true },
       });
-      if (updated.count === 1) {
-        // Happy path: we won the race. Deliver with the LIVE request payload.
-        if (row?.waitToken) {
-          await resolveWaitToken(row.waitToken, decisionPayload);
-          await tx.humanCheckpoint.update({
-            where: { id: cpId },
-            data: { waitToken: null },
-          });
-        }
-        return { status: "delivered", recovered: false };
+      if (!row) {
+        return { outcome: "not_found" };
       }
-      // updated.count === 0: a prior caller already transitioned the row.
-      if (row?.waitToken) {
-        // F2.2: Recovery — prior attempt crashed between DB update and
-        // resolveWaitToken. Replay with the PERSISTED decisionPayload
-        // (NOT the current request body).
-        await resolveWaitToken(
-          row.waitToken,
-          (row.decisionPayload ?? {}) as Record<string, unknown>,
-        );
-        await tx.humanCheckpoint.update({
-          where: { id: cpId },
-          data: { waitToken: null },
-        });
-        return { status: "delivered", recovered: true };
+      if (!row.waitToken) {
+        return { outcome: "already_delivered" };
       }
-      return { status: "already_resolved" };
+      await resolveWaitToken(
+        row.waitToken,
+        (row.decisionPayload ?? {}) as Record<string, unknown>,
+      );
+      await tx.humanCheckpoint.update({
+        where: { id: cpId },
+        data: { waitToken: null },
+      });
+      return { outcome: "delivered" };
     },
     { timeout: 30_000 },
   );
 
-  if (result.status === "already_resolved") {
+  if (phase2.outcome === "not_found") {
+    return NextResponse.json(
+      { error: "checkpoint_not_found" },
+      { status: 404 },
+    );
+  }
+  if (!phase1.decided && phase2.outcome === "already_delivered") {
     return NextResponse.json(
       { error: "checkpoint_already_resolved" },
       { status: 409 },
     );
   }
-  if (result.recovered) {
+  if (!phase1.decided && phase2.outcome === "delivered") {
     return NextResponse.json({ ok: true, recovered: true });
   }
   return NextResponse.json({ ok: true });
