@@ -1,4 +1,5 @@
-import type { ZodSchema } from "zod";
+import { randomUUID } from "node:crypto";
+import { z, type ZodSchema } from "zod";
 import { logMcpCall } from "@/lib/mcp/audit";
 import { checkRateLimit } from "@/lib/mcp/rate-limit";
 import type { McpUserCtx } from "@/lib/mcp/auth";
@@ -13,10 +14,8 @@ export class NotFoundError extends Error {
 }
 
 export function classifyError(err: unknown): ErrorCode {
-  if (err instanceof Error) {
-    if (err.name === "ZodError") return "invalid_input";
-    if (err.name === "NotFoundError") return "not_found";
-  }
+  if (err instanceof z.ZodError) return "invalid_input";
+  if (err instanceof Error && err.name === "NotFoundError") return "not_found";
   return "internal";
 }
 
@@ -43,6 +42,7 @@ type McpToolOpts<I, O> = {
  */
 export function mcpTool<I, O>(opts: McpToolOpts<I, O>) {
   return async (rawInput: unknown, ctx: McpUserCtx): Promise<ToolResult> => {
+    const requestId = randomUUID();
     const start = Date.now();
     let status: "OK" | "ERROR" = "OK";
     let errorCode: ErrorCode | undefined;
@@ -69,13 +69,14 @@ export function mcpTool<I, O>(opts: McpToolOpts<I, O>) {
         status = "ERROR";
         errorCode = classifyError(err);
         const safeMessage = errorCode === "internal"
-          ? "internal error — contact support with the request id"
+          ? `internal error — request id ${requestId}`
           : errorCode;
         result = { isError: true, content: [{ type: "text", text: JSON.stringify({ error: safeMessage }) }] };
       }
     }
 
     await logMcpCall({
+      id: requestId,
       userId: ctx.userId, toolName: opts.name, input: rawInput,
       status, errorCode, latencyMs: Date.now() - start,
     });

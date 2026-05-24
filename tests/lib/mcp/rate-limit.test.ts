@@ -34,20 +34,13 @@ describe("checkRateLimit", () => {
     expect(res).toEqual({ ok: false, retryAfter: 60, errorCode: "rate_limited" });
   });
 
-  it("returns { ok: false } when daily cap is hit (retryAfter to next UTC midnight)", async () => {
-    const now = new Date("2026-05-24T20:00:00Z").getTime();
-    vi.setSystemTime(now);
+  it("returns { ok: false } when daily cap is hit", async () => {
     (db.mcpCall.count as any)
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(RATE_LIMITS.perDay);
     const res = await checkRateLimit("u1", "list_reviews");
-    expect(res.ok).toBe(false);
-    if (!res.ok) {
-      // 20:00 UTC → next midnight is 4 hours = 14400 seconds
-      expect(res.retryAfter).toBe(4 * 3600);
-    }
-    vi.useRealTimers();
+    expect(res).toEqual({ ok: false, retryAfter: 60, errorCode: "rate_limited" });
   });
 
   it("counts ERROR rows alongside OK rows toward the limit", async () => {

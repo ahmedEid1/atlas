@@ -54,7 +54,9 @@ Every tool invocation writes one row to the `McpCall` table:
 | `createdAt` | timestamp |
 
 Failed audit writes never fail the user's request — they're logged to
-stderr and ignored.
+stderr and ignored. (Spec §3.3.3 calls for emitting a Langfuse span on
+audit-write failure; that integration is deferred to v1.1. Audit-write
+failure rate in v0.7.x will surface in Vercel logs.)
 
 ## Rate limits
 
@@ -66,8 +68,14 @@ DB-backed sliding window over `McpCall`. No Redis dependency.
 | Per user, per tool | 30 | 60 seconds |
 | Per user, daily total | 1000 | 24 hours |
 
-`429` responses include a `Retry-After` header. Rate-limited responses
-count toward the user's window (preventing spam-the-limit loopholes).
+When a limit is hit, the tool call returns an `isError: true` MCP
+response with body `{"error":"rate_limited","retryAfter":<seconds>}`.
+This is at the JSON-RPC tool layer, NOT the HTTP layer — the HTTP status
+remains 200 because mcp-handler reserves non-200 for transport-level
+failures per the MCP spec. Clients should read `retryAfter` from the
+tool result body. Rate-limited responses are themselves written to
+McpCall (status=ERROR, errorCode=rate_limited), so they count toward
+the user's window — preventing a spam-the-limit loophole.
 
 ## Authorization
 

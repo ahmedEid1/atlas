@@ -94,9 +94,10 @@ describe("mcpTool wrapper", () => {
 
 describe("classifyError", () => {
   it("classifies ZodError as invalid_input", () => {
-    const e = new Error("validation");
-    e.name = "ZodError";
-    expect(classifyError(e)).toBe("invalid_input");
+    const schema = z.object({ x: z.string() });
+    try { schema.parse({ x: 42 }); }
+    catch (e) { expect(classifyError(e)).toBe("invalid_input"); return; }
+    throw new Error("expected schema.parse to throw");
   });
   it("classifies NotFoundError as not_found", () => {
     const e = new Error("not found");

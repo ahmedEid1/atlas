@@ -39,10 +39,7 @@ export async function checkRateLimit(
     return { ok: false, retryAfter: 60, errorCode: "rate_limited" };
   }
   if (perDay >= RATE_LIMITS.perDay) {
-    const nextMidnight = new Date(now);
-    nextMidnight.setUTCHours(24, 0, 0, 0);
-    const retryAfter = Math.ceil((nextMidnight.getTime() - now) / 1000);
-    return { ok: false, retryAfter, errorCode: "rate_limited" };
+    return { ok: false, retryAfter: 60, errorCode: "rate_limited" };
   }
   return { ok: true };
 }

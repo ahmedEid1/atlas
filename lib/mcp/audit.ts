@@ -21,6 +21,7 @@ function extractReviewId(input: unknown): string | null {
 }
 
 export type McpCallLogArgs = {
+  id?: string;
   userId: string;
   toolName: string;
   input: unknown;
@@ -41,6 +42,7 @@ export async function logMcpCall(args: McpCallLogArgs): Promise<void> {
   try {
     await db.mcpCall.create({
       data: {
+        ...(args.id !== undefined ? { id: args.id } : {}),
         userId: args.userId,
         toolName: args.toolName,
         inputHash: hashInput(args.input),
