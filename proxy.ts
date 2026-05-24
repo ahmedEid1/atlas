@@ -7,6 +7,14 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks/clerk",
   "/evals",          // public eval dashboard
   "/evals/(.*)",     // future per-question detail pages
+  // MCP server has its own OAuth via withMcpAuth — must not be intercepted by
+  // the browser-redirect middleware. Machine clients need 401 + WWW-Authenticate,
+  // not a 307 to /sign-in. See app/api/mcp/[transport]/route.ts.
+  "/api/mcp/(.*)",
+  // OAuth Protected Resource Metadata + Authorization Server metadata are
+  // by-spec publicly readable (RFC 9728 + RFC 8414).
+  "/.well-known/oauth-protected-resource/(.*)",
+  "/.well-known/oauth-authorization-server",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
