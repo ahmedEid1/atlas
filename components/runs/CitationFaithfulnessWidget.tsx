@@ -16,10 +16,14 @@ export type CitationFaithfulnessWidgetProps = {
   claimChecks: ClaimCheckRow[];
 };
 
+// Verdict colours map to the Thoth palette (see docs/brand.md) instead
+// of Tailwind's default red/green which clash with the papyrus
+// background. SUPPORTED reads as the trust accent (blue ink);
+// UNSUPPORTED uses the warn brick; UNCLEAR sits on neutral stone.
 const VERDICT_COLOR: Record<ClaimCheckRow["verdict"], string> = {
-  SUPPORTED: "#16a34a",
-  UNSUPPORTED: "#dc2626",
-  UNCLEAR: "#a16207",
+  SUPPORTED: "var(--thoth-blue-ink)",
+  UNSUPPORTED: "var(--thoth-warn)",
+  UNCLEAR: "var(--thoth-stone)",
 };
 
 export function CitationFaithfulnessWidget({
@@ -30,23 +34,25 @@ export function CitationFaithfulnessWidget({
   if (faithfulnessScore == null) return null;
   const pct = Math.round(faithfulnessScore * 100);
   const color =
-    pct >= 80 ? "text-green-600 bg-green-50" :
-    pct >= 50 ? "text-yellow-700 bg-yellow-50" :
-    "text-red-700 bg-red-50";
+    pct >= 80
+      ? "text-[var(--thoth-blue-ink)] bg-[var(--thoth-blue-mist)]"
+      : pct >= 50
+        ? "text-[var(--thoth-blue-ink)] bg-[color-mix(in_oklab,var(--thoth-gold)_22%,var(--thoth-papyrus))]"
+        : "text-[var(--thoth-warn)] bg-[color-mix(in_oklab,var(--thoth-warn)_8%,var(--thoth-papyrus))]";
   const supported = claimChecks.filter((c) => c.verdict === "SUPPORTED").length;
   return (
-    <div className="border rounded-lg p-4 bg-white">
-      <h3 className="text-sm font-semibold text-gray-700 mb-2">Citation faithfulness</h3>
+    <div className="border border-[var(--thoth-rule)] rounded-lg p-4 bg-[var(--thoth-papyrus)]">
+      <h3 className="eyebrow text-[var(--thoth-stone)] mb-2">Citation faithfulness</h3>
       <div className={`inline-flex items-center px-3 py-1 rounded-full text-2xl font-mono ${color}`}>
         {pct}%
       </div>
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="text-xs text-[var(--thoth-stone)] mt-2">
         {supported} of {claimChecks.length} citations supported.
       </p>
       {claimChecks.length > 0 && (
         <button
           type="button"
-          className="text-xs text-blue-600 hover:underline mt-1"
+          className="text-xs text-[var(--thoth-blue)] hover:underline mt-1"
           onClick={() => setOpen((v) => !v)}
         >
           {open ? "Hide" : "Show"} per-citation verdicts
@@ -58,13 +64,13 @@ export function CitationFaithfulnessWidget({
             <div
               key={c.id}
               className="text-xs border-l-2 pl-2"
-              style={{ borderColor: VERDICT_COLOR[c.verdict] ?? "#9ca3af" }}
+              style={{ borderColor: VERDICT_COLOR[c.verdict] ?? "var(--thoth-stone)" }}
             >
-              <div className="font-mono text-gray-500">[{c.paperId}] — {c.verdict.toLowerCase()}</div>
-              <div className="text-gray-800 italic">&quot;{c.claim}&quot;</div>
-              <div className="text-gray-600">{c.reason}</div>
+              <div className="font-mono text-[var(--thoth-stone)]">[{c.paperId}] — {c.verdict.toLowerCase()}</div>
+              <div className="text-[var(--thoth-blue-ink)] italic">&quot;{c.claim}&quot;</div>
+              <div className="text-[var(--thoth-stone)]">{c.reason}</div>
               {c.paperExcerpt && (
-                <div className="text-gray-500 mt-1">Excerpt: {c.paperExcerpt}</div>
+                <div className="text-[var(--thoth-stone)] mt-1">Excerpt: {c.paperExcerpt}</div>
               )}
             </div>
           ))}

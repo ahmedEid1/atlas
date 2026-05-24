@@ -319,7 +319,7 @@ Published to the official MCP Registry as `io.github.ahmedEid1/thoth` (`status: 
 
 ## 8. Eval harness
 
-`scripts/run-evals.ts` runs the agent against a versioned golden set of SLR questions. Each golden question is a YAML file under `evals/golden/` carrying a research question, a PICOC, a list of expected paper filenames (uploaded to a dedicated evals project at run time), and a list of expected claims that must appear in the draft.
+`pnpm eval` (`scripts/run-evals.ts`) runs the agent against a versioned golden set of SLR questions. Each golden question is a YAML file under `evals/golden/` carrying a research question, a PICOC, a corpus of papers inlined as markdown (seeded directly as `CorpusItem.status = PARSED` with `kind = NOTE`, so the run skips PDF parsing and the eval stays fast + free), and a list of expected claims that must appear in the draft.
 
 ### Metrics
 
@@ -332,15 +332,15 @@ Published to the official MCP Registry as `io.github.ahmedEid1/thoth` (`status: 
 
 ### Persistence + dashboard
 
-Results are written to the `EvalRun` table (`goldenId, metric, score, runId?, commitSha, createdAt`). The public `/evals` page reads from Neon and renders per-question scores plus per-metric trend lines. The latest commit SHA and run timestamp are surfaced.
+Results are written to the `EvalRun` table (`goldenId, metric, score, runId?, commitSha, createdAt`). The public `/evals` page reads from Neon and renders the latest run's per-question scores plus aggregate averages, with the commit SHA and run timestamp surfaced inline.
 
-### Regression gate
+### Regression script
 
-`scripts/check-eval-regression.ts` compares the current run's metrics to the last `master` run and fails CI if any metric drops more than the configured threshold. The intent is that an eval regression cannot land on `master` silently.
+`pnpm eval:check` (`scripts/check-eval-regression.ts`) compares the current run's metrics to the last `master` run and exits non-zero if any metric drops more than the configured threshold. It is intended to be wired into CI; today it runs manually (the `.github/workflows/evals.yml` slot is reserved but unwired pending the M6 30-question dataset — running it nightly on 3 synthetic goldens would burn LLM budget without much signal).
 
 ### Current state
 
-3 synthetic golden questions are checked in today. **30 real-paper golden questions is the M6 deliverable**; the existing 3 exercise the harness end-to-end (headless graph runner → metrics → `EvalRun` rows → dashboard render → regression check) so the gap is "more data," not "missing capability."
+3 synthetic golden questions are checked in today, with their corpora inlined directly into the YAML (no PDF upload). **30 real-paper golden questions is the M6 deliverable**, along with the trend-line UI on `/evals` and the CI workflow that fails on regressions; the existing 3 goldens exercise the harness end-to-end (headless graph runner → metrics → `EvalRun` rows → dashboard render → regression script) so the gap is "more data and the CI hookup," not "missing capability."
 
 ---
 

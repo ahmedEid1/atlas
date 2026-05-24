@@ -182,12 +182,12 @@ export default async function EvalsPage() {
         <span>
           Methodology ·{" "}
           <a
-            href="https://github.com/ahmedEid1/thoth/blob/master/docs/superpowers/specs/2026-05-23-m4-critic-cite-check-evals-design.md"
+            href="https://github.com/ahmedEid1/thoth/blob/master/docs/superpowers/specs/thoth-design.md#8-eval-harness"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[var(--thoth-blue)] hover:underline underline-offset-4"
           >
-            M4 design spec
+            Design — eval harness
           </a>
         </span>
         <span>
