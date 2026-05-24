@@ -1,8 +1,23 @@
+import { readdir } from "node:fs/promises";
 import { db } from "@/lib/db";
 import { MetricCard } from "@/components/evals/MetricCard";
 import { QuestionRow } from "@/components/evals/QuestionRow";
 
 export const dynamic = "force-dynamic"; // always fresh
+
+/**
+ * Count the YAML files under evals/golden/ so we can render a
+ * "X of Y goldens completed in latest sweep" badge. Filesystem read is
+ * cheap and always reflects the repo state at the running deploy.
+ */
+async function countGoldenYamls(): Promise<number> {
+  try {
+    const files = await readdir("evals/golden");
+    return files.filter((f) => f.endsWith(".yaml")).length;
+  } catch {
+    return 0;
+  }
+}
 
 const METRICS = [
   {
@@ -30,6 +45,16 @@ const METRICS = [
 export default async function EvalsPage() {
   // Latest score per (goldenId, metric)
   const rows = await db.evalRun.findMany({ orderBy: { createdAt: "desc" } });
+  const totalYamls = await countGoldenYamls();
+
+  // Count goldens with at least one row at the latest commitSha — that's
+  // how many actually completed in the most recent sweep. Surfacing this
+  // catches silent partial runs (rate-limit skips, walltime timeouts) so
+  // a half-completed sweep is visible publicly, not hidden in CI logs.
+  const latestCommit = rows[0]?.commitSha;
+  const completedInLatestSweep = latestCommit
+    ? new Set(rows.filter((r) => r.commitSha === latestCommit).map((r) => r.goldenId)).size
+    : 0;
 
   const latestByKey = new Map<string, { score: number; createdAt: Date }>();
   for (const r of rows) {
@@ -104,6 +129,25 @@ export default async function EvalsPage() {
             <code className="font-mono text-[0.85em] text-[var(--thoth-blue)] bg-[var(--thoth-blue-mist)]/40 px-1.5 py-0.5 rounded">
               {lastRun.commitSha.slice(0, 7)}
             </code>
+            {totalYamls > 0 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span
+                  className={
+                    completedInLatestSweep === totalYamls
+                      ? "text-[var(--thoth-blue-ink)]"
+                      : "text-[var(--thoth-stone)]"
+                  }
+                  title="Goldens that wrote at least one metric row at the most recent commit, vs total goldens defined in evals/golden/."
+                >
+                  <span className="tabular-nums">{completedInLatestSweep}</span>
+                  /{totalYamls}{" "}
+                  {completedInLatestSweep === totalYamls
+                    ? "goldens completed"
+                    : "goldens completed (rest skipped: rate-limit or walltime cap)"}
+                </span>
+              </>
+            )}
           </p>
         )}
       </header>

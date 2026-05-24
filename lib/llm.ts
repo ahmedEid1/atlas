@@ -115,6 +115,11 @@ export async function runLLM<T>(args: RunLLMArgs<T>): Promise<RunLLMResult<T>> {
       system: args.system,
       messages: args.messages,
       maxOutputTokens: args.maxTokens,
+      // Default in @ai-sdk is 2 retries (3 attempts). Bumped to 4 retries (5
+      // attempts) so Mistral's free Experiment tier (~1 RPS, occasionally
+      // bursty rate-limiting on cite_check loops) gets more exponential
+      // backoff before bubbling up to the eval harness as a hard failure.
+      maxRetries: 4,
       experimental_telemetry: {
         isEnabled: true,
         functionId: args.name,

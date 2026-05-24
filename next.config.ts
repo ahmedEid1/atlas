@@ -35,6 +35,15 @@ const NON_API_SOURCE = "/((?!api/).*)";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // app/evals/page.tsx calls `readdir("evals/golden")` at request time to
+  // count the YAMLs vs how many produced rows in the latest sweep. That
+  // readdir is dynamic, so Next.js's automatic file tracing doesn't see
+  // the YAMLs as a dependency — without the explicit include below they
+  // wouldn't ship into the Vercel function bundle, and the badge would
+  // silently render 0/0 on prod.
+  outputFileTracingIncludes: {
+    "/evals": ["./evals/golden/**/*.yaml"],
+  },
   async headers() {
     return [
       {

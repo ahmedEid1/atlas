@@ -40,13 +40,15 @@ function selectGoldens<T extends { id: string }>(all: T[]): T[] {
 }
 
 /**
- * EVAL_GOLDEN_TIMEOUT_MS: per-golden walltime cap. Default 8 minutes. A golden
+ * EVAL_GOLDEN_TIMEOUT_MS: per-golden walltime cap. Default 15 minutes. A golden
  * that exceeds this is logged + skipped (no EvalRun rows written for it); the
  * sweep continues with the next golden. Bound is necessary because the cron's
  * Mistral provider can stall on free-tier rate-limits and one stuck golden
- * shouldn't burn the whole CI budget.
+ * shouldn't burn the whole CI budget. Tuned to 15 min after run #26371971611
+ * showed 4/6 goldens hitting the previous 8-min cap — the agent's cite-check
+ * loop under Mistral throttling routinely needs 10-12 min.
  */
-const DEFAULT_GOLDEN_TIMEOUT_MS = 8 * 60 * 1000;
+const DEFAULT_GOLDEN_TIMEOUT_MS = 15 * 60 * 1000;
 function goldenTimeoutMs(): number {
   const raw = process.env.EVAL_GOLDEN_TIMEOUT_MS;
   if (!raw) return DEFAULT_GOLDEN_TIMEOUT_MS;
