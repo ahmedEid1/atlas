@@ -48,6 +48,20 @@ const envSchema = z.object({
   // production to make hashes unpredictable across deploys.
   IP_HASH_SALT: z.string().default("thoth-demo-static-salt"),
 
+  // Optional: when set to "1" the /api/demo/start endpoint short-circuits
+  // with a 503 demo_disabled response BEFORE the rate-limit + origin
+  // checks. The intended use is operator panic-button — flip the env in
+  // the Vercel dashboard when a traffic spike threatens to exhaust the
+  // free-tier Mistral/Clerk/Neon quotas; flip it back once the spike
+  // subsides. No deploy needed.
+  DEMO_DISABLED: z.string().optional(),
+
+  // Optional: comma-separated list of email addresses (case-insensitive)
+  // permitted to view server-side admin pages under /admin/*. Empty or
+  // unset means nobody — every /admin/* request returns 404 even for
+  // signed-in users. Format: "ops@example.com,owner@example.com".
+  ADMIN_EMAILS: z.string().optional(),
+
   // Optional: shared secret that callers send in the `x-health-detail`
   // request header to /api/health to receive the raw DB error string in
   // the JSON response. When unset (the common case) the dbError field is

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("@/lib/env", () => ({
-  env: { IP_HASH_SALT: "test-salt" },
+  env: { IP_HASH_SALT: "test-salt", DEMO_DISABLED: undefined },
 }));
 vi.mock("@/lib/db", () => ({
   db: {
@@ -13,6 +13,7 @@ vi.mock("@clerk/nextjs/server", () => ({
 }));
 
 import { db } from "@/lib/db";
+import { env } from "@/lib/env";
 import { clerkClient } from "@clerk/nextjs/server";
 import { _resetRateLimitForTest } from "@/lib/demo/rate-limit";
 import { POST } from "@/app/api/demo/start/route";
@@ -63,6 +64,30 @@ function wireHappyPath(opts: { deleteUserImpl?: ReturnType<typeof vi.fn> } = {})
 beforeEach(() => {
   vi.clearAllMocks();
   _resetRateLimitForTest();
+  (env as { DEMO_DISABLED: string | undefined }).DEMO_DISABLED = undefined;
+});
+
+describe("POST /api/demo/start — operator kill switch (DEMO_DISABLED)", () => {
+  it("returns 503 demo_disabled and runs no side effects when DEMO_DISABLED=1", async () => {
+    wireHappyPath();
+    (env as { DEMO_DISABLED: string | undefined }).DEMO_DISABLED = "1";
+    const res = await POST(buildRequest({ ip: "10.0.0.4" }));
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toBe("demo_disabled");
+    // No Clerk or DB calls — the switch short-circuits before any side effect.
+    expect(db.user.create).not.toHaveBeenCalled();
+    expect(clerkClient).not.toHaveBeenCalled();
+  });
+
+  it("ignores DEMO_DISABLED values other than '1' (proceeds normally)", async () => {
+    wireHappyPath();
+    for (const v of ["", "0", "true", "false", undefined]) {
+      (env as { DEMO_DISABLED: string | undefined }).DEMO_DISABLED = v;
+      const res = await POST(buildRequest({ ip: `10.0.0.${100 + (v?.length ?? 0)}` }));
+      expect(res.status).toBe(201);
+    }
+  });
 });
 
 describe("POST /api/demo/start — happy path", () => {

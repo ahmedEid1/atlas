@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
+import { env } from "@/lib/env";
 import { checkRateLimit, extractClientIp } from "@/lib/demo/rate-limit";
 
 /**
@@ -39,6 +40,22 @@ import { checkRateLimit, extractClientIp } from "@/lib/demo/rate-limit";
  *     compensation runs first.
  */
 export async function POST(req: Request) {
+  // --- Operator kill switch ---
+  // Short-circuits BEFORE the origin / rate-limit / Clerk / DB work. Set
+  // DEMO_DISABLED="1" in the Vercel env to pause guest provisioning
+  // without a deploy — useful when a traffic spike threatens to exhaust
+  // free-tier Clerk MAU / Mistral RPS / Neon compute.
+  if (env.DEMO_DISABLED === "1") {
+    return NextResponse.json(
+      {
+        error: "demo_disabled",
+        message:
+          "The anonymous demo is temporarily paused. Sign up for a free account to use Thoth, or try again later.",
+      },
+      { status: 503 },
+    );
+  }
+
   // --- Origin / Referer guard (CSRF-style protection) ---
   // The endpoint is unauthenticated, so a malicious site embedding a
   // POST to /api/demo/start could otherwise burn through guest quotas
