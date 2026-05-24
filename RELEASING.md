@@ -41,7 +41,7 @@ touches `app/api/mcp/`, `lib/mcp/`, or `app/.well-known/`. ~5 minutes.
   9. Click `get_citation_audit` → same `reviewId` → expect: per-claim
      verdicts with counts
 
-- [ ] **Claude Desktop install** (proves the recruiter-demo path works):
+- [ ] **Claude Desktop install** (proves the install-and-use path works end-to-end):
   1. Claude Desktop → Settings → Developer → Edit Config → add an MCP server
      pointing at `https://thoth-slr.vercel.app/api/mcp/mcp`
   2. Restart Claude Desktop
@@ -105,7 +105,8 @@ pnpm seed:showcase
 
 Source: `scripts/seed-showcase-review.ts`. The content is deliberately
 designed to include two `UNSUPPORTED` `ClaimCheck` verdicts so the
-cite_check value prop is visible to a recruiter without signing in.
+cite_check value prop is visible to anyone visiting `/showcase` without
+needing to sign in or run the agent.
 
 ## Eval CI workflow secrets
 

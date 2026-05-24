@@ -193,7 +193,7 @@ export default function Home() {
           >
             plans
           </a>
-          {" → TDD subagents → reviewed → shipped. v0.7.1 live. M6 (30-question eval set + public launch) next."}
+          {" → TDD subagents → reviewed → shipped. v1.0.1 live; engineering complete."}
         </p>
       </section>
     </main>

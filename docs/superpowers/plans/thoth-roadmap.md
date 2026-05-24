@@ -198,22 +198,30 @@ Build order from M1 through current, with the load-bearing files for each milest
 - One-shot LLM provider fallback (LLM_FALLBACK_PROVIDER, default off): primary provider 5xx → single retry on the fallback with provider tag rewritten in OTel telemetry
 - McpCall.userId foreign key with cascade delete (migration 20260524200000_mcp_call_user_fk) — audit log integrity tied to user lifecycle
 - `docs/security-and-privacy.md`: 8-section evidence page behind the GDPR-friendly claim — data inventory, jurisdiction, retention, deletion paths, auth model, known limits
-- `app/for-recruiters/page.tsx`: in-app one-pager covering 8 skill cards each linking to the load-bearing file. Public, not promoted
 - Release ceremony — `package.json` / `server.json` / MCP serverInfo bumped to 1.0.0, README + roadmap + design doc updated, MCP Registry republish handled by the maintainer via `pnpm exec mcp-publisher publish`
 
-**Key files:** `evals/golden/{003..016}-*.yaml`, `.github/workflows/evals.yml`, `scripts/seed-showcase-review.ts`, `app/showcase/page.tsx`, `app/admin/guests/page.tsx`, `lib/admin.ts`, `lib/llm.ts` (claude-agent estimate + fallback path), `prisma/migrations/20260524200000_mcp_call_user_fk/migration.sql`, `docs/security-and-privacy.md`, `app/for-recruiters/page.tsx`
+**Key files:** `evals/golden/{003..016}-*.yaml`, `.github/workflows/evals.yml`, `scripts/seed-showcase-review.ts`, `app/showcase/page.tsx`, `app/admin/guests/page.tsx`, `lib/admin.ts`, `lib/llm.ts` (claude-agent estimate + fallback path), `prisma/migrations/20260524200000_mcp_call_user_fk/migration.sql`, `docs/security-and-privacy.md`
 
 **Tag:** `v1.0.0`
 
-## Next cycle — distribution
+## v1.0.1 — Post-release polish
 
-Out of scope for this build cycle, but the next sensible work:
+**What shipped:**
+- `/evals` UI gains plain-English metric descriptions on the four aggregate cards plus a "How this works" section covering lifecycle (golden YAMLs → headless run → `EvalRun` rows), philosophy (public-not-hidden, vacuous-true scoring, regression guard), and per-metric definitions with formulas
+- Eval CI bounded to a 6-golden smoke set on the cron schedule (`EVAL_GOLDENS=000,001,002,004,005,007`) with `workflow_dispatch` `goldens=smoke|all` choice for opt-in full sweeps; job timeout bumped 60 → 90 min
+- Per-golden walltime cap (`EVAL_GOLDEN_TIMEOUT_MS`, default 15 min) via `Promise.race` in `scripts/run-evals.ts` so one stuck golden no longer kills the whole sweep
+- `generateObject` `maxRetries` bumped 2 → 4 for Mistral free-tier resilience
+- Regression threshold widened 10% → 20% in `scripts/check-eval-regression.ts` to tolerate per-claim LLM-judge variance on low-N `claim_faithfulness`
+- "X of Y goldens have data at this commit" sweep-completion badge in the `/evals` hero, with `outputFileTracingIncludes` in `next.config.ts` so the readdir() works on Vercel
+- `package.json`'s `packageManager` pinned to `pnpm@9.15.0` to fix `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` after a pnpm 10 migration attempt regressed CI
 
-- 90-second Loom recording of the cite_check flow end-to-end
-- Recruiter outreach (3-5 targeted EU applications, paired with the `/for-recruiters` URL)
-- Optional public launch: HN / LinkedIn / Twitter, lead copy on cite_check (universal hook) rather than MCP (niche)
+**Key files:** `scripts/run-evals.ts`, `scripts/check-eval-regression.ts`, `lib/llm.ts`, `.github/workflows/evals.yml`, `app/evals/page.tsx`, `components/evals/MetricCard.tsx`, `next.config.ts`, `package.json`
 
-No engineering items currently planned past v1.0.0. The dormant
+**Tag:** `v1.0.1`
+
+## Beyond v1.0.1
+
+No engineering items currently planned. The dormant
 `lib/demo/clone-review.ts` stays in tree in case a future "tour the
 sample data" flow is wanted; otherwise the build cycle is closed.
 

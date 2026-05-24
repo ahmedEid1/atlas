@@ -13,7 +13,7 @@
 [![MCP Registry](https://img.shields.io/badge/MCP-registered-orange?style=flat-square)](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
 [![Tests](https://img.shields.io/badge/tests-326%20passing-success?style=flat-square)](#)
-[![Status](https://img.shields.io/badge/status-v1.0.0-informational?style=flat-square)](#)
+[![Status](https://img.shields.io/badge/status-v1.0.1-informational?style=flat-square)](#)
 [![Deploy cost](https://img.shields.io/badge/deploy-%240%2Fmo-brightgreen?style=flat-square)](#)
 
 `agentic-ai` · `langgraph` · `systematic-literature-review` · `mcp-server` · `oauth-2.1` · `next.js` · `prisma` · `trigger.dev` · `clerk` · `cite-check`
@@ -39,7 +39,7 @@ Thoth turns a research question and a corpus of PDFs into an evidence-grounded l
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
 | **Deploy cost** | $0 / month (Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers) |
 | **Self-host fallback** | One-VM deploy on Oracle Cloud Always Free (4 ARM cores, 24 GB RAM) — [`docs/self-host/`](docs/self-host/oracle-cloud-quickstart.md) |
-| **Status** | `v1.0.0` shipped 2026-05-24 · engineering complete; next cycle is distribution |
+| **Status** | `v1.0.1` — engineering complete; eval CI runs weekly with regression gate |
 
 ## What makes Thoth different
 
@@ -151,12 +151,10 @@ The full design is at [`docs/superpowers/specs/thoth-design.md`](docs/superpower
 - ~~**v0.5.1** — First live end-to-end review on prod~~ ✅ — Real PDF (ReAct paper) → full SLR pipeline → completed draft + critic + cite_check
 - ~~**v0.7.0-m5** — Authenticated MCP server~~ ✅ — Streamable HTTP at `/api/mcp/mcp`, OAuth 2.1 + PKCE + DCR via Clerk, 3 read-only tools, audit log + rate limits, published to the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) as `io.github.ahmedEid1/thoth`
 - ~~**v0.7.1** — Post-M5 hardening + ibis brand + anonymous demo~~ ✅ — Cost cap on every agent node (per-run token budget), 2-phase commit-then-deliver for HITL gates (exactly-once via Postgres advisory lock + Trigger.dev idempotent `wait.completeToken`), cron outbox + UI retry for stranded checkpoints, security headers, MCP `ToolAnnotations`, accessibility pass (skip-link, contrast, focus rings), Delapouite ibis identity + papyrus design tokens, `/api/demo/start` + `/demo/handoff` for one-click anonymous trial (no pre-cloned sample — guests build their own review)
-- ~~**v1.0.0** — Engineering complete~~ ✅ — 14 real-paper goldens (`/evals` now 17 questions covering LLM / ML / SE literature), weekly CI eval workflow with regression gate (`.github/workflows/evals.yml`), pinned exemplar review at `/showcase` (no-LLM-required, shows cite_check catching fabricated citations), `DEMO_DISABLED` operator kill switch + `/admin/guests` observability, char-based token estimate so cost cap engages on the claude-agent provider, one-shot `LLM_FALLBACK_PROVIDER` for Mistral 5xx → Groq resilience, `McpCall.userId` FK with cascade, `docs/security-and-privacy.md` evidence page for the GDPR-friendly claim, `/for-recruiters` in-app overview
-- **Next cycle** — Distribution: 90-second demo recording, recruiter outreach, optional public launch (HN / LinkedIn / Twitter). Engineering work paused; this is a portfolio + real-artifact handoff.
+- ~~**v1.0.0** — Engineering complete~~ ✅ — 14 real-paper goldens (`/evals` now 17 questions covering LLM / ML / SE literature), weekly CI eval workflow with regression gate (`.github/workflows/evals.yml`), pinned exemplar review at `/showcase` (no-LLM-required, shows cite_check catching fabricated citations), `DEMO_DISABLED` operator kill switch + `/admin/guests` observability, char-based token estimate so cost cap engages on the claude-agent provider, one-shot `LLM_FALLBACK_PROVIDER` for Mistral 5xx → Groq resilience, `McpCall.userId` FK with cascade, `docs/security-and-privacy.md` evidence page for the GDPR-friendly claim
+- **v1.0.1** — Post-release polish — public `/evals` page gains metric explanations + "How this works" section (lifecycle / philosophy / per-metric definitions), eval CI bounded to a 6-golden smoke set with per-golden walltime cap (`EVAL_GOLDEN_TIMEOUT_MS`) and bumped `generateObject` retries so a flaky free-tier provider can't kill the whole sweep, regression threshold widened 10% → 20% to tolerate per-claim LLM-judge variance.
 
-## For recruiters
-
-One-page in-app overview at [`/for-recruiters`](https://thoth-slr.vercel.app/for-recruiters) — what Thoth demonstrates, with direct links to the evidence (showcase review, public eval dashboard, MCP Registry listing, key files in the repo).
+Engineering is complete. Eval CI continues to run weekly; the dashboard at `/evals` updates whenever a sweep lands.
 
 ## Security & privacy
 

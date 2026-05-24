@@ -263,7 +263,7 @@ expand step; you still need to run `growpart` + `resize2fs` after).
 ## Trigger.dev self-host (optional, advanced)
 
 By default this setup uses Trigger.dev Cloud — free 500K runs/mo, more than enough
-for everything short of a public launch. If you want full sovereignty:
+for any single-user or small-team install. If you want full sovereignty:
 
 - Follow https://github.com/triggerdotdev/self-hosted-trigger.dev.
 - It adds ~5 more services (the trigger orchestrator + its own Postgres + Redis +

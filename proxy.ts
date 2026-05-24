@@ -10,7 +10,6 @@ const isPublicRoute = createRouteMatcher([
   "/evals",          // public eval dashboard
   "/evals/(.*)",     // future per-question detail pages
   "/showcase",       // pinned exemplar review — public, read-only, no auth required
-  "/for-recruiters", // public recruiter-facing single-page overview, no auth required
   // MCP server has its own OAuth via withMcpAuth — must not be intercepted by
   // the browser-redirect middleware. Machine clients need 401 + WWW-Authenticate,
   // not a 307 to /sign-in. See app/api/mcp/[transport]/route.ts.
@@ -27,8 +26,7 @@ const isPublicRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
     // Redirect unauthenticated users to /sign-in instead of returning Clerk's
-    // default 404. Better UX for anyone landing on a protected URL directly
-    // (e.g. recruiters following a link to /dashboard).
+    // default 404. Better UX for anyone landing on a protected URL directly.
     await auth.protect({ unauthenticatedUrl: new URL("/sign-in", req.url).toString() });
   }
 });
