@@ -173,7 +173,13 @@ See [`docs/mcp/tools.md`](docs/mcp/tools.md) for full tool reference and
 [`docs/mcp/security.md`](docs/mcp/security.md) for the auth and audit
 model.
 
-<!-- TODO: embed 30-60s screencast of install + first tool call here -->
+**See it work** — Claude.ai connected to Atlas, calling `list_reviews` then `get_citation_audit` and catching 6 fabricated citations in the draft (every one citing the same paper, with invented percentages that aren't in the source):
+
+![Atlas MCP demo — Claude.ai catching fabricated citations via cite_check](docs/assets/m5-mcp-demo.gif)
+
+**Setting it up** in claude.ai (Pro/Max — Connectors → Add custom connector → paste the URL → OAuth via Clerk + DCR, no manual client config needed):
+
+![Adding Atlas as a custom MCP connector in claude.ai](docs/assets/m5-mcp-setup.gif)
 
 ## Roadmap
 
