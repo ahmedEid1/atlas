@@ -1,12 +1,14 @@
 import { runLLM } from "@/lib/llm";
 import { CritiqueSchema, buildCriticRequest } from "@/lib/prompts/critic";
 import { addStep, finishStep } from "@/lib/agent/runs";
+import { assertWithinBudget } from "@/lib/agent/cost-cap";
 import type { AgentState } from "@/lib/agent/state";
 
 export async function criticNode(state: AgentState): Promise<Partial<AgentState>> {
   if (!state.draft) throw new Error("critic: state.draft is null — drafter must run first");
   if (!state.plan) throw new Error("critic: state.plan is null");
 
+  await assertWithinBudget(state.runId);
   const step = await addStep({ runId: state.runId, nodeName: "critic" });
   try {
     const { system, messages } = buildCriticRequest({

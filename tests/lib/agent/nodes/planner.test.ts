@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   runLLM: vi.fn(),
   addStep: vi.fn(),
   finishStep: vi.fn(),
+  assertWithinBudget: vi.fn(),
 }));
 
 vi.mock("@/lib/llm", () => ({ runLLM: mocks.runLLM }));
@@ -11,11 +12,17 @@ vi.mock("@/lib/agent/runs", () => ({
   addStep: mocks.addStep,
   finishStep: mocks.finishStep,
 }));
+vi.mock("@/lib/agent/cost-cap", () => ({
+  assertWithinBudget: mocks.assertWithinBudget,
+  BudgetExceededError: class BudgetExceededError extends Error {},
+}));
 
 beforeEach(() => {
   mocks.runLLM.mockReset();
   mocks.addStep.mockResolvedValue({ id: "step_1" });
   mocks.finishStep.mockResolvedValue(undefined);
+  mocks.assertWithinBudget.mockReset();
+  mocks.assertWithinBudget.mockResolvedValue({ tokensUsed: 0, limit: 250_000 });
 });
 
 describe("plannerNode", () => {

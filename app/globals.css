@@ -16,8 +16,9 @@
   --thoth-gold-glow:   oklch(0.85 0.09 87);   /* #E8D38E — hover glow */
   --thoth-papyrus:     oklch(0.97 0.012 87);  /* #FAF7F0 — warm off-white */
   --thoth-ink:         oklch(0.20 0.01 60);   /* #1F1B17 — body text */
-  --thoth-stone:       oklch(0.55 0.01 60);   /* #847C71 — muted text */
+  --thoth-stone:       oklch(0.42 0.01 60);   /* darkened from 0.55 → ~6.8:1 on papyrus (WCAG AA for small italic body) */
   --thoth-rule:        oklch(0.88 0.012 87);  /* divider lines on papyrus */
+  --thoth-warn:        oklch(0.45 0.18 25);   /* brick-red that harmonises with papyrus — destructive/error state */
 }
 
 @theme inline {
@@ -67,6 +68,7 @@
   --color-thoth-ink: var(--thoth-ink);
   --color-thoth-stone: var(--thoth-stone);
   --color-thoth-rule: var(--thoth-rule);
+  --color-thoth-warn: var(--thoth-warn);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

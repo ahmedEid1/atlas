@@ -58,7 +58,7 @@ export default async function EvalsPage() {
     : null;
 
   return (
-    <main className="max-w-6xl mx-auto px-6 py-16">
+    <main id="main" className="max-w-6xl mx-auto px-6 py-16">
       {/* EDITORIAL HEADER ────────────────────────────────────────────── */}
       <header className="mb-14 max-w-3xl">
         <p className="eyebrow">Public Eval Dashboard</p>

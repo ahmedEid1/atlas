@@ -1,9 +1,11 @@
 import { runLLM } from "@/lib/llm";
 import { PlanSchema, buildPlannerRequest } from "@/lib/prompts/plan-review";
 import { addStep, finishStep } from "@/lib/agent/runs";
+import { assertWithinBudget } from "@/lib/agent/cost-cap";
 import type { AgentState } from "@/lib/agent/state";
 
 export async function plannerNode(state: AgentState): Promise<Partial<AgentState>> {
+  await assertWithinBudget(state.runId);
   const step = await addStep({ runId: state.runId, nodeName: "planner" });
   try {
     const { system, messages } = buildPlannerRequest({

@@ -20,7 +20,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   if (!project || project.ownerId !== user.id) notFound();
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+    <main id="main" className="max-w-5xl mx-auto px-6 py-10 space-y-8">
       <header>
         <h1 className="text-2xl font-semibold">{project.title}</h1>
         <p className="text-muted-foreground mt-1">{project.question}</p>

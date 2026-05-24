@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   addStep: vi.fn(),
   finishStep: vi.fn(),
   findCorpusMarkdown: vi.fn(),
+  assertWithinBudget: vi.fn(),
 }));
 
 vi.mock("@/lib/llm", () => ({ runLLM: mocks.runLLM }));
@@ -13,12 +14,18 @@ vi.mock("@/lib/agent/runs", () => ({
   finishStep: mocks.finishStep,
   findCorpusMarkdown: mocks.findCorpusMarkdown,
 }));
+vi.mock("@/lib/agent/cost-cap", () => ({
+  assertWithinBudget: mocks.assertWithinBudget,
+  BudgetExceededError: class BudgetExceededError extends Error {},
+}));
 
 beforeEach(() => {
   mocks.runLLM.mockReset();
   mocks.addStep.mockResolvedValue({ id: "step_3" });
   mocks.finishStep.mockResolvedValue(undefined);
   mocks.findCorpusMarkdown.mockReset();
+  mocks.assertWithinBudget.mockReset();
+  mocks.assertWithinBudget.mockResolvedValue({ tokensUsed: 0, limit: 250_000 });
 });
 
 const baseState = {

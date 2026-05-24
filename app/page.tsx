@@ -12,7 +12,7 @@ import { DemoCtaButton } from "@/components/home/demo-cta-button";
 
 export default function Home() {
   return (
-    <main className="relative">
+    <main id="main" className="relative">
       {/* HERO ─────────────────────────────────────────────────────────── */}
       <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-24 lg:pt-28 lg:pb-32">
         {/* Decorative ibis — bleeds off the right margin, subtle */}

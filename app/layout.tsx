@@ -57,6 +57,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       >
         <body className="min-h-screen bg-background text-foreground antialiased">
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-[var(--thoth-blue-ink)] focus:text-[var(--thoth-papyrus)] focus:px-3 focus:py-2 focus:rounded focus:shadow-lg"
+          >
+            Skip to content
+          </a>
           <header className="border-b border-[var(--thoth-rule)]">
             <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
               <Link

@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   });
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-16">
+    <main id="main" className="max-w-5xl mx-auto px-6 py-16">
       <header className="flex items-end justify-between gap-6 flex-wrap mb-12">
         <div>
           <p className="eyebrow">Your work</p>

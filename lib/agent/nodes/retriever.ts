@@ -1,11 +1,13 @@
 import { runLLM } from "@/lib/llm";
 import { PaperScoreSchema, buildPaperScoreRequest } from "@/lib/prompts/score-paper";
 import { addStep, finishStep } from "@/lib/agent/runs";
+import { assertWithinBudget } from "@/lib/agent/cost-cap";
 import type { AgentState, IncludedPaperSpec } from "@/lib/agent/state";
 
 export async function retrieverNode(state: AgentState): Promise<Partial<AgentState>> {
   if (!state.plan) throw new Error("retriever: state.plan is null — planner must run first");
 
+  await assertWithinBudget(state.runId);
   const step = await addStep({ runId: state.runId, nodeName: "retriever" });
   let totalIn = 0, totalOut = 0, totalCacheRead = 0;
   const traces: string[] = [];
@@ -13,6 +15,10 @@ export async function retrieverNode(state: AgentState): Promise<Partial<AgentSta
   try {
     const included: IncludedPaperSpec[] = [];
     for (const paper of state.candidateCorpusItems) {
+      // Gate inside the per-paper loop: a large corpus can blow past the cap
+      // mid-iteration. Each new paper is a new LLM call, so re-check before
+      // dispatching it.
+      await assertWithinBudget(state.runId);
       const { system, messages } = buildPaperScoreRequest({
         question: state.question,
         plan: state.plan,

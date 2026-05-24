@@ -1,12 +1,14 @@
 import { runLLM } from "@/lib/llm";
 import { DraftSchema, buildDrafterRequest } from "@/lib/prompts/draft-review";
 import { addStep, finishStep } from "@/lib/agent/runs";
+import { assertWithinBudget } from "@/lib/agent/cost-cap";
 import type { AgentState } from "@/lib/agent/state";
 
 export async function drafterNode(state: AgentState): Promise<Partial<AgentState>> {
   if (!state.plan) throw new Error("drafter: state.plan is null");
   if (state.claims.length === 0) throw new Error("drafter: no claims to draft from");
 
+  await assertWithinBudget(state.runId);
   const step = await addStep({ runId: state.runId, nodeName: "drafter" });
   try {
     const { system, messages } = buildDrafterRequest({

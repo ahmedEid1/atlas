@@ -39,6 +39,26 @@ const envSchema = z.object({
   // endpoint clones into each new guest account. If unset, the demo
   // button returns 503 with a clear error.
   DEMO_TEMPLATE_PROJECT_ID: z.string().optional(),
+
+  // Optional: salt used to hash client IPs before they're used as keys in
+  // the in-memory demo rate limiter. Hashing-with-salt means we never keep
+  // raw IPs in process memory. Defaults to a static value; override in
+  // production to make hashes unpredictable across deploys.
+  IP_HASH_SALT: z.string().default("thoth-demo-static-salt"),
+
+  // Optional: shared secret that callers send in the `x-health-detail`
+  // request header to /api/health to receive the raw DB error string in
+  // the JSON response. When unset (the common case) the dbError field is
+  // omitted unconditionally so we never leak Prisma error text — which
+  // routinely includes DB hostnames, ports, and sometimes credentials —
+  // to public scrapers / monitors.
+  HEALTH_DETAIL_TOKEN: z.string().optional(),
+
+  // Per-run token ceiling enforced by lib/agent/cost-cap.ts. Sums input+output
+  // tokens across all RunSteps and trips BudgetExceededError before the next
+  // runLLM call when exceeded. 250k covers a generous review run; tunable
+  // per-env for tighter budgets in CI/eval or looser ones in production.
+  MAX_TOKENS_PER_RUN: z.coerce.number().int().positive().default(250_000),
 });
 
 export type Env = z.infer<typeof envSchema>;

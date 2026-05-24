@@ -11,6 +11,7 @@ import {
   finishRun,
   failRun,
 } from "@/lib/agent/runs";
+import { BudgetExceededError } from "@/lib/agent/cost-cap";
 import { db } from "@/lib/db";
 
 type InterruptValue =
@@ -160,6 +161,18 @@ export const runReviewTask = schemaTask({
       await setRunStatus({ runId, status: "FAILED" });
       return { ok: false, status: "FAILED" as const };
     } catch (err) {
+      // Budget cap breach: record a budget-specific failureReason so the
+      // dashboard distinguishes a runaway-cost shutdown from a generic error.
+      if (err instanceof BudgetExceededError) {
+        const reason = `Token budget exceeded: ${err.tokensUsed} > ${err.limit}`;
+        logger.error("run-review halted: token budget exceeded", {
+          runId: err.runId,
+          tokensUsed: err.tokensUsed,
+          limit: err.limit,
+        });
+        await failRun({ runId, reason });
+        throw err;
+      }
       const reason = err instanceof Error ? err.message : String(err);
       logger.error("run-review failed", { reason, lastState });
       await failRun({ runId, reason });

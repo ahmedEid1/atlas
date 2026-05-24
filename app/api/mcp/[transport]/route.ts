@@ -13,6 +13,11 @@ const baseHandler = createMcpHandler(
           title: tool.title,
           description: tool.description,
           inputSchema: tool.inputSchema,
+          // MCP spec 2025-11-25 ToolAnnotations: behaviour hints clients use
+          // for UX (auto-approval, danger badges, etc.). Verified against
+          // @modelcontextprotocol/sdk 1.29.0 — registerTool's config object
+          // accepts an `annotations?: ToolAnnotations` field directly.
+          annotations: tool.annotations,
         },
         async (input: unknown, extra: { authInfo?: { extra?: unknown } }) => {
           const ctx = extra?.authInfo?.extra as { userId: string; clerkId: string } | undefined;

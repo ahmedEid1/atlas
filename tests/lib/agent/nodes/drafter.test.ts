@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   runLLM: vi.fn(),
   addStep: vi.fn(),
   finishStep: vi.fn(),
+  assertWithinBudget: vi.fn(),
 }));
 
 vi.mock("@/lib/llm", () => ({ runLLM: mocks.runLLM }));
@@ -12,10 +13,35 @@ vi.mock("@/lib/agent/runs", () => ({
   finishStep: mocks.finishStep,
 }));
 
+// Hoisted local copy of BudgetExceededError that the production code
+// (drafter.ts) and the test's expectation both see as the same class —
+// the production code imports it from @/lib/agent/cost-cap, which we mock
+// here to expose this same class.
+class TestBudgetExceededError extends Error {
+  runId: string;
+  tokensUsed: number;
+  limit: number;
+  constructor(args: { runId: string; tokensUsed: number; limit: number }) {
+    super(`budget exceeded`);
+    this.runId = args.runId;
+    this.tokensUsed = args.tokensUsed;
+    this.limit = args.limit;
+  }
+}
+
+vi.mock("@/lib/agent/cost-cap", () => ({
+  assertWithinBudget: mocks.assertWithinBudget,
+  BudgetExceededError: TestBudgetExceededError,
+}));
+
 beforeEach(() => {
   mocks.runLLM.mockReset();
+  mocks.addStep.mockReset();
   mocks.addStep.mockResolvedValue({ id: "step_4" });
+  mocks.finishStep.mockReset();
   mocks.finishStep.mockResolvedValue(undefined);
+  mocks.assertWithinBudget.mockReset();
+  mocks.assertWithinBudget.mockResolvedValue({ tokensUsed: 0, limit: 250_000 });
 });
 
 const baseState = {
@@ -58,6 +84,23 @@ describe("drafterNode", () => {
   it("throws when state.claims is empty (nothing to draft from)", async () => {
     const { drafterNode } = await import("@/lib/agent/nodes/drafter");
     await expect(drafterNode({ ...baseState, claims: [] })).rejects.toThrow(/no claims/i);
+  });
+
+  it("bubbles BudgetExceededError when assertWithinBudget throws (does not swallow)", async () => {
+    const budgetErr = new TestBudgetExceededError({
+      runId: "r1",
+      tokensUsed: 9999,
+      limit: 1000,
+    });
+    mocks.assertWithinBudget.mockRejectedValueOnce(budgetErr);
+
+    const { drafterNode } = await import("@/lib/agent/nodes/drafter");
+    await expect(drafterNode(baseState)).rejects.toBe(budgetErr);
+    // runLLM must NOT have been called once the gate trips.
+    expect(mocks.runLLM).not.toHaveBeenCalled();
+    // No step is created — the gate runs before addStep, so we don't
+    // pollute the trace with an empty failed step.
+    expect(mocks.addStep).not.toHaveBeenCalled();
   });
 
   it("passes critique feedback to the prompt when critique decision is revise", async () => {

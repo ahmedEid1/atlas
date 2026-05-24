@@ -2,6 +2,7 @@ import { runLLM } from "@/lib/llm";
 import { extractCitations } from "@/lib/agent/cite-extract";
 import { CiteCheckPerCitationSchema, buildCiteCheckRequest } from "@/lib/prompts/cite-check";
 import { addStep, finishStep, findCorpusSummary, persistCiteCheck } from "@/lib/agent/runs";
+import { assertWithinBudget, BudgetExceededError } from "@/lib/agent/cost-cap";
 import type { AgentState } from "@/lib/agent/state";
 
 // Sequential by default. Originally batched at 5 in parallel, but Mistral's
@@ -60,6 +61,9 @@ async function checkOneCitation(
   } catch (err) {
     // Per-citation error: don't fail the whole run. Record as unclear with the
     // error reason so the dashboard still shows what could be checked.
+    // EXCEPTION: BudgetExceededError must bubble — silencing it would let a
+    // runaway run continue past the cap, defeating the gate.
+    if (err instanceof BudgetExceededError) throw err;
     const reason = err instanceof Error ? err.message : String(err);
     return {
       paperId: c.paperId,
@@ -73,6 +77,7 @@ async function checkOneCitation(
 export async function citeCheckNode(state: AgentState): Promise<Partial<AgentState>> {
   if (state.draft == null) throw new Error("cite_check: state.draft is null");
 
+  await assertWithinBudget(state.runId);
   const step = await addStep({ runId: state.runId, nodeName: "cite_check" });
   try {
     const citations = extractCitations(state.draft);
@@ -86,7 +91,12 @@ export async function citeCheckNode(state: AgentState): Promise<Partial<AgentSta
     }> = [];
 
     // Process in batches of PARALLEL to respect provider rate limits.
+    // Gate per-batch: each citation costs an LLM call, so re-check the run's
+    // cumulative budget before dispatching the next batch. checkOneCitation
+    // swallows generic errors as "unclear", so we cannot rely on it to surface
+    // a BudgetExceededError thrown mid-batch — we must gate here instead.
     for (let i = 0; i < citations.length; i += PARALLEL) {
+      await assertWithinBudget(state.runId);
       const batch = citations.slice(i, i + PARALLEL);
       const results = await Promise.all(batch.map((c) => checkOneCitation(c, state)));
       perCitation.push(...results);

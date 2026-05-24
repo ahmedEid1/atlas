@@ -36,7 +36,7 @@ export default async function RunPage({
   const pendingPapers = run.checkpoints.find((c) => c.kind === "APPROVE_PAPERS");
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+    <main id="main" className="max-w-5xl mx-auto px-6 py-10 space-y-8">
       <header className="space-y-2">
         <p className="text-xs text-muted-foreground">
           <a href={`/projects/${projectId}`} className="underline">{run.project.title}</a> / run
