@@ -32,7 +32,31 @@ const baseHandler = createMcpHandler(
       );
     }
   },
-  { serverInfo: { name: "thoth", version: "0.7.0" }, capabilities: { tools: {} } },
+  {
+    // The MCP SDK 1.29.0 Implementation schema accepts title, description,
+    // websiteUrl, and icons[] alongside the required name + version.
+    // mcp-handler 1.1.0's type is narrower (just name + version) but it
+    // passes the object through to McpServer unchanged, so the extra
+    // fields reach clients that read them (claude.ai's connector card
+    // shows the icon + title; older clients drop the unknown fields
+    // silently). The `as never` cast bridges mcp-handler's narrow type
+    // to the SDK's actual schema without re-typing the whole config.
+    serverInfo: {
+      name: "thoth",
+      version: "0.7.0",
+      title: "Thoth — Agentic SLR",
+      description:
+        "Authenticated MCP server for systematic literature reviews with verified citations. Surfaces your Thoth reviews + per-claim cite_check audits.",
+      websiteUrl: "https://thoth-slr.vercel.app",
+      icons: [
+        {
+          src: "https://thoth-slr.vercel.app/icon.svg",
+          mimeType: "image/svg+xml",
+        },
+      ],
+    } as never,
+    capabilities: { tools: {} },
+  },
   { basePath: "/api/mcp", maxDuration: 60, verboseLogs: process.env.NODE_ENV !== "production" },
 );
 

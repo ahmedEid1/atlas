@@ -152,6 +152,10 @@ Every milestone is specified, planned, and reviewed before code. Specs live unde
 - ~~**v0.7.0-m5** — Authenticated MCP server~~ ✅ — Streamable HTTP at `/api/mcp/mcp`, OAuth 2.1 + PKCE + DCR via Clerk, 3 read-only tools, audit log + rate limits, published to the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) as `io.github.ahmedEid1/thoth`
 - **M6** (next) — 30-question real-paper golden eval set, recruiter 1-pager, public launch (HN / LinkedIn / Twitter)
 
+## Credits
+
+Ibis icon by [Delapouite](https://delapouite.com/) under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via [game-icons.net](https://game-icons.net/1x1/delapouite/ibis.html).
+
 ## License
 
 MIT
