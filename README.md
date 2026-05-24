@@ -156,6 +156,25 @@ pnpm test       # 161 tests (Vitest)
 pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending CI infra
 ```
 
+## Connect via MCP
+
+Atlas ships an authenticated MCP server at
+`https://atlas-sooty-delta.vercel.app/api/mcp/mcp` — paste this URL
+into Claude Desktop, Cursor, or any MCP-compatible client. OAuth flow
+runs in your browser (powered by Clerk + Dynamic Client Registration);
+you never copy-paste a token.
+
+**Available tools** (all read-only, all scoped to your Atlas account):
+- `list_reviews` — list your Atlas reviews with scores
+- `get_review_draft` — fetch the markdown draft of a completed review
+- `get_citation_audit` — fetch the per-claim cite_check verdict report
+
+See [`docs/mcp/tools.md`](docs/mcp/tools.md) for full tool reference and
+[`docs/mcp/security.md`](docs/mcp/security.md) for the auth and audit
+model.
+
+<!-- TODO: embed 30-60s screencast of install + first tool call here -->
+
 ## Roadmap
 
 - ~~**M2** (Wk 2): Single-node summarisation + Langfuse self-hosted observability~~ ✅ shipped as `v0.2.0-m2`
@@ -170,7 +189,7 @@ pnpm test:e2e   # 2 e2e tests (Playwright); 1 skipped pending CI infra
 - ~~**v0.5.0 – Trigger.dev Cloud production deploy**~~ ✅ shipped — all 3 background tasks running on managed infra
 - ~~**v0.5.1 – First live end-to-end review on production**~~ ✅ shipped — real PDF → full SLR pipeline → completed draft + critic + cite_check
 - ~~**v0.6.0 – M3.5c self-host fallback docs**~~ ✅ shipped — Oracle Cloud Always Free deployment path
-- **M5** (Wk 6): Authenticated MCP server (OAuth 2.1) published to MCP registry — NEXT
+- **v0.7.0-m5** (2026-05-24): Authenticated MCP server. Streamable HTTP at `/api/mcp/mcp`. OAuth 2.1 + PKCE + DCR via Clerk as Authorization Server, Atlas as Resource Server. 3 read-only tools (`list_reviews`, `get_review_draft`, `get_citation_audit`) over tenant-scoped data. DB-backed audit log + per-user sliding-window rate limits. Published to MCP registry.
 - **M6** (Wk 7): Public launch with 30-question golden eval set, blog series, recruiter 1-pager
 
 See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the per-milestone implementation plans.
