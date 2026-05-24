@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { guestWriteBlock } from "@/lib/demo/guards";
-import { resolveWaitToken } from "@/lib/trigger-client";
+import { deliverCheckpoint } from "@/lib/agent/checkpoint-delivery";
 
 export async function POST(
   req: NextRequest,
@@ -34,7 +34,8 @@ export async function POST(
   // Phase 1 — commit the decision (small, fast tx, no external call).
   // Once Phase 1 commits, the decision is IMMUTABLE: any later request
   // (approve OR reject) sees status != PENDING and writes nothing. This
-  // is the critical invariant that prevents audit divergence.
+  // is the critical invariant that prevents audit divergence. Phase 1
+  // stays inline because the payload assembly is route-specific.
   const phase1 = await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
     const updated = await tx.humanCheckpoint.updateMany({
@@ -48,39 +49,14 @@ export async function POST(
     return { decided: updated.count > 0 };
   });
 
-  // Phase 2 — deliver the persisted decision to Trigger.dev.
-  // ALWAYS uses the persisted decisionPayload (never the live request
-  // body). If Phase 2 fails after Trigger succeeds, the tx rolls back,
-  // waitToken stays set, and a retry replays delivery with the SAME
-  // persisted payload — so the agent and the DB stay in lockstep.
-  const phase2 = await db.$transaction(
-    async (tx): Promise<{ outcome: "delivered" | "already_delivered" | "not_found" }> => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
-      const row = await tx.humanCheckpoint.findUnique({
-        where: { id: cpId },
-        select: { waitToken: true, decisionPayload: true, status: true },
-      });
-      if (!row) {
-        return { outcome: "not_found" };
-      }
-      if (!row.waitToken) {
-        return { outcome: "already_delivered" };
-      }
-      // Always use the PERSISTED payload — the first caller's committed
-      // decision is what the agent must see; later retries cannot
-      // substitute their own payload.
-      await resolveWaitToken(
-        row.waitToken,
-        (row.decisionPayload ?? {}) as Record<string, unknown>,
-      );
-      await tx.humanCheckpoint.update({
-        where: { id: cpId },
-        data: { waitToken: null },
-      });
-      return { outcome: "delivered" };
-    },
-    { timeout: 30_000 },
-  );
+  // Phase 2 — deliver the persisted decision to Trigger.dev. Extracted
+  // into the shared `deliverCheckpoint` helper so the same atomic
+  // advisory-lock + findUnique + resolveWaitToken + null-out flow is
+  // reused by the recovery-outbox cron (trigger/checkpoint-delivery-outbox).
+  // The helper ALWAYS reads the persisted decisionPayload — it takes no
+  // external payload param, which is the invariant that prevents an
+  // audit-divergent retry from substituting its own decision.
+  const phase2 = await deliverCheckpoint(cpId);
 
   if (phase2.outcome === "not_found") {
     return NextResponse.json(

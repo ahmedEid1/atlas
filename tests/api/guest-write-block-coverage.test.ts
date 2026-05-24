@@ -153,6 +153,19 @@ const ROUTES: RouteCase[] = [
         { params: Promise.resolve({ id: "r1", cpId: "cp1" }) },
       ),
   },
+  {
+    name: "POST /api/runs/[id]/checkpoints/[cpId]/retry-delivery",
+    path: "app/api/runs/[id]/checkpoints/[cpId]/retry-delivery/route.ts",
+    importPath: "@/app/api/runs/[id]/checkpoints/[cpId]/retry-delivery/route",
+    invoke: (POST) =>
+      POST(
+        jsonBodyRequest(
+          "http://localhost/api/runs/r1/checkpoints/cp1/retry-delivery",
+          {},
+        ),
+        { params: Promise.resolve({ id: "r1", cpId: "cp1" }) },
+      ),
+  },
 ];
 
 describe("Guest write-block coverage (every mutation POST must short-circuit before side effects)", () => {

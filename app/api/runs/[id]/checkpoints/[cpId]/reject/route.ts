@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { guestWriteBlock } from "@/lib/demo/guards";
-import { resolveWaitToken } from "@/lib/trigger-client";
+import { deliverCheckpoint } from "@/lib/agent/checkpoint-delivery";
 
 export async function POST(
   req: NextRequest,
@@ -34,6 +34,7 @@ export async function POST(
   // an APPROVE that committed Phase 1 then crashed during Phase 2,
   // followed by a REJECT retry) can never substitute its own payload —
   // Phase 2 always reads and re-delivers the original committed payload.
+  // Phase 1 stays inline because the payload assembly is route-specific.
   const phase1 = await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
     const updated = await tx.humanCheckpoint.updateMany({
@@ -48,31 +49,9 @@ export async function POST(
     return { decided: updated.count > 0 };
   });
 
-  const phase2 = await db.$transaction(
-    async (tx): Promise<{ outcome: "delivered" | "already_delivered" | "not_found" }> => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
-      const row = await tx.humanCheckpoint.findUnique({
-        where: { id: cpId },
-        select: { waitToken: true, decisionPayload: true, status: true },
-      });
-      if (!row) {
-        return { outcome: "not_found" };
-      }
-      if (!row.waitToken) {
-        return { outcome: "already_delivered" };
-      }
-      await resolveWaitToken(
-        row.waitToken,
-        (row.decisionPayload ?? {}) as Record<string, unknown>,
-      );
-      await tx.humanCheckpoint.update({
-        where: { id: cpId },
-        data: { waitToken: null },
-      });
-      return { outcome: "delivered" };
-    },
-    { timeout: 30_000 },
-  );
+  // Phase 2 — delivery is handled by the shared helper, which also
+  // backs the recovery-outbox cron. See lib/agent/checkpoint-delivery.ts.
+  const phase2 = await deliverCheckpoint(cpId);
 
   if (phase2.outcome === "not_found") {
     return NextResponse.json(

@@ -14,10 +14,14 @@ vi.mock("@/lib/trigger-client", () => ({
   enqueueParsePdf: vi.fn(),
   enqueueSummarizePaper: vi.fn(),
 }));
+vi.mock("@/lib/agent/checkpoint-delivery", () => ({
+  deliverCheckpoint: vi.fn(),
+}));
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { resolveWaitToken } from "@/lib/trigger-client";
+import { deliverCheckpoint } from "@/lib/agent/checkpoint-delivery";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -37,24 +41,15 @@ type TxState = {
 type TxSpies = {
   executeRaw: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
   updateMany: ReturnType<typeof vi.fn<(args: unknown) => unknown>>;
-  findUnique: ReturnType<typeof vi.fn<(args: unknown) => unknown>>;
-  update: ReturnType<typeof vi.fn<(args: unknown) => unknown>>;
 };
 
 /**
- * Same stateful-tx mock as checkpoint-approve.test.ts. See that file
- * for the full rationale; the shape is identical so a single helper
- * can drive Phase 1 + Phase 2 against shared in-memory state across
- * sequential requests AND mixed approve/reject retries.
+ * Same Phase-1-only stateful tx mock as checkpoint-approve.test.ts.
+ * Phase 2 is now provided by the mocked `deliverCheckpoint` helper
+ * (via `installDeliveryHelper`).
  */
 function installStatefulTxMock(
   initial: Partial<TxState> & { status: TxState["status"]; waitToken: string | null },
-  options?: {
-    updateBehavior?: (
-      args: { where: { id: string }; data: { waitToken?: string | null } },
-      state: TxState,
-    ) => Promise<unknown> | unknown;
-  },
 ) {
   const state: TxState = {
     status: initial.status,
@@ -65,8 +60,6 @@ function installStatefulTxMock(
   const spies: TxSpies = {
     executeRaw: vi.fn(),
     updateMany: vi.fn(),
-    findUnique: vi.fn(),
-    update: vi.fn(),
   };
 
   let lockChain: Promise<unknown> = Promise.resolve();
@@ -102,25 +95,6 @@ function installStatefulTxMock(
           }
           return { count: 0 };
         }) as never,
-        findUnique: (async (args: { where: { id: string } }) => {
-          spies.findUnique(args);
-          return {
-            waitToken: state.waitToken,
-            decisionPayload: state.decisionPayload,
-            status: state.status,
-          };
-        }) as never,
-        update: (async (args: {
-          where: { id: string };
-          data: { waitToken?: string | null };
-        }) => {
-          spies.update(args);
-          if (options?.updateBehavior) {
-            await options.updateBehavior(args, state);
-          }
-          if (args.data.waitToken === null) state.waitToken = null;
-          return {};
-        }) as never,
       },
     };
     const prev = lockChain;
@@ -139,6 +113,36 @@ function installStatefulTxMock(
   return { state, spies };
 }
 
+/**
+ * Mocks the shared `deliverCheckpoint` helper to behave against the
+ * in-memory state (read persisted decisionPayload, call resolveWaitToken,
+ * null the token). Optional `onNullOut` simulates a partial-failure
+ * rollback after Trigger has already been called.
+ */
+function installDeliveryHelper(
+  state: TxState,
+  options?: { onNullOut?: (state: TxState) => Promise<void> | void },
+) {
+  vi.mocked(deliverCheckpoint).mockImplementation(async () => {
+    if (state.waitToken === null && state.status === "PENDING") {
+      return { outcome: "not_found" };
+    }
+    if (state.waitToken === null) {
+      return { outcome: "already_delivered" };
+    }
+    const token = state.waitToken;
+    await resolveWaitToken(
+      token,
+      (state.decisionPayload ?? {}) as Record<string, unknown>,
+    );
+    if (options?.onNullOut) {
+      await options.onNullOut(state);
+    }
+    state.waitToken = null;
+    return { outcome: "delivered" };
+  });
+}
+
 describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
   it("Phase 1 + Phase 2: marks the checkpoint rejected and delivers the persisted payload", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1", isGuest: false } as never);
@@ -147,18 +151,19 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
       status: "PENDING",
       run: { id: "r1", project: { ownerId: "u1" } },
     } as never);
-    const { spies } = installStatefulTxMock({
+    const { state, spies } = installStatefulTxMock({
       status: "PENDING",
       waitToken: "tk_xyz",
     });
+    installDeliveryHelper(state);
 
     const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/reject/route");
     const res = await POST(buildReq({ reason: "off-topic" }), {
       params: Promise.resolve({ id: "r1", cpId: "cp1" }),
     });
     expect(res.status).toBe(200);
-    expect(db.$transaction).toHaveBeenCalledTimes(2);
-    expect(spies.executeRaw).toHaveBeenCalledTimes(2);
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(spies.executeRaw).toHaveBeenCalledTimes(1);
     expect(spies.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "cp1", status: "PENDING" },
@@ -168,15 +173,14 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
         }),
       }),
     );
+    expect(deliverCheckpoint).toHaveBeenCalledTimes(1);
+    expect(deliverCheckpoint).toHaveBeenCalledWith("cp1");
     expect(resolveWaitToken).toHaveBeenCalledTimes(1);
     expect(resolveWaitToken).toHaveBeenCalledWith(
       "tk_xyz",
       expect.objectContaining({ approved: false, rejectionReason: "off-topic" }),
     );
-    expect(spies.update).toHaveBeenCalledWith({
-      where: { id: "cp1" },
-      data: { waitToken: null },
-    });
+    expect(state.waitToken).toBeNull();
   });
 
   it("returns 404 for non-owner", async () => {
@@ -193,6 +197,7 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
     });
     expect(res.status).toBe(404);
     expect(db.$transaction).not.toHaveBeenCalled();
+    expect(deliverCheckpoint).not.toHaveBeenCalled();
   });
 
   it("returns 409 when a prior caller fully resolved (waitToken null)", async () => {
@@ -202,11 +207,12 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
       status: "REJECTED",
       run: { id: "r1", project: { ownerId: "u1" } },
     } as never);
-    installStatefulTxMock({
+    const { state } = installStatefulTxMock({
       status: "REJECTED",
       waitToken: null,
       decisionPayload: { approved: false, rejectionReason: "prior" },
     });
+    installDeliveryHelper(state);
 
     const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/reject/route");
     const res = await POST(buildReq({ reason: "x" }), {
@@ -215,7 +221,8 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.error).toBe("checkpoint_already_resolved");
-    expect(db.$transaction).toHaveBeenCalledTimes(2);
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(deliverCheckpoint).toHaveBeenCalledTimes(1);
     expect(resolveWaitToken).not.toHaveBeenCalled();
   });
 
@@ -226,12 +233,13 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
       status: "REJECTED",
       run: { id: "r1", project: { ownerId: "u1" } },
     } as never);
-    const { spies } = installStatefulTxMock({
+    const { state } = installStatefulTxMock({
       status: "REJECTED",
       waitToken: "tk_stranded",
       decisionPayload: { approved: false, rejectionReason: "off-topic" },
       rejectionReason: "off-topic",
     });
+    installDeliveryHelper(state);
 
     const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/reject/route");
     const res = await POST(buildReq({ reason: "retry" }), {
@@ -246,10 +254,7 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
       "tk_stranded",
       expect.objectContaining({ approved: false, rejectionReason: "off-topic" }),
     );
-    expect(spies.update).toHaveBeenCalledWith({
-      where: { id: "cp1" },
-      data: { waitToken: null },
-    });
+    expect(state.waitToken).toBeNull();
   });
 
   it("REGRESSION: audit log cannot diverge — REJECT then APPROVE retry preserves the original REJECT payload", async () => {
@@ -257,7 +262,9 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
     // first call REJECTs successfully through Phase 1 + Trigger, then
     // the null-out throws. A second APPROVE retry arrives; it must
     // NOT flip the DB to APPROVED, and Trigger must be re-delivered
-    // with the original REJECT payload.
+    // with the original REJECT payload. deliverCheckpoint takes no
+    // external payload param, so the helper is structurally incapable
+    // of substituting the approve body.
     vi.mocked(requireUser).mockResolvedValue({ id: "u1", isGuest: false } as never);
     vi.mocked(db.humanCheckpoint.findUnique).mockResolvedValue({
       id: "cp1",
@@ -266,19 +273,15 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
     } as never);
 
     let nullOutAttempts = 0;
-    const { state } = installStatefulTxMock(
-      { status: "PENDING", waitToken: "tk_y" },
-      {
-        updateBehavior: async (args) => {
-          if (args.data.waitToken === null) {
-            nullOutAttempts++;
-            if (nullOutAttempts === 1) {
-              throw new Error("db connection lost");
-            }
-          }
-        },
+    const { state } = installStatefulTxMock({ status: "PENDING", waitToken: "tk_y" });
+    installDeliveryHelper(state, {
+      onNullOut: async () => {
+        nullOutAttempts++;
+        if (nullOutAttempts === 1) {
+          throw new Error("db connection lost");
+        }
       },
-    );
+    });
 
     const { POST: REJECT_POST } = await import(
       "@/app/api/runs/[id]/checkpoints/[cpId]/reject/route"
@@ -350,7 +353,8 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
       status: "PENDING",
       run: { id: "r1", project: { ownerId: "u1" } },
     } as never);
-    installStatefulTxMock({ status: "PENDING", waitToken: "tk_only" });
+    const { state } = installStatefulTxMock({ status: "PENDING", waitToken: "tk_only" });
+    installDeliveryHelper(state);
 
     const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/reject/route");
     const [res1, res2] = await Promise.all([
