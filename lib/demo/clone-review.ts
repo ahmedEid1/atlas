@@ -28,7 +28,22 @@ import type { Prisma } from "@/app/generated/prisma/client";
  *
  * Draft rewriting: `Run.draft` embeds `[paper_id]` citation tokens whose
  * ids must also be rewritten to match the cloned corpus, otherwise the
- * audit UI shows mismatched citations after clone.
+ * audit UI shows mismatched citations after clone. Any cuid-shaped
+ * token that ISN'T in `corpusIdMap` is treated as a template-integrity
+ * violation and throws (a 10+-char `[a-zA-Z0-9_-]` run in prose is
+ * vanishingly unlikely by coincidence — it is almost certainly a
+ * dangling pointer to a deleted corpus row).
+ *
+ * Template-integrity contract: the template project is expected to be
+ * self-consistent —
+ *   - every `IncludedPaper.corpusItemId` MUST refer to a CorpusItem in
+ *     the same template's corpus,
+ *   - every `[<cuid>]` citation token in `Run.draft` MUST resolve to a
+ *     CorpusItem in the same template's corpus,
+ *   - every `ClaimCheck.paperId` MUST refer to a CorpusItem in the same
+ *     template's corpus.
+ * This function fails loudly on any violation rather than producing
+ * dangling or cross-tenant data in the guest's project.
  *
  * Returns the new Project id so the caller can redirect the user to it.
  *
@@ -92,16 +107,28 @@ export async function cloneReviewTemplate(args: {
     }
 
     for (const run of template.runs) {
+      // Rewrite [paper_id] tokens in the cloned draft so they point at
+      // cloned corpus ids — keeps the audit view consistent with
+      // ClaimCheck.paperId on the cloned side. Any cuid-shaped token
+      // that doesn't resolve is collected here and surfaced as a
+      // template-integrity violation BEFORE we commit row writes.
+      const unmappedDraftTokens = new Set<string>();
+      const rewrittenDraft = rewriteCitationsInDraft(run.draft, corpusIdMap, unmappedDraftTokens);
+      if (unmappedDraftTokens.size > 0) {
+        const sample = [...unmappedDraftTokens].slice(0, 3).join(", ");
+        const suffix = unmappedDraftTokens.size > 3 ? ", ..." : "";
+        throw new Error(
+          `cloneReviewTemplate: draft contains ${unmappedDraftTokens.size} citation-shaped token(s) not in corpusIdMap: [${sample}${suffix}]. Template integrity violation — refusing to clone with dangling citation pointers.`,
+        );
+      }
+
       const newRun = await tx.run.create({
         data: {
           projectId: newProject.id,
           status: run.status,
           question: run.question,
           plan: run.plan ?? undefined,
-          // Rewrite [paper_id] tokens in the cloned draft so they point at
-          // cloned corpus ids — keeps the audit view consistent with
-          // ClaimCheck.paperId on the cloned side.
-          draft: rewriteCitationsInDraft(run.draft, corpusIdMap),
+          draft: rewrittenDraft,
           failureReason: run.failureReason,
           faithfulnessScore: run.faithfulnessScore,
           critiqueScore: run.critiqueScore,
@@ -154,7 +181,16 @@ export async function cloneReviewTemplate(args: {
       const includedPaperIdMap = new Map<string, string>();
       for (const ip of run.includedPapers) {
         const newCorpusItemId = corpusIdMap.get(ip.corpusItemId);
-        if (!newCorpusItemId) continue;
+        if (!newCorpusItemId) {
+          // No silent skip — a missing mapping means the template has
+          // an IncludedPaper pointing at a CorpusItem that doesn't exist
+          // in the template's corpus. Cloning past it would silently
+          // drop a row from the guest's run and leave the audit graph
+          // inconsistent. Fail loud.
+          throw new Error(
+            `cloneReviewTemplate: IncludedPaper.corpusItemId="${ip.corpusItemId}" has no mapping in corpusIdMap. Template integrity violation — corpus row may have been deleted while IncludedPaper rows remained.`,
+          );
+        }
         const created = await tx.includedPaper.create({
           data: {
             runId: newRun.id,
@@ -229,20 +265,30 @@ export async function cloneReviewTemplate(args: {
  * Rewrite `[paper_id]` tokens in a draft string using the corpus id map.
  *
  * Citation tokens look like `[<corpusItemId>]` where the inner id is a
- * cuid-like string (alphanumeric + `_-`, at least 10 chars long). If the
- * inner id isn't in the map, the token is left alone — drafts can also
- * contain other bracketed text (e.g. `[Figure 1]`, footnote-style refs)
- * and a non-mapping bracket is not necessarily a bug. Throwing here
- * would be too aggressive.
+ * cuid-like string (alphanumeric + `_-`, at least 10 chars long).
+ * Non-cuid-shaped brackets like `[Figure 1]` (contains a space) or
+ * `[fig2]` (too short) don't match the regex and are passed through
+ * untouched.
+ *
+ * A token that DOES match the cuid shape but is NOT in `corpusIdMap` is
+ * collected into the `unmapped` set so the caller can fail the clone —
+ * a 10+-char alphanumeric run in prose is overwhelmingly likely to be a
+ * real citation pointing at a deleted/foreign corpus row, not a
+ * coincidence. The original token text is preserved in the output for
+ * debug visibility; the caller is expected to throw before any DB write
+ * lands.
  */
 function rewriteCitationsInDraft(
   draft: string | null,
   corpusIdMap: Map<string, string>,
+  unmapped?: Set<string>,
 ): string | null {
   if (!draft) return draft;
   return draft.replace(/\[([a-zA-Z0-9_-]{10,})\]/g, (full, id: string) => {
     const mapped = corpusIdMap.get(id);
-    return mapped ? `[${mapped}]` : full;
+    if (mapped) return `[${mapped}]`;
+    unmapped?.add(id);
+    return full;
   });
 }
 

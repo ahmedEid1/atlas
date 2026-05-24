@@ -16,8 +16,11 @@ import { checkRateLimit, extractClientIp } from "@/lib/demo/rate-limit";
  * already there.
  *
  * Hardening on each request, in order:
- *   1. Per-IP sliding-window rate limit (5/hour, in-memory)
- *   2. Same-origin check (Origin/Referer must match host) in production
+ *   1. Same-origin check (Origin/Referer must match host) in production —
+ *      runs BEFORE rate-limit so cross-site posts can't drain a victim
+ *      IP's quota (DoS amplifier).
+ *   2. Per-IP sliding-window rate limit (5/hour, in-memory) — only
+ *      consumed by requests that pass the origin check.
  *   3. Compensation on partial failure (clerk + db rollback)
  *   4. Local User + clone happen inside ONE db transaction
  *
@@ -38,25 +41,27 @@ import { checkRateLimit, extractClientIp } from "@/lib/demo/rate-limit";
  *     compensation runs first.
  */
 export async function POST(req: Request) {
-  // --- Rate limit (before any side effects) ---
-  const ip = extractClientIp(req.headers);
-  const limit = checkRateLimit(ip);
-  if (!limit.allowed) {
-    return NextResponse.json(
-      { error: "rate_limited", retryAfterSeconds: limit.retryAfterSeconds },
-      {
-        status: 429,
-        headers: { "Retry-After": String(limit.retryAfterSeconds) },
-      },
-    );
-  }
-
   // --- Origin / Referer guard (CSRF-style protection) ---
   // The endpoint is unauthenticated, so a malicious site embedding a
   // POST to /api/demo/start could otherwise burn through guest quotas
   // attributed to honest users. Enforced in production only — local dev
   // requests from curl / fetch in test runners may not set these
   // headers and we don't want to break them.
+  //
+  // Runs BEFORE the rate-limit check on purpose: if we rate-limited
+  // first, a cross-site POST from a victim's browser would still drain
+  // that victim IP's per-hour bucket even though we reject it. Net
+  // effect: an attacker page could DoS legitimate demo-start attempts
+  // from any visitor. By short-circuiting on bad origin first, the
+  // rate-limit budget is only ever spent by requests that at least look
+  // same-origin.
+  //
+  // Origin comparison parses through `new URL().origin` and matches
+  // against an exact Set, NOT a startsWith on `https://${host}`. The
+  // prefix form was bypassable by an attacker hostname that is a
+  // string-prefix superset, e.g. `https://thoth.example.com.evil.tld`
+  // starts with `https://thoth.example.com` but has a completely
+  // different .origin. URL parsing collapses that ambiguity.
   if (process.env.NODE_ENV === "production") {
     const host = req.headers.get("host");
     const origin = req.headers.get("origin");
@@ -67,15 +72,34 @@ export async function POST(req: Request) {
         { status: 403 },
       );
     }
-    const allowedPrefixes = [`https://${host}`, `http://${host}`];
-    const matchesHost = (val: string | null) =>
-      val ? allowedPrefixes.some((p) => val.startsWith(p)) : false;
-    if (!(matchesHost(origin) || matchesHost(referer))) {
+    const expectedOrigins = new Set([`https://${host}`, `http://${host}`]);
+    const isAllowedOrigin = (val: string | null): boolean => {
+      if (!val) return false;
+      try {
+        return expectedOrigins.has(new URL(val).origin);
+      } catch {
+        return false;
+      }
+    };
+    if (!(isAllowedOrigin(origin) || isAllowedOrigin(referer))) {
       return NextResponse.json(
         { error: "demo_invalid_origin", message: "Cross-origin request rejected." },
         { status: 403 },
       );
     }
+  }
+
+  // --- Rate limit (after origin check, before any side effects) ---
+  const ip = extractClientIp(req.headers);
+  const limit = checkRateLimit(ip);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited", retryAfterSeconds: limit.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfterSeconds) },
+      },
+    );
   }
 
   const templateProjectId = env.DEMO_TEMPLATE_PROJECT_ID;

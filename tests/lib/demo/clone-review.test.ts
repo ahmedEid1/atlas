@@ -233,6 +233,51 @@ describe("cloneReviewTemplate", () => {
     ).rejects.toThrow(/Template integrity violation/);
   });
 
+  it("throws when an IncludedPaper.corpusItemId has no mapping", async () => {
+    // Template has an IncludedPaper pointing at a CorpusItem that is
+    // NOT in the template's corpus (e.g. the corpus row was deleted
+    // while the IncludedPaper row stayed). Cloning past it would
+    // silently drop a row from the guest's run and leave the audit
+    // graph inconsistent.
+    const tmpl = structuredClone(baseTemplate) as typeof baseTemplate;
+    tmpl.runs[0]!.includedPapers[0]!.corpusItemId = "t_ghost_corpus_999";
+    // Also wipe claimChecks so the IncludedPaper check is what fires.
+    tmpl.runs[0]!.claimChecks = [];
+    vi.mocked(db.project.findUnique).mockResolvedValue(tmpl as never);
+    const { tx } = buildTxMock();
+    vi.mocked(db.$transaction).mockImplementation(
+      async (cb: unknown) => (cb as (t: unknown) => unknown)(tx),
+    );
+
+    await expect(
+      cloneReviewTemplate({
+        templateProjectId: "p_template",
+        targetOwnerId: "u_guest_1",
+      }),
+    ).rejects.toThrow(/IncludedPaper\.corpusItemId="t_ghost_corpus_999".*Template integrity violation/);
+  });
+
+  it("throws when the draft contains an unmapped citation-shaped token", async () => {
+    // A 10+-char [a-zA-Z0-9_-] run in prose is overwhelmingly likely a
+    // real citation pointing at a deleted/foreign corpus row. Codex
+    // pushback: silently leaving the token would let the guest see a
+    // draft that references a non-existent paper.
+    const tmpl = structuredClone(baseTemplate) as typeof baseTemplate;
+    tmpl.runs[0]!.draft = "This [t_corpus_1] is fine but [unmapped_token_12345] is not.";
+    vi.mocked(db.project.findUnique).mockResolvedValue(tmpl as never);
+    const { tx } = buildTxMock();
+    vi.mocked(db.$transaction).mockImplementation(
+      async (cb: unknown) => (cb as (t: unknown) => unknown)(tx),
+    );
+
+    await expect(
+      cloneReviewTemplate({
+        templateProjectId: "p_template",
+        targetOwnerId: "u_guest_1",
+      }),
+    ).rejects.toThrow(/citation-shaped token\(s\) not in corpusIdMap.*unmapped_token_12345.*Template integrity violation/);
+  });
+
   it("rewrites corpus ids inside HumanCheckpoint.proposal JSON", async () => {
     const tmpl = structuredClone(baseTemplate) as typeof baseTemplate;
     tmpl.runs[0]!.checkpoints = [

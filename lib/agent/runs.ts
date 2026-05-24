@@ -2,8 +2,21 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { IncludedPaperSpec, ClaimSpec } from "@/lib/agent/state";
 
-export async function createRun(args: { projectId: string; question: string }): Promise<{ id: string }> {
-  return db.run.create({
+/**
+ * Create a new Run row in PENDING status.
+ *
+ * Contract: if `tx` is provided, the insert runs inside the caller's
+ * transaction; otherwise it uses the global Prisma client. This mirrors
+ * the `cloneReviewTemplate` pattern and lets the runs-start route hold
+ * a project-scoped advisory lock across the active-run check + insert
+ * (see app/api/projects/[id]/runs/route.ts).
+ */
+export async function createRun(
+  args: { projectId: string; question: string },
+  tx?: Prisma.TransactionClient,
+): Promise<{ id: string }> {
+  const client = tx ?? db;
+  return client.run.create({
     data: { projectId: args.projectId, question: args.question, status: "PENDING" },
     select: { id: true },
   });

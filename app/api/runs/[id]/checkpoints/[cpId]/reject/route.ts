@@ -30,8 +30,10 @@ export async function POST(
 
   // Atomic transition (PENDING -> REJECTED). A null return means another
   // concurrent caller already resolved this checkpoint; we MUST NOT call
-  // resolveWaitToken in that case — Trigger.dev's wait.completeToken is
-  // not idempotent across different payloads.
+  // resolveWaitToken with a fresh payload in that case — Trigger.dev's
+  // wait.completeToken is not idempotent across different payloads. But
+  // a null can also mean a prior attempt updated the DB row and then
+  // crashed before completing the wait token — see F2 recovery below.
   const resolved = await resolveCheckpoint({
     checkpointId: cpId,
     status: "REJECTED",
@@ -39,10 +41,36 @@ export async function POST(
     rejectionReason: reason,
   });
   if (resolved === null) {
+    // F2.2: Recovery path. If a prior attempt set status but failed to
+    // deliver the wait token (Trigger outage between the DB update and
+    // resolveWaitToken), the row will still have a non-null waitToken.
+    // Replay using the persisted decisionPayload so the agent unblocks.
+    const row = await db.humanCheckpoint.findUnique({
+      where: { id: cpId },
+      select: { waitToken: true, decisionPayload: true },
+    });
+    if (row?.waitToken) {
+      await resolveWaitToken(
+        row.waitToken,
+        (row.decisionPayload ?? {}) as Record<string, unknown>,
+      );
+      await db.humanCheckpoint.update({
+        where: { id: cpId },
+        data: { waitToken: null },
+      });
+      return NextResponse.json({ ok: true, recovered: true });
+    }
     return NextResponse.json({ error: "checkpoint_already_resolved" }, { status: 409 });
   }
   if (resolved.waitToken) {
     await resolveWaitToken(resolved.waitToken, decisionPayload);
+    // F2.1: Null out the waitToken so a retry doesn't re-deliver it.
+    // Safe to use update (not updateMany) — the row is guaranteed to
+    // exist because resolveCheckpoint just updated it.
+    await db.humanCheckpoint.update({
+      where: { id: cpId },
+      data: { waitToken: null },
+    });
   }
 
   return NextResponse.json({ ok: true });

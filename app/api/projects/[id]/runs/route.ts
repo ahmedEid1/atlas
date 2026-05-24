@@ -31,14 +31,34 @@ export async function POST(
     );
   }
 
-  const existingActive = await db.run.findFirst({
-    where: {
-      projectId: id,
-      status: { notIn: ["COMPLETED", "REJECTED", "FAILED"] },
-    },
-    select: { id: true, status: true, createdAt: true },
+  // F1: Active-run guard MUST be inside a transaction holding a per-project
+  // advisory lock — otherwise two concurrent POSTs both see a clean
+  // findFirst (neither sees the other's not-yet-committed Run) and both
+  // create runs + enqueue Trigger jobs, doubling LLM spend on a double-click.
+  // pg_advisory_xact_lock(hashtext($1)) serializes all run-creation attempts
+  // per project; the lock auto-releases at COMMIT/ROLLBACK. Trigger.dev calls
+  // happen AFTER the tx commits — they can take seconds and must not hold
+  // either the DB transaction or the advisory lock.
+  type GuardResult =
+    | { conflict: { id: string; status: string } }
+    | { run: { id: string } };
+  const guardResult = await db.$transaction(async (tx): Promise<GuardResult> => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+    const existingActive = await tx.run.findFirst({
+      where: {
+        projectId: id,
+        status: { notIn: ["COMPLETED", "REJECTED", "FAILED"] },
+      },
+      select: { id: true, status: true },
+    });
+    if (existingActive) {
+      return { conflict: existingActive };
+    }
+    const created = await createRun({ projectId: id, question: project.question }, tx);
+    return { run: created };
   });
-  if (existingActive) {
+  if ("conflict" in guardResult) {
+    const existingActive = guardResult.conflict;
     return NextResponse.json(
       {
         error: "run_already_active",
@@ -49,8 +69,7 @@ export async function POST(
       { status: 409 },
     );
   }
-
-  const run = await createRun({ projectId: id, question: project.question });
+  const run = guardResult.run;
   let triggerHandle: { id: string };
   try {
     triggerHandle = await enqueueRunReview(run.id);
