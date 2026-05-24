@@ -26,74 +26,75 @@ export async function POST(
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const decisionPayload = { approved: true, ...body };
 
-  // F2 + F3: All three operations (PENDING -> APPROVED transition, wait-token
-  // probe, resolveWaitToken delivery, waitToken null-out) run inside a single
-  // transaction holding a per-checkpoint advisory lock. This guarantees
-  // exactly-once delivery of the Trigger.dev wait-token even under concurrent
-  // retries: the lock serializes all approve/reject calls per checkpoint, so
-  // the second caller sees the already-cleared waitToken and 409s instead of
-  // double-delivering. The Trigger.dev HTTP call is held inside the tx
-  // (timeout=30s accommodates typical Trigger latency); this is acceptable
-  // because contention is per-checkpoint (one human approving one HITL pause).
-  type ResolveResult =
-    | { status: "delivered"; recovered: false }
-    | { status: "delivered"; recovered: true }
-    | { status: "already_resolved" };
-  const result = await db.$transaction(
-    async (tx): Promise<ResolveResult> => {
+  // Round-4 fix: split the resolve into TWO consecutive transactions so an
+  // external Trigger.dev failure cannot cause the persisted decision (and
+  // therefore the audit log) to diverge from what was actually delivered
+  // to the agent.
+  //
+  // Phase 1 — commit the decision (small, fast tx, no external call).
+  // Once Phase 1 commits, the decision is IMMUTABLE: any later request
+  // (approve OR reject) sees status != PENDING and writes nothing. This
+  // is the critical invariant that prevents audit divergence.
+  const phase1 = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
+    const updated = await tx.humanCheckpoint.updateMany({
+      where: { id: cpId, status: "PENDING" },
+      data: {
+        status: "APPROVED",
+        decisionPayload,
+        decidedAt: new Date(),
+      },
+    });
+    return { decided: updated.count > 0 };
+  });
+
+  // Phase 2 — deliver the persisted decision to Trigger.dev.
+  // ALWAYS uses the persisted decisionPayload (never the live request
+  // body). If Phase 2 fails after Trigger succeeds, the tx rolls back,
+  // waitToken stays set, and a retry replays delivery with the SAME
+  // persisted payload — so the agent and the DB stay in lockstep.
+  const phase2 = await db.$transaction(
+    async (tx): Promise<{ outcome: "delivered" | "already_delivered" | "not_found" }> => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cpId}))`;
-      const updated = await tx.humanCheckpoint.updateMany({
-        where: { id: cpId, status: "PENDING" },
-        data: {
-          status: "APPROVED",
-          decisionPayload,
-          decidedAt: new Date(),
-        },
-      });
       const row = await tx.humanCheckpoint.findUnique({
         where: { id: cpId },
-        select: { waitToken: true, decisionPayload: true },
+        select: { waitToken: true, decisionPayload: true, status: true },
       });
-      if (updated.count === 1) {
-        // Happy path: we won the race. Deliver with the LIVE request payload.
-        if (row?.waitToken) {
-          await resolveWaitToken(row.waitToken, decisionPayload);
-          await tx.humanCheckpoint.update({
-            where: { id: cpId },
-            data: { waitToken: null },
-          });
-        }
-        return { status: "delivered", recovered: false };
+      if (!row) {
+        return { outcome: "not_found" };
       }
-      // updated.count === 0: a prior caller already transitioned the row.
-      if (row?.waitToken) {
-        // F2.2: Recovery — prior attempt crashed between DB update and
-        // resolveWaitToken (Trigger outage). Replay with the PERSISTED
-        // decisionPayload (NOT the current request body) so the agent
-        // unblocks with the same decision the original caller recorded.
-        await resolveWaitToken(
-          row.waitToken,
-          (row.decisionPayload ?? {}) as Record<string, unknown>,
-        );
-        await tx.humanCheckpoint.update({
-          where: { id: cpId },
-          data: { waitToken: null },
-        });
-        return { status: "delivered", recovered: true };
+      if (!row.waitToken) {
+        return { outcome: "already_delivered" };
       }
-      // Already resolved AND delivered — nothing to do.
-      return { status: "already_resolved" };
+      // Always use the PERSISTED payload — the first caller's committed
+      // decision is what the agent must see; later retries cannot
+      // substitute their own payload.
+      await resolveWaitToken(
+        row.waitToken,
+        (row.decisionPayload ?? {}) as Record<string, unknown>,
+      );
+      await tx.humanCheckpoint.update({
+        where: { id: cpId },
+        data: { waitToken: null },
+      });
+      return { outcome: "delivered" };
     },
     { timeout: 30_000 },
   );
 
-  if (result.status === "already_resolved") {
+  if (phase2.outcome === "not_found") {
+    return NextResponse.json(
+      { error: "checkpoint_not_found" },
+      { status: 404 },
+    );
+  }
+  if (!phase1.decided && phase2.outcome === "already_delivered") {
     return NextResponse.json(
       { error: "checkpoint_already_resolved" },
       { status: 409 },
     );
   }
-  if (result.recovered) {
+  if (!phase1.decided && phase2.outcome === "delivered") {
     return NextResponse.json({ ok: true, recovered: true });
   }
   return NextResponse.json({ ok: true });
