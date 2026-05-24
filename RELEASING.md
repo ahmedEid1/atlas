@@ -87,3 +87,24 @@ curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth" \
 ```
 
 Namespace `io.github.ahmedEid1/thoth` requires logging in as **`ahmedEid1`** (capital E — namespace is case-sensitive). Description is hard-capped at 100 chars.
+
+## Eval CI workflow secrets
+
+The weekly `.github/workflows/evals.yml` job needs the same secrets as
+the live deploy plus the LLM provider key, all configured under
+**Settings → Secrets and variables → Actions** on the GitHub repo:
+
+| Secret | Source |
+|---|---|
+| `DATABASE_URL` | Neon pooled connection string (`postgres://…?sslmode=require`) |
+| `DIRECT_DATABASE_URL` | Neon direct connection string (used by `prisma generate` / migrate) |
+| `MISTRAL_API_KEY` | https://console.mistral.ai (free Experiment tier) |
+| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` | Langfuse Cloud project keys |
+| `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` | Cloudflare R2 bucket credentials |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` / `CLERK_WEBHOOK_SIGNING_SECRET` | Clerk app keys (`lib/env.ts` requires them to parse even though the eval path doesn't touch Clerk at call time) |
+
+Without these the scheduled run fails at the `pnpm install` →
+`prisma generate` → `pnpm eval` step where `lib/env.ts`'s Zod parse
+demands them. The workflow has a `workflow_dispatch` trigger so you
+can re-run a baseline manually from the **Actions** tab once secrets
+are in place.
