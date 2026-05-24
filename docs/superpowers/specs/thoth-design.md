@@ -1,6 +1,6 @@
 # Thoth — Design
 
-**Status:** Authoritative design (matches code at `v1.0.0`)
+**Status:** Authoritative design (matches code at `v1.0.1`)
 **Owner:** Ahmed Hobeishy
 
 ---
@@ -14,7 +14,7 @@ The product is named for **Thoth**, the ancient Egyptian ibis-headed god of writ
 Two outcomes are served by one implementation:
 
 1. **A real artifact** — a GDPR-friendly tool that researchers can sign into, run, and self-host. EU researchers can keep their corpus on Oracle Cloud Always Free in Frankfurt.
-2. **A portfolio artifact** — a single, deeply-engineered project covering every production agentic skill on 2026 Agentic SWE / Applied AI job descriptions: LangGraph, HITL with durable execution, evals tied to a public dashboard, end-to-end OpenTelemetry tracing, authenticated MCP, and ruthless cost discipline.
+2. **An end-to-end reference implementation** — a single, deeply-engineered project covering every production agentic skill that matters: LangGraph state machines, HITL with durable execution, evals tied to a public dashboard, end-to-end OpenTelemetry tracing, authenticated MCP, and ruthless cost discipline.
 
 The product niche — Kitchenham & Charters style SLRs — was chosen because it is narrow enough to build a real golden eval set against (citation recall, faithfulness, hallucination rate are all measurable), the methodology is well-defined, and no incumbent (Elicit / Undermind / Perplexity) addresses exactly this job with a public eval dashboard and an authenticated MCP surface.
 
@@ -206,7 +206,7 @@ Guest accounts (created by `/api/demo/start`) are marked in three places:
 
 ## 6. Demo flow
 
-Goal: a recruiter or first-time visitor can click one button on the landing page and be in a working dashboard within seconds, without seeing a sign-up form.
+Goal: a first-time visitor can click one button on the landing page and be in a working dashboard within seconds, without seeing a sign-up form.
 
 ### Anonymous entry
 
@@ -231,7 +231,7 @@ The handoff lives in our own app rather than redirecting directly to Clerk's `ac
 
 ### Empty-dashboard landing
 
-The guest lands on an **empty dashboard** — no pre-cloned sample data. They upload their own PDFs, create a project, and run the agent end-to-end. This is the intended demo experience: the recruiter sees the real flow (upload → plan gate → papers gate → draft → critic → cite_check), and the cost-cap (§4) is the spend boundary that makes guest write access safe.
+The guest lands on an **empty dashboard** — no pre-cloned sample data. They upload their own PDFs, create a project, and run the agent end-to-end. This is the intended demo experience: the visitor sees the real flow (upload → plan gate → papers gate → draft → critic → cite_check), and the cost-cap (§4) is the spend boundary that makes guest write access safe.
 
 A clone helper (`lib/demo/clone-review.ts`) and its tests remain in the repo for potential future re-enable but are not on the current code path.
 
@@ -269,7 +269,7 @@ Claude Desktop → POST /api/mcp (no token) → 401 + WWW-Authenticate
 
 ### Tools
 
-Three read-only tools. All scoped to the JWT-verified `User.id`. None hits an LLM at call time — every response is a DB read of already-computed data, so recruiter traffic cannot exhaust the free-tier LLM budget.
+Three read-only tools. All scoped to the JWT-verified `User.id`. None hits an LLM at call time — every response is a DB read of already-computed data, so external traffic cannot exhaust the free-tier LLM budget.
 
 | Tool | Returns | Notes |
 |---|---|---|
@@ -422,7 +422,7 @@ The following are deliberately deferred. Each is a known gap, not an oversight.
 - **Real-time multi-user collaboration**. Liveblocks-style cursors are out.
 - **Multi-tenant org workspaces**. Each project belongs to one `User`.
 - **Pricing / SaaS billing**. Open-source, free-to-self-host. No billing surface.
-- **MCP write tools**. `start_review`, `cancel_run`, `delete_review` are out by design — read-only keeps the recruiter demo cheap and bounded.
+- **MCP write tools**. `start_review`, `cancel_run`, `delete_review` are out by design — read-only keeps the public MCP surface cheap and bounded.
 - **Pre-cloned sample SLR for guests**. The clone helper survives in code but is not on the demo path; the empty-dashboard flow is more honest about what Thoth does.
 - **30-question real-paper golden set**. The harness runs end-to-end with 3 synthetic goldens today; 30 real ones are the M6 work item.
 - **Anomaly detection over `McpCall`**. The data is captured; the cron is deferred.

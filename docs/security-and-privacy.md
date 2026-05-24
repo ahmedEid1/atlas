@@ -125,6 +125,5 @@ These are real gaps. Documenting them honestly is the point of this page.
 
 Please open a GitHub issue marked `[security]` on
 [github.com/ahmedEid1/thoth](https://github.com/ahmedEid1/thoth). No
-bug bounty, no NDA — this is a portfolio project that doubles as a
-real artifact; the most useful response we can offer is a public fix +
-credit in the commit.
+bug bounty, no NDA — this is an open-source project; the most useful
+response we can offer is a public fix + credit in the commit.

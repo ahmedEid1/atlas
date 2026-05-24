@@ -14,7 +14,7 @@ This is the milestone where Thoth stopped being a CRUD app with a clever tool bu
 
 ## Why LangGraph and Trigger.dev — together, not one or the other
 
-LangGraph is the framework that turns "a few prompts in sequence" into a real state machine: typed channels, conditional edges, a checkpointer that survives in-process state. That's the framework most often named in 2026 Agentic SWE job descriptions, and it's the right abstraction for an SLR loop that needs to fan out, gate on human approval, and conditionally loop the drafter when the critic isn't happy.
+LangGraph is the framework that turns "a few prompts in sequence" into a real state machine: typed channels, conditional edges, a checkpointer that survives in-process state. It's the right abstraction for an SLR loop that needs to fan out, gate on human approval, and conditionally loop the drafter when the critic isn't happy.
 
 But LangGraph's checkpointer survives in-process state. It does not, by itself, survive the *worker process restarting* — which it absolutely will, when a human-in-the-loop gate pauses the graph for an hour and the deploy rolls in the meantime. For that you need durable execution.
 
@@ -101,7 +101,7 @@ Each run has a workspace page that renders:
 - The `HumanCheckpoint` cards inline at the gate boundaries, with Approve / Edit / Reject controls.
 - A `RunStep` timeline that shows each node's call to `runLLM`, with a direct link out to the Langfuse trace.
 
-The Langfuse link is the thing I'd point a recruiter at first. The whole run is a Langfuse session; expanding it shows every prompt, every output, every cost, every latency, every Zod-validated structure. The "show your work" surface for the agent is built into the framework, not bolted on afterwards.
+The Langfuse link is the most legible artifact for understanding how the agent thinks. The whole run is a Langfuse session; expanding it shows every prompt, every output, every cost, every latency, every Zod-validated structure. The "show your work" surface for the agent is built into the framework, not bolted on afterwards.
 
 ## What's missing — and what later milestones add
 

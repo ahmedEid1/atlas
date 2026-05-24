@@ -9,15 +9,15 @@
 - A self-host fallback: a step-by-step walkthrough that brings Thoth up on Oracle Cloud's Always Free tier (4-core ARM Ampere + 24 GB RAM, free forever) — one VM, Caddy + auto-TLS, the whole stack in docker-compose.
 - A Langfuse migration from the direct JS SDK to the OpenTelemetry exporter, so traces emit from both the Next.js process and the Trigger.dev workers without per-call instrumentation code.
 
-This milestone is the one where Thoth went from "a thing that works on my laptop" to "a thing a recruiter can sign into in 90 seconds." The engineering wasn't glamorous; the outcome moved the project.
+This milestone is the one where Thoth went from "a thing that works on my laptop" to "a thing anyone can sign into in 90 seconds." The engineering wasn't glamorous; the outcome moved the project.
 
 ## Why I pivoted off Anthropic-direct
 
 The M2 wrapper hardcoded Anthropic. That was fine for week two — the goal was to get the *shape* right, not the supplier — but it had two problems.
 
-The first was cost. The agent loop in M3 makes 6+ LLM calls per run (planner, retriever, assessor, drafter, critic, plus one per citation in `cite_check`). On Anthropic Sonnet that's roughly $0.50 per run at typical SLR sizes. For a portfolio project where I want recruiters poking at it freely, $0.50/run is the difference between "leave it open and let people play" and "rate-limit aggressively and worry about the bill." Times a dozen evaluation runs in CI per push, it stops being trivial.
+The first was cost. The agent loop in M3 makes 6+ LLM calls per run (planner, retriever, assessor, drafter, critic, plus one per citation in `cite_check`). On Anthropic Sonnet that's roughly $0.50 per run at typical SLR sizes. $0.50/run is the difference between "leave it open and let people play" and "rate-limit aggressively and worry about the bill." Times a dozen evaluation runs in CI per push, it stops being trivial.
 
-The second was the EU recruiter narrative. "Thoth defaults to Mistral, an EU model, runs on EU infrastructure, with EU-region observability" is a sentence that lands very differently in a Berlin interview from "Thoth uses Claude." Both are fine answers; the first one is specific to the audience.
+The second was data residency. "Thoth defaults to Mistral, an EU model, runs on EU infrastructure, with EU-region observability" is a meaningfully different posture from "Thoth uses Claude." Both are fine; the first one matters for EU labs that care about where research corpora live.
 
 So I refactored. `runLLM` became a dispatcher: it resolves `(provider, tier)` to a concrete AI SDK `LanguageModel` via a provider registry, calls `generateObject` with the existing Zod schemas, and returns a uniform result. The agent nodes don't know which provider they're talking to.
 
@@ -46,9 +46,9 @@ The catch is that the SDK returns text only, not native structured output. The a
 
 The deploy is a layer cake of free tiers, each chosen because it covers Thoth's scale and stays free without a credit card on file (where possible):
 
-- **Vercel Hobby** for the Next.js host. Generous limits for a portfolio app; the build runs `prisma migrate deploy` automatically.
+- **Vercel Hobby** for the Next.js host. Generous limits at Thoth's scale; the build runs `prisma migrate deploy` automatically.
 - **Neon Free** for Postgres in Frankfurt — EU region, branchable, scale-to-zero. Prisma v7's `@prisma/adapter-neon` is the driver, so the same Prisma client works against `pg` locally and Neon's serverless WebSocket driver in prod.
-- **Cloudflare R2** for the object store. No egress fees — important when the recruiter demo means recruiters' PDFs are being downloaded for parsing. S3-compatible via AWS SDK v3, same code path as MinIO locally.
+- **Cloudflare R2** for the object store. No egress fees — important when the demo means visitors' PDFs are being downloaded for parsing. S3-compatible via AWS SDK v3, same code path as MinIO locally.
 - **Langfuse Cloud Hobby** (50K observations/month, EU region) for traces. The migration to the OTel exporter (`langfuse-vercel` + `@vercel/otel`) was the key enabler — traces emit from the Next.js process via `instrumentation.ts` and from Trigger.dev workers explicitly. No per-call instrumentation code anywhere in the agent nodes.
 - **Trigger.dev Cloud Free** for the durable job runtime. The local `pnpm dev:trigger` is the same task code; `syncEnvVars` pushes the local `.env` to the prod Trigger.dev environment on every deploy.
 - **Clerk Cloud Free** for auth, with the EU-region option enabled. Doubles as the OAuth Authorization Server for the M5 MCP work.
@@ -64,7 +64,7 @@ A free-tier cloud stack is great until somebody asks "but what if I don't trust 
 
 [`docs/self-host/oracle-cloud-quickstart.md`](../self-host/oracle-cloud-quickstart.md) walks through standing up Thoth on Oracle Cloud's Always Free tier — an ARM Ampere A1 VM with 4 cores and 24 GB of RAM, free forever, no card required after sign-up. One VM runs Thoth + Postgres + MinIO + Langfuse behind Caddy with auto-TLS. The LLM stays hosted (Mistral free tier, or any other supported provider), but no user data crosses my infrastructure. Total recurring cost: **$0/month + about €10/yr for a domain**.
 
-Whether anybody actually self-hosts is irrelevant to the portfolio outcome. The repo containing a real, documented, single-VM deploy path is what makes the GDPR story land: the cloud deploy is the default, the self-host is the escape hatch.
+Whether anybody actually self-hosts is almost beside the point. A real, documented, single-VM deploy path is what makes the GDPR story land: the cloud deploy is the default, the self-host is the escape hatch.
 
 ## What's next: M4
 

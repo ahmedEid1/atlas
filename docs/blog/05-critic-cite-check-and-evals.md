@@ -19,7 +19,7 @@ A drafter with no critic ships its first attempt. A drafter with a critic ships 
 
 `cite_check` is different. It's not asking "is this writing good" — it's asking "does the source paper actually support this specific claim." That's a *grounded* question, with a *specific* document to verify against. It catches the failure mode that critic alone cannot: the model writes a fluent, on-topic sentence and cites paper [3], and paper [3] simply doesn't say that thing.
 
-Hallucinated citations are the #1 failure mode of agentic SLR generators in 2026. Every interview I've had where the conversation gets technical, this comes up. Shipping the critic without `cite_check` would have been shipping the easier half of the problem and leaving the hard half for "later."
+Hallucinated citations are the #1 failure mode of agentic SLR generators in 2026. Shipping the critic without `cite_check` would have been shipping the easier half of the problem and leaving the hard half for "later."
 
 So they ship together. The graph now looks like:
 
@@ -78,13 +78,13 @@ Neither of those would have been visible from spot-checking a couple of draft ou
 
 I could have run the harness in CI and kept the results in a private dashboard. I made the dashboard public for a specific reason.
 
-If a hiring manager asks "how good are this agent's outputs?", the honest answer is one of: "I don't know," "I think they're pretty good," or "here are the four numbers, here's the trend line, here's the git SHA of the worst regression and what fixed it." The first two answers are what every other portfolio agentic project gives. The third one is the differentiator.
+If someone asks "how good are this agent's outputs?", the honest answer is one of: "I don't know," "I think they're pretty good," or "here are the four numbers, here's the trend line, here's the git SHA of the worst regression and what fixed it." Only the third answer survives scrutiny, and it's the one I wanted Thoth to be able to give.
 
-The public dashboard also forces a discipline I would not have imposed on myself otherwise: a regression is embarrassing if anyone might look at the page, so I don't ship regressions. The Aleph Alpha "AI Software Engineer — Model Evaluation" requisition and every other 2026 Agentic SWE JD names evals as a top requirement; the public `/evals` URL is the receipt.
+The public dashboard also forces a discipline I would not have imposed on myself otherwise: a regression is embarrassing if anyone might look at the page, so I don't ship regressions. Evals stop being a private engineering activity and start being a contract with whoever's looking.
 
 ## What's next: M5
 
-The agent loop is good, the quality story is measured, the deploy is free. The last piece for the v0.7 hiring story is the *interface* the rest of the AI ecosystem speaks: the Model Context Protocol. M5 ships an authenticated, registered MCP server at `/api/mcp/mcp` — OAuth 2.1 + PKCE + Dynamic Client Registration via Clerk, three read-only tools scoped to the authenticated user, an audit log of every call, and a listing in the official MCP Registry. A recruiter can paste one URL into claude.ai, complete the OAuth flow in their browser, and call `get_citation_audit` on a real Thoth review without a single line of local configuration.
+The agent loop is good, the quality story is measured, the deploy is free. The last piece for v0.7 is the *interface* the rest of the AI ecosystem speaks: the Model Context Protocol. M5 ships an authenticated, registered MCP server at `/api/mcp/mcp` — OAuth 2.1 + PKCE + Dynamic Client Registration via Clerk, three read-only tools scoped to the authenticated user, an audit log of every call, and a listing in the official MCP Registry. Anyone can paste one URL into claude.ai, complete the OAuth flow in their browser, and call `get_citation_audit` on a real Thoth review without a single line of local configuration.
 
 That's also the milestone the project becomes "Thoth" — the ibis brand replaces the Atlas codename.
 

@@ -37,7 +37,7 @@ That third point didn't matter on day one (M2 ran on Anthropic only). It became 
 
 ## Why self-hosted Langfuse (and what it cost)
 
-Langfuse Cloud has a generous free tier and I eventually moved Thoth's production traces there for M3.5b's $0 deploy. But for the local dev story, I wanted the docker-compose stack to include observability — both because I wanted EU researchers self-hosting Thoth to get traces without signing up for anything, and because "I've stood up Langfuse end to end with no SaaS dependency" is a different sentence in an interview from "I pasted an API key."
+Langfuse Cloud has a generous free tier and I eventually moved Thoth's production traces there for M3.5b's $0 deploy. But for the local dev story, I wanted the docker-compose stack to include observability — partly because I wanted EU researchers self-hosting Thoth to get traces without signing up for anything, partly because standing it up end-to-end with no SaaS dependency forces you to learn the architecture in a way a hosted API key never will.
 
 The footprint is more than I expected: Langfuse needs Postgres for the app, ClickHouse for the event store, Redis for the queue, and an S3-compatible bucket for blob storage. That's four services beyond the Langfuse web container itself. docker-compose handles the orchestration, and `LANGFUSE_INIT_PROJECT_PUBLIC_KEY` / `..._SECRET_KEY` env vars seed the project at first boot so my dev keys never change.
 

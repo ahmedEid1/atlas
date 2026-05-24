@@ -1,12 +1,12 @@
 # Thoth, week one: foundations
 
-*The first in a series documenting an open-source agentic literature-review platform, built from spec to public launch over a few focused weeks of evenings.*
+*The first in a series documenting an open-source agentic literature-review platform, built from spec to public release over a few focused weeks of evenings.*
 
 ## Why I'm building Thoth
 
-I've spent the last few years writing full-stack TypeScript for SaaS apps. The work is interesting, but the agentic AI shift has changed which engineers EU hiring managers are funding in 2026 — LangGraph, evals, observability, MCP, HITL gates, cost discipline. Reading those job descriptions, it's clear that "I've used the OpenAI API once" is not the bar. The bar is *shipping* a real agentic system that you can defend technically end to end.
+I've spent the last few years writing full-stack TypeScript for SaaS apps. Agentic AI is the shift I wanted to learn deeply, so I built Thoth as a way to actually use LangGraph, evals, observability, MCP, HITL gates, and cost discipline in one project. "I've used the OpenAI API once" wasn't going to teach me much; *shipping* a real agentic system that I can defend technically end to end would.
 
-So Thoth is two things at once. It's a useful artifact — a tool a researcher can self-host and actually run on real PDFs without sending the contents to a third-party SaaS. And it's a portfolio artifact — a single deeply-engineered project that demonstrates each of those agentic skills with code you can read.
+Thoth is a useful artifact — a tool a researcher can self-host and actually run on real PDFs without sending the contents to a third-party SaaS — and a single deeply-engineered project that exercises each of those agentic skills with code I can read back later.
 
 The name is Thoth, after the ibis-headed Egyptian god of writing and scribes. The hieroglyph for "scribe" was literally an ibis. It's a tool that drafts and verifies systematic literature reviews — the ibis on the cover does the symbolism for me so I don't have to do it in the copy.
 
@@ -20,7 +20,7 @@ Once the eval harness has signal, the same machinery extends to broader literatu
 
 ## The boring infra choices that matter
 
-The temptation with a portfolio agentic project is to spend week one on the agent. I deliberately didn't. Week one was the unglamorous foundation: auth, DB, object storage, durable jobs, PDF parsing. If the bottom of the stack wobbles, nothing on top of it is credible.
+The temptation with any agentic project is to spend week one on the agent. I deliberately didn't. Week one was the unglamorous foundation: auth, DB, object storage, durable jobs, PDF parsing. If the bottom of the stack wobbles, nothing on top of it is credible.
 
 - **Clerk for auth.** Not roll-your-own JWT. Clerk also doubles as the OAuth Authorization Server later when M5 adds an authenticated MCP server — same identity provider, no rebuild.
 - **Prisma v7 with `@prisma/adapter-neon`.** v7 went all-in on the driver-adapter pattern; you pick your driver (`pg` locally, `@neondatabase/serverless` in prod) and Prisma is provider-agnostic. This is what made the eventual move to Neon serverless in M3.5b a single-file change.

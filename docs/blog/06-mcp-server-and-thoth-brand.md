@@ -10,9 +10,9 @@
 - **DB-backed sliding-window rate limits** per `(userId, toolName)` — no external Redis required.
 - A listing in the **official MCP Registry** as `io.github.ahmedEid1/thoth`, published via `mcp-publisher` against a `server.json` manifest.
 - A **rebrand**: the project that had been "Atlas" for the first five milestones became **Thoth**, with a Delapouite ibis mark across the logo, the hero, the favicon, and a tightened editorial visual identity.
-- An **anonymous demo flow** at `/demo` that provisions a Clerk guest user with an `@example.com` email and signs the visitor straight into an empty dashboard, so a recruiter can build their own review without creating an account.
+- An **anonymous demo flow** at `/demo` that provisions a Clerk guest user with an `@example.com` email and signs the visitor straight into an empty dashboard, so anyone can build their own review without creating an account.
 
-This is the milestone where Thoth became the thing I'd been describing in interviews.
+This is the milestone where Thoth became the thing I'd been describing to anyone who asked what I'd been working on.
 
 ## Why MCP, and why authenticated
 
@@ -25,11 +25,11 @@ The answer turned out to be cleaner than I expected, thanks to two pieces of rec
 1. **The MCP spec's Resource Server pattern.** A modern MCP server doesn't have to be its own OAuth server. It declares itself a Resource Server, publishes a `oauth-protected-resource` metadata document at `/.well-known/oauth-protected-resource/mcp`, and points clients at an external Authorization Server (Clerk, in my case). Clients discover the AS, do the OAuth dance there, come back with a bearer JWT, and the Resource Server validates the JWT against the AS's JWKS. RFC 8707 + OAuth 2.0 Protected Resource Metadata, both stable.
 2. **Clerk's first-class MCP support.** `@clerk/mcp-tools` ships the helpers for the Resource Server pattern, including Dynamic Client Registration — the protocol that lets a brand-new MCP client (claude.ai, Cursor, MCP Inspector) register itself with Clerk on the fly. No manual client config, no per-client shared secret to distribute. The first time a user clicks "Connect to Thoth" in their MCP client, the client registers with Clerk, the user signs in to Clerk in their browser, Clerk issues a JWT, and the client has a bearer token. From the user's point of view: paste a URL, complete a browser sign-in, done.
 
-The result is the demo I show in the README: a hiring manager pastes `https://thoth-slr.vercel.app/api/mcp/mcp` into claude.ai's custom connectors, signs in via Clerk in a popup, and calls `list_reviews` from inside a Claude conversation a few seconds later. End to end, no local install, no manual config.
+The result is the demo I show in the README: a visitor pastes `https://thoth-slr.vercel.app/api/mcp/mcp` into claude.ai's custom connectors, signs in via Clerk in a popup, and calls `list_reviews` from inside a Claude conversation a few seconds later. End to end, no local install, no manual config.
 
 ## Three tools, read-only
 
-The tool surface is small on purpose. M5's audience priority — locked during brainstorming — is **recruiter demo first**. A 3-tool surface ships in a day and a half; the original 6-tool design from the M1 spec would have taken three or four days and routed LLM cost onto recruiter traffic with no commensurate hiring upside.
+The tool surface is small on purpose. M5's audience priority — locked during brainstorming — is **demo first**. A 3-tool surface ships in a day and a half; the original 6-tool design from the M1 spec would have taken three or four days and routed LLM cost onto demo traffic with no commensurate upside for the milestone's goals.
 
 The three tools:
 
@@ -37,7 +37,7 @@ The three tools:
 - **`get_review_draft`** — given a run id, returns the full markdown draft with inline `[paper_id]` citations.
 - **`get_citation_audit`** — given a run id, returns the per-claim `cite_check` verdict report: every citation, its claim, the cited paper id, the supported/partially/not-supported verdict, the justification.
 
-All three are read-only. All three are tenant-scoped — the Clerk-authenticated `userId` is the only way data flows back; there is no path to read another user's reviews. No tool exposes LLM calls on the request path, which means recruiter traffic doesn't burn the free-tier Mistral quota.
+All three are read-only. All three are tenant-scoped — the Clerk-authenticated `userId` is the only way data flows back; there is no path to read another user's reviews. No tool exposes LLM calls on the request path, which means casual traffic doesn't burn the free-tier Mistral quota.
 
 The three tools are also the demo. `list_reviews` surfaces a review with low faithfulness; `get_citation_audit` shows Claude.ai which claims weren't supported by the cited paper. The whole "we built `cite_check` for a reason" narrative is a 30-second interaction in a Claude conversation.
 
@@ -89,7 +89,7 @@ All the production URLs moved to `thoth-slr.vercel.app`. The MCP registry slug i
 
 ## The anonymous demo flow
 
-The other M5 surface that matters for the recruiter story is the anonymous demo. A hiring manager who's curious enough to click around the live app shouldn't have to fill out a sign-up form first.
+The other M5 surface worth covering is the anonymous demo. Anyone curious enough to click around the live app shouldn't have to fill out a sign-up form first.
 
 The flow:
 
@@ -100,17 +100,16 @@ The flow:
 
 A guest cleanup task (`trigger/guest-cleanup.ts`, every 6 hours) drops guest accounts older than 24 hours along with their projects and corpus items. The free tier on Clerk + Neon + R2 stays within free-tier limits without manual gardening.
 
-There's deliberately no pre-cloned sample data in the demo dashboard. I considered seeding it with a worked review of the ReAct paper so visitors could see the end state immediately, and decided against: the more interesting interaction is uploading a small PDF and watching the agent loop run. The recruiter's own paper, in the recruiter's own session, is more memorable than a canned demo on a paper they don't know.
+There's deliberately no pre-cloned sample data in the demo dashboard. I considered seeding it with a worked review of the ReAct paper so visitors could see the end state immediately, and decided against: the more interesting interaction is uploading a small PDF and watching the agent loop run. The visitor's own paper, in their own session, is more memorable than a canned demo on a paper they don't know.
 
 ## What's next: M6
 
-The platform is built, the quality is measured, the interface is published. M6 is the **launch** milestone:
+The platform is built, the quality is measured, the interface is published. M6 is the **release** milestone:
 
 - A 30-question golden eval set drawn from real published Kitchenham reviews (replacing the 10-question synthetic v1).
-- A one-page recruiter-targeted artefact linking to the live app, the public evals, the MCP demo, and the registry listing.
-- Public surface: HN, LinkedIn, Twitter — timed to the recruiter pager going live.
+- A one-page overview linking to the live app, the public evals, the MCP demo, and the registry listing.
 
-The engineering work is mostly done. What's left is making the project legible to people who aren't going to read the codebase — which is its own discipline, and the one that makes the difference between a portfolio repo and a job offer.
+The engineering work is mostly done. What's left is making the project legible to people who aren't going to read the codebase — which is its own discipline.
 
 ---
 
