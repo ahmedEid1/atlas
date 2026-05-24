@@ -69,7 +69,7 @@ describe("env", () => {
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
   });
 
-  it("defaults LLM_PROVIDER to 'groq' when unset", async () => {
+  it("defaults LLM_PROVIDER to 'mistral' when unset", async () => {
     process.env.DATABASE_URL = "postgresql://u:p@localhost:5433/d";
     process.env.S3_ENDPOINT = "http://localhost:9010";
     process.env.S3_REGION = "us-east-1";
@@ -85,7 +85,7 @@ describe("env", () => {
     delete process.env.LLM_PROVIDER;
 
     const { env } = await import("@/lib/env");
-    expect(env.LLM_PROVIDER).toBe("groq");
+    expect(env.LLM_PROVIDER).toBe("mistral");
   });
 
   it("accepts LLM_PROVIDER=anthropic", async () => {
