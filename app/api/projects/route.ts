@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { guestWriteBlock } from "@/lib/demo/guards";
 
 const createSchema = z.object({
   title: z.string().min(1).max(120),
@@ -11,6 +12,9 @@ const createSchema = z.object({
 export async function POST(req: NextRequest) {
   const user = await requireUser().catch(() => null);
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
+
+  const blocked = guestWriteBlock(user);
+  if (blocked) return blocked;
 
   const json = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(json);

@@ -34,6 +34,11 @@ const envSchema = z.object({
   LANGFUSE_PUBLIC_KEY: z.string().min(1),
   LANGFUSE_SECRET_KEY: z.string().min(1),
   LANGFUSE_HOST: z.string().url(),
+
+  // Optional: the canonical Project id whose data the /api/demo/start
+  // endpoint clones into each new guest account. If unset, the demo
+  // button returns 503 with a clear error.
+  DEMO_TEMPLATE_PROJECT_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

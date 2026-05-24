@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Show } from "@clerk/nextjs";
+import { DemoCtaButton } from "@/components/home/demo-cta-button";
 
 /* ------------------------------------------------------------------
    Home — the editorial cover page.
@@ -67,16 +68,16 @@ export default function Home() {
             style={{ animationDelay: "340ms" }}
           >
             <Show when="signed-out">
+              <DemoCtaButton />
               <Link
                 href="/sign-up"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--thoth-blue)] text-[var(--thoth-papyrus)] text-sm font-medium tracking-wide hover:bg-[var(--thoth-blue-ink)] transition-colors shadow-[0_1px_0_rgba(0,0,0,0.04),0_2px_8px_-2px_rgba(30,58,138,0.25)]"
+                className="inline-flex items-center gap-2 px-5 py-3 text-sm font-medium text-[var(--thoth-blue-ink)] border border-[var(--thoth-rule)] rounded-md hover:border-[var(--thoth-blue)] hover:text-[var(--thoth-blue)] transition-colors"
               >
-                Get started
-                <span aria-hidden="true">→</span>
+                Or sign up
               </Link>
               <Link
                 href="/sign-in"
-                className="inline-flex items-center px-5 py-3 text-sm font-medium text-[var(--thoth-blue-ink)] hover:text-[var(--thoth-blue)] transition-colors"
+                className="inline-flex items-center px-3 py-3 text-sm font-medium text-[var(--thoth-stone)] hover:text-[var(--thoth-blue)] transition-colors"
               >
                 Sign in
               </Link>

@@ -11,12 +11,14 @@ model User {
   id        String   @id @default(cuid())
   clerkId   String   @unique
   email     String   @unique
+  isGuest   Boolean  @default(false)   // true for anonymous sample-data sessions; subject to nightly cleanup
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   projects  Project[]
 
   @@index([clerkId])
+  @@index([isGuest, createdAt])         // for the cleanup cron's "guests older than 24h" query
 }
 
 enum CorpusItemKind {
