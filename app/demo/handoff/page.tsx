@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 // The legacy entry point keeps the familiar imperative useSignIn() shape
 // (isLoaded / setActive / signIn.create returning a SignInResource) that
 // every "consume a sign-in ticket" example in the Clerk docs uses.
@@ -26,8 +26,34 @@ import Link from "next/link";
  *
  * On success: navigate to /dashboard.
  * On failure: show a brand-card error with a link back to /sign-in.
+ *
+ * Wrapped in <Suspense> because useSearchParams() triggers Next.js's CSR
+ * bailout during static prerender — Suspense is the documented escape
+ * hatch (https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout).
  */
 export default function DemoHandoffPage() {
+  return (
+    <Suspense fallback={<HandoffLoading />}>
+      <DemoHandoffInner />
+    </Suspense>
+  );
+}
+
+function HandoffLoading() {
+  return (
+    <main className="min-h-[60vh] grid place-items-center px-6">
+      <div className="flex flex-col items-center gap-4 py-12 text-center">
+        <span
+          aria-hidden="true"
+          className="inline-block w-5 h-5 border-2 border-[var(--thoth-blue)] border-t-transparent rounded-full animate-spin"
+        />
+        <p className="eyebrow text-[var(--thoth-stone)]">Preparing your demo</p>
+      </div>
+    </main>
+  );
+}
+
+function DemoHandoffInner() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
   const ticket = useSearchParams().get("ticket");
