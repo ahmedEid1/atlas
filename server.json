@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ahmedEid1/atlas-research",
+  "title": "Atlas Research",
+  "description": "Read-only MCP over an agentic SLR workspace with per-claim citation verification",
+  "repository": {
+    "url": "https://github.com/ahmedEid1/atlas",
+    "source": "github"
+  },
+  "version": "0.7.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://atlas-sooty-delta.vercel.app/api/mcp/mcp"
+    }
+  ]
+}
