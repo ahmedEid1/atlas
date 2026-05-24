@@ -119,12 +119,12 @@ Thoth uses [Vercel AI SDK](https://ai-sdk.dev) so you can swap providers via a s
 |-----------|-------|-----------------------------------------------|----------------------------------|
 | **Mistral** (default) | ✅ Free Experiment tier | https://console.mistral.ai (30s) | `MISTRAL_API_KEY` |
 | Groq      | ✅ Free | https://console.groq.com                       | `GROQ_API_KEY`                   |
-| Gemini    | ✅ Free* | https://aistudio.google.com                   | `GOOGLE_GENERATIVE_AI_API_KEY`   |
+| Gemini    | ✅ Free | https://aistudio.google.com                    | `GOOGLE_GENERATIVE_AI_API_KEY`   |
 | Anthropic | Paid  | https://console.anthropic.com                  | `ANTHROPIC_API_KEY`              |
 | OpenAI    | Paid  | https://platform.openai.com                    | `OPENAI_API_KEY`                 |
 | Claude Agent SDK | ✅ Free with Max | `claude login` (Claude Code CLI)      | (CLI session — no key)           |
 
-*Gemini Flash has a known parse issue with Vercel AI SDK structured output ([vercel/ai#12187](https://github.com/vercel/ai/issues/12187)) — usable but unreliable for Thoth's per-call Zod schemas. Mistral is the default specifically because it's the most reliable free option for this workload.
+Mistral is the default because the Free Experiment tier covers Thoth's workload, the data stays in the EU jurisdiction, and `mistral-large-latest` produces reliable Zod-validated structured output across every node in the agent pipeline.
 
 Switch with `LLM_PROVIDER=<name>` in `.env`. Tier choice (`smart`/`fast`) per prompt stays the same — the dispatcher maps each tier to the equivalent model per provider (see `lib/llm/tiers.ts`).
 

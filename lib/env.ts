@@ -30,7 +30,7 @@ const envSchema = z.object({
   // Optional: only needed when the PDF parser runs. lib/pdf-parse.ts throws at call time if absent.
   MISTRAL_API_KEY: z.string().optional(),
 
-  LLM_PROVIDER: z.enum(["gemini", "anthropic", "openai", "groq", "claude-agent", "mistral"]).default("groq"),
+  LLM_PROVIDER: z.enum(["gemini", "anthropic", "openai", "groq", "claude-agent", "mistral"]).default("mistral"),
   LANGFUSE_PUBLIC_KEY: z.string().min(1),
   LANGFUSE_SECRET_KEY: z.string().min(1),
   LANGFUSE_HOST: z.string().url(),
