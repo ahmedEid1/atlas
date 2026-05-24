@@ -199,6 +199,73 @@ describe("POST /api/demo/start — origin / referer guard (production only)", ()
     }
   });
 
+  it("rejects a malicious-suffix Origin like host.evil.tld (no startsWith bypass)", async () => {
+    // Regression: an earlier impl used `origin.startsWith("https://" + host)`
+    // which let `https://demo.thoth.app.evil.tld` slip past because it
+    // string-starts-with `https://demo.thoth.app`. The fix parses
+    // Origin through `new URL().origin` so the comparison is exact.
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      wireHappyPath();
+      const res = await POST(
+        new Request("http://localhost/api/demo/start", {
+          method: "POST",
+          headers: {
+            "x-forwarded-for": "203.0.113.79",
+            host: "demo.thoth.app",
+            origin: "https://demo.thoth.app.evil.tld",
+          },
+        }),
+      );
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.error).toBe("demo_invalid_origin");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("does not consume rate-limit budget on cross-origin reject", async () => {
+    // Regression: an earlier impl ran the rate-limit check BEFORE the
+    // origin check, which meant a cross-site POST from a victim's
+    // browser would still drain the victim IP's per-hour bucket even
+    // though the request got rejected — DoS amplifier. With the origin
+    // check first, 10 cross-origin attempts must NOT eat into the
+    // bucket; a follow-up same-origin request from the same IP still
+    // succeeds.
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      wireHappyPath();
+      const sharedIp = "203.0.113.80";
+      for (let i = 0; i < 10; i++) {
+        const denied = await POST(
+          new Request("http://localhost/api/demo/start", {
+            method: "POST",
+            headers: {
+              "x-forwarded-for": sharedIp,
+              host: "thoth.example.com",
+              origin: "https://attacker.example.org",
+            },
+          }),
+        );
+        expect(denied.status).toBe(403);
+      }
+      const ok = await POST(
+        new Request("http://localhost/api/demo/start", {
+          method: "POST",
+          headers: {
+            "x-forwarded-for": sharedIp,
+            host: "thoth.example.com",
+            origin: "https://thoth.example.com",
+          },
+        }),
+      );
+      expect(ok.status).toBe(201);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("allows a same-origin request in production", async () => {
     vi.stubEnv("NODE_ENV", "production");
     try {

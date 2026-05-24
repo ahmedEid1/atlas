@@ -10,9 +10,17 @@ import { db } from "@/lib/db";
  * evicted/deleted would silently come back as `isGuest=false` (column
  * default) and bypass `guestWriteBlock` guards.
  *
- * Clerk lookup is best-effort: if it fails, we default to `isGuest=false`
- * (the safer-for-non-guests path) and log a warning so the operator can
- * investigate. We never break the request because of a Clerk read.
+ * Fail-closed on Clerk read failure: if the Clerk lookup throws (5xx,
+ * network blip, etc.), we re-throw rather than defaulting to
+ * `isGuest=false`. Defaulting would let a guest whose local row was
+ * evicted come back as a non-guest during a Clerk outage and slip past
+ * every `guestWriteBlock` guard in the app. The fail-closed path lets
+ * the error bubble up to `requireUser` → the route returns 401. Trade:
+ *   - Real users see a transient 401 during a Clerk outage; retrying
+ *     after Clerk recovers succeeds.
+ *   - Guests see a 401 and can't escalate. Acceptable cost because
+ *     Clerk outages are rare and write-guard integrity is the higher
+ *     value.
  */
 export async function getCurrentUser() {
   const { userId } = await auth();
@@ -27,10 +35,11 @@ export async function getCurrentUser() {
     const clerkUser = await clerk.users.getUser(userId);
     isGuest = clerkUser.publicMetadata?.isGuest === true;
   } catch (err) {
-    console.warn(
-      `[auth] Failed to read Clerk publicMetadata for ${userId}; defaulting isGuest=false`,
+    console.error(
+      `[auth] Clerk metadata read failed for ${userId} during lazy-create — failing closed to protect guest write-guards. Retry after Clerk recovers.`,
       err,
     );
+    throw err;
   }
 
   return db.user.create({

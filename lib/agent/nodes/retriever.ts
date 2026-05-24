@@ -1,7 +1,7 @@
 import { runLLM } from "@/lib/llm";
 import { PaperScoreSchema, buildPaperScoreRequest } from "@/lib/prompts/score-paper";
 import { addStep, finishStep } from "@/lib/agent/runs";
-import { assertWithinBudget } from "@/lib/agent/cost-cap";
+import { assertWithinBudget, BudgetExceededError } from "@/lib/agent/cost-cap";
 import type { AgentState, IncludedPaperSpec } from "@/lib/agent/state";
 
 export async function retrieverNode(state: AgentState): Promise<Partial<AgentState>> {
@@ -9,8 +9,6 @@ export async function retrieverNode(state: AgentState): Promise<Partial<AgentSta
 
   await assertWithinBudget(state.runId);
   const step = await addStep({ runId: state.runId, nodeName: "retriever" });
-  let totalIn = 0, totalOut = 0, totalCacheRead = 0;
-  const traces: string[] = [];
 
   try {
     const included: IncludedPaperSpec[] = [];
@@ -24,36 +22,49 @@ export async function retrieverNode(state: AgentState): Promise<Partial<AgentSta
         plan: state.plan,
         paper,
       });
-      const { output, traceUrl, usage } = await runLLM({
-        name: "retriever:score",
-        tier: "fast",
-        maxTokens: 1024,
-        system,
-        messages,
-        schema: PaperScoreSchema,
-        metadata: { runId: state.runId, projectId: state.projectId, node: "retriever", corpusItemId: paper.id },
-      });
-      totalIn += usage.inputTokens;
-      totalOut += usage.outputTokens;
-      totalCacheRead += usage.cacheReadInputTokens;
-      traces.push(traceUrl);
-
-      if (output.include) {
-        included.push({
-          corpusItemId: paper.id,
-          relevanceScore: output.relevanceScore,
-          inclusionReason: output.reason,
+      // Persist a RunStep PER LLM call so cost-cap's aggregate query sees this
+      // node's spend. Without this, runLLM's `usage` is only flushed when the
+      // outer `retriever` step finishes, so the per-iteration gate above reads
+      // only completed-step tokens and a large-corpus retriever is silently
+      // uncapped. The outer retriever step records tokens=0 to avoid double
+      // counting.
+      const innerStep = await addStep({ runId: state.runId, nodeName: "retriever_paper" });
+      try {
+        const { output, traceUrl, usage } = await runLLM({
+          name: "retriever:score",
+          tier: "fast",
+          maxTokens: 1024,
+          system,
+          messages,
+          schema: PaperScoreSchema,
+          metadata: { runId: state.runId, projectId: state.projectId, node: "retriever", corpusItemId: paper.id },
         });
+        await finishStep({
+          stepId: innerStep.id,
+          traceUrl,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          cacheReadInputTokens: usage.cacheReadInputTokens,
+        });
+
+        if (output.include) {
+          included.push({
+            corpusItemId: paper.id,
+            relevanceScore: output.relevanceScore,
+            inclusionReason: output.reason,
+          });
+        }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        await finishStep({ stepId: innerStep.id, failureReason: reason.slice(0, 1000) });
+        if (err instanceof BudgetExceededError) throw err;
+        throw err;
       }
     }
 
-    await finishStep({
-      stepId: step.id,
-      traceUrl: traces[0],
-      inputTokens: totalIn,
-      outputTokens: totalOut,
-      cacheReadInputTokens: totalCacheRead,
-    });
+    // Outer step records tokens=0 (defaults) — actual spend lives on the
+    // per-paper `retriever_paper` inner steps to keep cost-cap honest.
+    await finishStep({ stepId: step.id });
 
     return { includedPapers: included };
   } catch (err) {

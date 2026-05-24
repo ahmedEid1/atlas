@@ -93,27 +93,30 @@ describe("getCurrentUser — lazy-create preserves Clerk publicMetadata.isGuest"
     });
   });
 
-  it("falls back to isGuest=false (and does not throw) when the Clerk lookup fails", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("throws (does not lazy-create) when the Clerk publicMetadata lookup fails — fail-closed", async () => {
+    // Regression: an earlier impl caught the Clerk error and defaulted
+    // isGuest=false, which let a guest whose local row was evicted come
+    // back as a non-guest during a Clerk outage and bypass every
+    // guestWriteBlock guard. The fix re-throws so requireUser surfaces
+    // an Unauthorized → the route returns 401 until Clerk recovers.
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(auth).mockResolvedValue({ userId: "user_err" } as never);
     vi.mocked(db.user.findUnique).mockResolvedValue(null);
     vi.mocked(clerkClient).mockResolvedValue({
       users: { getUser: vi.fn().mockRejectedValue(new Error("Clerk 5xx")) },
     } as never);
-    vi.mocked(db.user.create).mockResolvedValue({
-      id: "u_new",
-      clerkId: "user_err",
-      isGuest: false,
-    } as never);
 
-    const { getCurrentUser } = await import("@/lib/auth");
-    const u = await getCurrentUser();
+    const { getCurrentUser, requireUser } = await import("@/lib/auth");
+    await expect(getCurrentUser()).rejects.toThrow("Clerk 5xx");
+    // Must not have lazy-created a row with the unsafe default.
+    expect(db.user.create).not.toHaveBeenCalled();
 
-    expect(u?.isGuest).toBe(false);
-    expect(db.user.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ clerkId: "user_err", isGuest: false }),
-    });
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+    // And requireUser must surface the failure as Unauthorized-style
+    // bubble (route handlers turn this into a 401).
+    await expect(requireUser()).rejects.toThrow();
+    expect(db.user.create).not.toHaveBeenCalled();
+
+    expect(err).toHaveBeenCalled();
+    err.mockRestore();
   });
 });

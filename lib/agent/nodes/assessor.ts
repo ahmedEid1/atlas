@@ -1,14 +1,12 @@
 import { runLLM } from "@/lib/llm";
 import { ClaimsSchema, buildExtractClaimsRequest } from "@/lib/prompts/extract-claims";
 import { addStep, finishStep, findCorpusMarkdown } from "@/lib/agent/runs";
-import { assertWithinBudget } from "@/lib/agent/cost-cap";
+import { assertWithinBudget, BudgetExceededError } from "@/lib/agent/cost-cap";
 import type { AgentState, ClaimSpec } from "@/lib/agent/state";
 
 export async function assessorNode(state: AgentState): Promise<Partial<AgentState>> {
   await assertWithinBudget(state.runId);
   const step = await addStep({ runId: state.runId, nodeName: "assessor" });
-  let totalIn = 0, totalOut = 0, totalCacheRead = 0;
-  const firstTraceUrl: { value?: string } = {};
   const claims: ClaimSpec[] = [];
 
   try {
@@ -24,37 +22,52 @@ export async function assessorNode(state: AgentState): Promise<Partial<AgentStat
         question: state.question,
         paperMarkdown: markdown,
       });
-      const { output, traceUrl, usage } = await runLLM({
-        name: "assessor:extract",
-        tier: "smart",
-        maxTokens: 4096,
-        system,
-        messages,
-        schema: ClaimsSchema,
-        metadata: { runId: state.runId, projectId: state.projectId, node: "assessor", corpusItemId: inc.corpusItemId },
-      });
-
-      totalIn += usage.inputTokens;
-      totalOut += usage.outputTokens;
-      totalCacheRead += usage.cacheReadInputTokens;
-      firstTraceUrl.value ??= traceUrl;
-
-      for (const c of output.claims) {
-        claims.push({
-          includedPaperId: inc.corpusItemId,
-          text: c.text,
-          category: c.category,
+      // Persist a RunStep PER LLM call so cost-cap's aggregate query sees this
+      // node's spend. Without this, runLLM's `usage` is only flushed when the
+      // outer `assessor` step finishes, so the per-iteration gate above reads
+      // only completed-step tokens and a multi-paper assessor is silently
+      // uncapped. The outer assessor step records tokens=0 to avoid double
+      // counting.
+      const innerStep = await addStep({ runId: state.runId, nodeName: "assessor_paper" });
+      try {
+        const { output, traceUrl, usage } = await runLLM({
+          name: "assessor:extract",
+          tier: "smart",
+          maxTokens: 4096,
+          system,
+          messages,
+          schema: ClaimsSchema,
+          metadata: { runId: state.runId, projectId: state.projectId, node: "assessor", corpusItemId: inc.corpusItemId },
         });
+        await finishStep({
+          stepId: innerStep.id,
+          traceUrl,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          cacheReadInputTokens: usage.cacheReadInputTokens,
+        });
+
+        for (const c of output.claims) {
+          claims.push({
+            includedPaperId: inc.corpusItemId,
+            text: c.text,
+            category: c.category,
+          });
+        }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        await finishStep({ stepId: innerStep.id, failureReason: reason.slice(0, 1000) });
+        // BudgetExceededError (and any other error) bubbles — assessor has no
+        // per-paper soft-fail story like cite-check; an extraction failure
+        // should fail the run so the user can investigate.
+        if (err instanceof BudgetExceededError) throw err;
+        throw err;
       }
     }
 
-    await finishStep({
-      stepId: step.id,
-      traceUrl: firstTraceUrl.value,
-      inputTokens: totalIn,
-      outputTokens: totalOut,
-      cacheReadInputTokens: totalCacheRead,
-    });
+    // Outer step records tokens=0 (defaults) — actual spend lives on the
+    // per-paper `assessor_paper` inner steps to keep cost-cap honest.
+    await finishStep({ stepId: step.id });
     return { claims };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);

@@ -36,8 +36,14 @@ async function checkOneCitation(
     paperId: c.paperId,
     paperSummary: summary,
   });
+  // Persist a RunStep PER LLM call so cost-cap's aggregate query sees this
+  // node's spend. Without this, runLLM's `usage` is discarded and a multi-
+  // citation cite-check is silently uncapped (the per-iteration gate above
+  // reads only completed-step tokens). The outer cite_check step records
+  // tokens=0 to avoid double counting.
+  const innerStep = await addStep({ runId: state.runId, nodeName: "cite_check_citation" });
   try {
-    const { output } = await runLLM({
+    const { output, traceUrl, usage } = await runLLM({
       name: "cite-check",
       tier: "smart",
       maxTokens: 600,
@@ -51,6 +57,13 @@ async function checkOneCitation(
         paperId: c.paperId,
       },
     });
+    await finishStep({
+      stepId: innerStep.id,
+      traceUrl,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cacheReadInputTokens: usage.cacheReadInputTokens,
+    });
     return {
       paperId: c.paperId,
       claim: c.claim,
@@ -63,8 +76,9 @@ async function checkOneCitation(
     // error reason so the dashboard still shows what could be checked.
     // EXCEPTION: BudgetExceededError must bubble — silencing it would let a
     // runaway run continue past the cap, defeating the gate.
-    if (err instanceof BudgetExceededError) throw err;
     const reason = err instanceof Error ? err.message : String(err);
+    await finishStep({ stepId: innerStep.id, failureReason: reason.slice(0, 1000) });
+    if (err instanceof BudgetExceededError) throw err;
     return {
       paperId: c.paperId,
       claim: c.claim,
@@ -120,6 +134,8 @@ export async function citeCheckNode(state: AgentState): Promise<Partial<AgentSta
       },
     });
 
+    // Outer step records tokens=0 (defaults) — actual spend lives on the
+    // per-citation `cite_check_citation` inner steps to keep cost-cap honest.
     await finishStep({ stepId: step.id });
     return {};
   } catch (err) {
