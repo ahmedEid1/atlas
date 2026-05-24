@@ -164,6 +164,11 @@ into Claude Desktop, Cursor, or any MCP-compatible client. OAuth flow
 runs in your browser (powered by Clerk + Dynamic Client Registration);
 you never copy-paste a token.
 
+**Listed in the official [MCP Registry](https://registry.modelcontextprotocol.io)** as `io.github.ahmedEid1/atlas-research`. Verify with:
+```bash
+curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=atlas-research" | jq '.servers[0].server'
+```
+
 **Available tools** (all read-only, all scoped to your Atlas account):
 - `list_reviews` — list your Atlas reviews with scores
 - `get_review_draft` — fetch the markdown draft of a completed review
@@ -195,7 +200,7 @@ model.
 - ~~**v0.5.0 – Trigger.dev Cloud production deploy**~~ ✅ shipped — all 3 background tasks running on managed infra
 - ~~**v0.5.1 – First live end-to-end review on production**~~ ✅ shipped — real PDF → full SLR pipeline → completed draft + critic + cite_check
 - ~~**v0.6.0 – M3.5c self-host fallback docs**~~ ✅ shipped — Oracle Cloud Always Free deployment path
-- **v0.7.0-m5** (2026-05-24): Authenticated MCP server. Streamable HTTP at `/api/mcp/mcp`. OAuth 2.1 + PKCE + DCR via Clerk as Authorization Server, Atlas as Resource Server. 3 read-only tools (`list_reviews`, `get_review_draft`, `get_citation_audit`) over tenant-scoped data. DB-backed audit log + per-user sliding-window rate limits. Published to MCP registry.
+- **v0.7.0-m5** (2026-05-24): Authenticated MCP server. Streamable HTTP at `/api/mcp/mcp`. OAuth 2.1 + PKCE + DCR via Clerk as Authorization Server, Atlas as Resource Server. 3 read-only tools (`list_reviews`, `get_review_draft`, `get_citation_audit`) over tenant-scoped data. DB-backed audit log + per-user sliding-window rate limits. Published to the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=atlas-research) as `io.github.ahmedEid1/atlas-research`.
 - **M6** (Wk 7): Public launch with 30-question golden eval set, blog series, recruiter 1-pager
 
 See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the per-milestone implementation plans.

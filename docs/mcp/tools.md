@@ -1,7 +1,9 @@
 # Atlas MCP — Tools Reference
 
 Atlas's MCP server exposes 3 read-only tools over your Atlas reviews.
+
 Install URL: `https://atlas-sooty-delta.vercel.app/api/mcp/mcp`
+Registry entry: [`io.github.ahmedEid1/atlas-research`](https://registry.modelcontextprotocol.io/v0.1/servers?search=atlas-research) on the official MCP Registry.
 
 All tools require an OAuth 2.1 access token from Clerk (your MCP client
 handles this automatically via Dynamic Client Registration).
