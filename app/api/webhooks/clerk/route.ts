@@ -2,15 +2,21 @@ import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 
+// Webhook payload uses snake_case (see @clerk/backend UserJSON).
 type UserEventData = {
   id: string;
   email_addresses: Array<{ id: string; email_address: string }>;
   primary_email_address_id: string | null;
+  public_metadata?: Record<string, unknown> | null;
 };
 
 function primaryEmail(data: UserEventData): string {
   const primary = data.email_addresses.find((e) => e.id === data.primary_email_address_id);
   return primary?.email_address ?? data.email_addresses[0]?.email_address ?? `${data.id}@pending.local`;
+}
+
+function isGuestFromMetadata(data: UserEventData): boolean {
+  return data.public_metadata?.isGuest === true;
 }
 
 export async function POST(req: NextRequest) {
@@ -19,10 +25,12 @@ export async function POST(req: NextRequest) {
 
     if (evt.type === "user.created" || evt.type === "user.updated") {
       const data = evt.data as UserEventData;
+      const isGuest = isGuestFromMetadata(data);
+      const email = primaryEmail(data);
       await db.user.upsert({
         where: { clerkId: data.id },
-        create: { clerkId: data.id, email: primaryEmail(data) },
-        update: { email: primaryEmail(data) },
+        create: { clerkId: data.id, email, isGuest },
+        update: { email, isGuest },
       });
     } else if (evt.type === "user.deleted") {
       const data = evt.data as { id: string };

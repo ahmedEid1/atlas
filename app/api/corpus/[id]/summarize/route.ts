@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { guestWriteBlock } from "@/lib/demo/guards";
 import { enqueueSummarizePaper } from "@/lib/trigger-client";
 
 export async function POST(
@@ -9,6 +10,9 @@ export async function POST(
 ) {
   const user = await requireUser().catch(() => null);
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
+
+  const blocked = guestWriteBlock(user);
+  if (blocked) return blocked;
 
   const { id } = await params;
   const item = await db.corpusItem.findUnique({

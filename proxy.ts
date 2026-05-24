@@ -16,6 +16,9 @@ const isPublicRoute = createRouteMatcher([
   // by-spec publicly readable (RFC 9728 + RFC 8414).
   "/.well-known/oauth-protected-resource/(.*)",
   "/.well-known/oauth-authorization-server",
+  // Liveness probe for self-host docker healthcheck + external monitors.
+  // Must be reachable without auth so unhealthy containers are detected.
+  "/api/health",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

@@ -25,13 +25,13 @@ import { resolveWaitToken } from "@/lib/trigger-client";
 beforeEach(() => vi.clearAllMocks());
 
 const buildReq = (body: unknown) =>
-  new NextRequest("http://localhost/api/runs/r1/checkpoints/cp1/approve", {
+  new NextRequest("http://localhost/api/runs/r1/checkpoints/cp1/reject", {
     method: "POST",
     body: JSON.stringify(body),
   });
 
-describe("POST /api/runs/[id]/checkpoints/[cpId]/approve", () => {
-  it("marks the checkpoint approved and completes the wait token", async () => {
+describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
+  it("marks the checkpoint rejected and completes the wait token", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1", isGuest: false } as never);
     vi.mocked(db.humanCheckpoint.findUnique).mockResolvedValue({
       id: "cp1",
@@ -40,17 +40,21 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/approve", () => {
     } as never);
     vi.mocked(resolveCheckpoint).mockResolvedValue({ waitToken: "tk_xyz" } as never);
 
-    const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/approve/route");
-    const res = await POST(buildReq({ corpusItemIds: ["c1", "c2"] }), {
+    const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/reject/route");
+    const res = await POST(buildReq({ reason: "off-topic" }), {
       params: Promise.resolve({ id: "r1", cpId: "cp1" }),
     });
     expect(res.status).toBe(200);
     expect(resolveCheckpoint).toHaveBeenCalledWith(
-      expect.objectContaining({ checkpointId: "cp1", status: "APPROVED" }),
+      expect.objectContaining({
+        checkpointId: "cp1",
+        status: "REJECTED",
+        rejectionReason: "off-topic",
+      }),
     );
     expect(resolveWaitToken).toHaveBeenCalledWith(
       "tk_xyz",
-      expect.objectContaining({ approved: true, corpusItemIds: ["c1", "c2"] }),
+      expect.objectContaining({ approved: false, rejectionReason: "off-topic" }),
     );
   });
 
@@ -62,7 +66,7 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/approve", () => {
       run: { id: "r1", project: { ownerId: "u2" } },
     } as never);
 
-    const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/approve/route");
+    const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/reject/route");
     const res = await POST(buildReq({}), {
       params: Promise.resolve({ id: "r1", cpId: "cp1" }),
     });
@@ -77,11 +81,11 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/approve", () => {
       run: { id: "r1", project: { ownerId: "u1" } },
     } as never);
     // Simulate the atomic update losing the race: resolveCheckpoint returns null
-    // because another request already flipped PENDING -> APPROVED first.
+    // because another request already flipped PENDING -> {APPROVED,REJECTED} first.
     vi.mocked(resolveCheckpoint).mockResolvedValue(null);
 
-    const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/approve/route");
-    const res = await POST(buildReq({}), {
+    const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/reject/route");
+    const res = await POST(buildReq({ reason: "x" }), {
       params: Promise.resolve({ id: "r1", cpId: "cp1" }),
     });
     expect(res.status).toBe(409);

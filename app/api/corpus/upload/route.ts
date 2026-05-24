@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { guestWriteBlock } from "@/lib/demo/guards";
 import { putObject } from "@/lib/object-store";
 import { enqueueParsePdf } from "@/lib/trigger-client";
 
@@ -10,6 +11,9 @@ const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 export async function POST(req: NextRequest) {
   const user = await requireUser().catch(() => null);
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
+
+  const blocked = guestWriteBlock(user);
+  if (blocked) return blocked;
 
   const form = await req.formData();
   const projectId = form.get("projectId");
