@@ -190,6 +190,12 @@ body {
     radial-gradient(circle at 100% 100%, oklch(0.95 0.022 87) 0%, transparent 50%),
     var(--thoth-papyrus);
   background-attachment: fixed;
+  /* Decorative elements (e.g. the hero ibis with `-mr-24`) intentionally
+     bleed off the right margin for an editorial feel. Clip horizontal
+     overflow so that bleed never produces a viewport-level scrollbar.
+     `overflow-x: clip` (not `hidden`) avoids creating a scroll container,
+     so it doesn't break sticky positioning or scroll-into-view behaviour. */
+  overflow-x: clip;
 }
 
 body::before {
