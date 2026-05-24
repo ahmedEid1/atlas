@@ -4,12 +4,29 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ------------------------------------------------------------------
+   Thoth — Brand tokens (palette defined in docs/brand.md)
+   Approximated as OKLCH so they compose with the existing shadcn vars.
+   ------------------------------------------------------------------ */
+:root {
+  --thoth-blue:        oklch(0.32 0.17 264);  /* #1E3A8A — lapis lazuli */
+  --thoth-blue-ink:    oklch(0.20 0.10 264);  /* #0F1F4D — body-text depth */
+  --thoth-blue-mist:   oklch(0.92 0.04 264);  /* #DDE4F4 — surface tint */
+  --thoth-gold:        oklch(0.72 0.10 87);   /* #C9A961 — papyrus gold accent */
+  --thoth-gold-glow:   oklch(0.85 0.09 87);   /* #E8D38E — hover glow */
+  --thoth-papyrus:     oklch(0.97 0.012 87);  /* #FAF7F0 — warm off-white */
+  --thoth-ink:         oklch(0.20 0.01 60);   /* #1F1B17 — body text */
+  --thoth-stone:       oklch(0.55 0.01 60);   /* #847C71 — muted text */
+  --thoth-rule:        oklch(0.88 0.012 87);  /* divider lines on papyrus */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,6 +56,18 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Custom brand tokens — also exposed to Tailwind utilities */
+  --color-thoth-blue: var(--thoth-blue);
+  --color-thoth-blue-ink: var(--thoth-blue-ink);
+  --color-thoth-blue-mist: var(--thoth-blue-mist);
+  --color-thoth-gold: var(--thoth-gold);
+  --color-thoth-gold-glow: var(--thoth-gold-glow);
+  --color-thoth-papyrus: var(--thoth-papyrus);
+  --color-thoth-ink: var(--thoth-ink);
+  --color-thoth-stone: var(--thoth-stone);
+  --color-thoth-rule: var(--thoth-rule);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,50 +77,54 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* shadcn defaults — overridden to Thoth palette where it matters.
+   Most shadcn components read --primary/--background/--muted etc., so
+   re-pointing these radiates the brand through every Card/Button. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --background: var(--thoth-papyrus);
+  --foreground: var(--thoth-ink);
+  --card: oklch(1 0 0);                       /* pure white card surfaces lift off the papyrus bg */
+  --card-foreground: var(--thoth-ink);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: var(--thoth-ink);
+  --primary: var(--thoth-blue);
+  --primary-foreground: oklch(0.98 0.005 87);
+  --secondary: oklch(0.94 0.008 87);
+  --secondary-foreground: var(--thoth-blue-ink);
+  --muted: oklch(0.95 0.008 87);
+  --muted-foreground: var(--thoth-stone);
+  --accent: var(--thoth-blue-mist);
+  --accent-foreground: var(--thoth-blue-ink);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --border: var(--thoth-rule);
+  --input: var(--thoth-rule);
+  --ring: var(--thoth-blue);
+  --chart-1: var(--thoth-blue);
+  --chart-2: var(--thoth-gold);
+  --chart-3: oklch(0.55 0.13 200);
+  --chart-4: oklch(0.65 0.15 30);
+  --chart-5: oklch(0.45 0.10 320);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.96 0.008 87);
+  --sidebar-foreground: var(--thoth-ink);
+  --sidebar-primary: var(--thoth-blue);
+  --sidebar-primary-foreground: oklch(0.98 0.005 87);
+  --sidebar-accent: var(--thoth-blue-mist);
+  --sidebar-accent-foreground: var(--thoth-blue-ink);
+  --sidebar-border: var(--thoth-rule);
+  --sidebar-ring: var(--thoth-blue);
 }
 
 .dark {
+  /* Dark mode kept dark-neutral for now — brand iteration v2 if needed */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: var(--thoth-gold-glow);
+  --primary-foreground: oklch(0.20 0.10 264);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -101,16 +134,16 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: var(--thoth-gold-glow);
+  --chart-1: var(--thoth-gold-glow);
+  --chart-2: oklch(0.65 0.13 264);
+  --chart-3: oklch(0.55 0.13 200);
+  --chart-4: oklch(0.65 0.15 30);
+  --chart-5: oklch(0.45 0.10 320);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: var(--thoth-gold-glow);
+  --sidebar-primary-foreground: oklch(0.20 0.10 264);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -123,8 +156,94 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv11";  /* Geist stylistic alternates: tighter rounds */
   }
   html {
     @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  /* Tabular numerals on data surfaces — eval metrics, audit times */
+  .tabular-nums, table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Display headings */
+  .font-display {
+    font-family: var(--font-display), Georgia, serif;
+    font-feature-settings: "ss01", "ss02";  /* Fraunces stylistic sets */
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Paper-grain background — subtle warmth, no costume.
+   Layered on the body so it's everywhere without polluting components.
+   ------------------------------------------------------------------ */
+body {
+  background-image:
+    radial-gradient(circle at 0% 0%, oklch(0.96 0.018 87) 0%, transparent 45%),
+    radial-gradient(circle at 100% 100%, oklch(0.95 0.022 87) 0%, transparent 50%),
+    var(--thoth-papyrus);
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='noise'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.40 0 0 0 0 0.36 0 0 0 0 0.30 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23noise)'/></svg>");
+  mix-blend-mode: multiply;
+}
+
+/* All page-level content rides above the noise overlay */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------
+   Editorial helpers
+   ------------------------------------------------------------------ */
+.rule {
+  border-top: 1px solid var(--thoth-rule);
+}
+
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;       /* 11px */
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--thoth-stone);
+}
+
+.scribe-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--thoth-stone);
+}
+
+.scribe-divider::before,
+.scribe-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--thoth-rule);
+}
+
+/* Staggered reveal for hero — used by the home page */
+@keyframes thoth-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.thoth-rise {
+  animation: thoth-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }

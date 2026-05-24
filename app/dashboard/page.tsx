@@ -11,11 +11,31 @@ export default async function DashboardPage() {
   });
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Your projects</h1>
+    <main className="max-w-5xl mx-auto px-6 py-16">
+      <header className="flex items-end justify-between gap-6 flex-wrap mb-12">
+        <div>
+          <p className="eyebrow">Your work</p>
+          <h1
+            className="font-display text-[var(--thoth-blue-ink)] mt-3 leading-[1.0] tracking-tight"
+            style={{
+              fontSize: "clamp(2.25rem, 5vw, 3.25rem)",
+              fontWeight: 500,
+              fontVariationSettings: "'opsz' 96",
+            }}
+          >
+            Reviews
+          </h1>
+          <p className="text-sm text-[var(--thoth-stone)] mt-2 max-w-md">
+            {projects.length === 0
+              ? "Start your first review by giving Thoth a research question and a corpus."
+              : `${projects.length} review${
+                  projects.length === 1 ? "" : "s"
+                }, ordered by most recently updated.`}
+          </p>
+        </div>
         <NewProjectDialog />
       </header>
+
       <ProjectList projects={projects} />
     </main>
   );
