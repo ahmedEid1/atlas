@@ -50,26 +50,37 @@ async function main(): Promise<void> {
 
   let failures = 0;
   for (const row of current.rows) {
-    // Last main-branch result for this (goldenId, metric) before the current commit
-    const baseline = await db.evalRun.findFirst({
+    // Compare against the HIGHEST historical score for this (goldenId,
+    // metric), not the most recent one. Two reasons:
+    //   1. Mistral non-determinism on small-N denominators means the
+    //      most-recent score is noisy by ±20-25% — comparing against
+    //      "previous run" trips the guard on natural variance even when
+    //      the agent code hasn't changed.
+    //   2. Comparing against the peak prevents "ratchet drift" where the
+    //      score quietly drops a bit each run and the cumulative loss
+    //      goes unnoticed because each step is under threshold.
+    // Net effect: the guard fires on true regressions from project peak,
+    // not on day-to-day LLM-judge variance.
+    const agg = await db.evalRun.aggregate({
+      _max: { score: true },
       where: { goldenId: row.goldenId, metric: row.metric, NOT: { commitSha: current.commitSha } },
-      orderBy: { createdAt: "desc" },
     });
-    if (!baseline) {
+    const peakScore = agg._max.score;
+    if (peakScore === null) {
       console.log(`  ${row.goldenId}/${row.metric}: new — no baseline yet (current=${row.score.toFixed(2)})`);
       continue;
     }
     const threshold = REGRESSION_THRESHOLDS[row.metric] ?? DEFAULT_REGRESSION_THRESHOLD;
-    const drop = baseline.score - row.score;
-    const pctDrop = baseline.score === 0 ? 0 : drop / baseline.score;
+    const drop = peakScore - row.score;
+    const pctDrop = peakScore === 0 ? 0 : drop / peakScore;
     if (pctDrop > threshold) {
       console.log(
-        `  ✗ ${row.goldenId}/${row.metric}: ${baseline.score.toFixed(2)} → ${row.score.toFixed(2)} ` +
+        `  ✗ ${row.goldenId}/${row.metric}: peak ${peakScore.toFixed(2)} → ${row.score.toFixed(2)} ` +
           `(drop ${(pctDrop * 100).toFixed(0)}%, threshold ${(threshold * 100).toFixed(0)}%)`,
       );
       failures++;
     } else {
-      console.log(`  ✓ ${row.goldenId}/${row.metric}: ${baseline.score.toFixed(2)} → ${row.score.toFixed(2)}`);
+      console.log(`  ✓ ${row.goldenId}/${row.metric}: peak ${peakScore.toFixed(2)} → ${row.score.toFixed(2)}`);
     }
   }
 

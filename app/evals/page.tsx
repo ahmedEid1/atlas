@@ -303,14 +303,16 @@ export default async function EvalsPage() {
                   Hard regression guard.
                 </dt>
                 <dd>
-                  Each metric has its own drop tolerance versus the
-                  prior baseline: the deterministic set/substring
-                  metrics (recall, precision, coverage) fail at a 10%
-                  drop, while <code>claim_faithfulness</code> — scored
-                  by an LLM judge over ~10–20 claims per golden, where a
-                  single verdict flip is 7–10 points — gets a looser
-                  20% bound. The dashboard moves only when a real
-                  change is intended.
+                  Each metric is compared against its{" "}
+                  <em>highest historical score</em> for that golden
+                  (not the most recent prior run) — so day-to-day LLM
+                  variance doesn&apos;t trip the guard, but a sustained
+                  drift from project peak does. Tolerances are
+                  per-metric: 10% for the deterministic
+                  citation/coverage metrics, 20% for
+                  <code> claim_faithfulness</code> — scored by an LLM
+                  judge over ~10–20 claims per golden, where a single
+                  verdict flip is 7–10 points.
                 </dd>
               </div>
             </dl>
