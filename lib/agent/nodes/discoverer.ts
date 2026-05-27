@@ -8,6 +8,7 @@ import { assertWithinBudget } from "@/lib/agent/cost-cap";
 import { dispatchSearch } from "@/lib/search/dispatch";
 import type { SearchProviderName } from "@/lib/search/types";
 import { db } from "@/lib/db";
+import { env } from "@/lib/env";
 import type { AgentState, DiscoveredPaperRef } from "@/lib/agent/state";
 
 /**
@@ -37,6 +38,15 @@ export async function discovererNode(
   if (!state.plan) throw new Error("discoverer: state.plan is null — planner must run first");
   if (state.searchProviders.length === 0) {
     throw new Error("discoverer: state.searchProviders is empty — project config has no providers");
+  }
+
+  // Operator kill switch — refuse to fan out to any provider when set.
+  // The run halts with a clear failureReason rather than silently producing
+  // empty hits, so the operator's intent (pause outbound) reaches the user.
+  if (env.SEARCH_DISABLED === "1") {
+    throw new Error(
+      "discoverer: outbound search is temporarily disabled by the operator (SEARCH_DISABLED=1); retry later",
+    );
   }
 
   await assertWithinBudget(state.runId);

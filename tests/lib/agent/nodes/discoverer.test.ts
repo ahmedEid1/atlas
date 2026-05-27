@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({
   assertWithinBudget: vi.fn(),
   createMany: vi.fn(),
   findMany: vi.fn(),
+  envMock: {} as { SEARCH_DISABLED?: string },
 }));
+const envMock = mocks.envMock;
 
 vi.mock("@/lib/llm", () => ({ runLLM: mocks.runLLM }));
 vi.mock("@/lib/search/dispatch", () => ({ dispatchSearch: mocks.dispatchSearch }));
@@ -28,6 +30,10 @@ vi.mock("@/lib/db", () => ({
     },
   },
 }));
+
+// Mock the env proxy so the node's SEARCH_DISABLED read doesn't trigger
+// a full schema parse against an unset process.env in the test runner.
+vi.mock("@/lib/env", () => ({ env: mocks.envMock }));
 
 import { discovererNode } from "@/lib/agent/nodes/discoverer";
 import type { AgentState } from "@/lib/agent/state";
@@ -59,7 +65,10 @@ const baseState: AgentState = {
 };
 
 beforeEach(() => {
-  Object.values(mocks).forEach((m) => m.mockReset?.());
+  for (const v of Object.values(mocks)) {
+    if (typeof v === "function" && "mockReset" in v) (v as { mockReset: () => void }).mockReset();
+  }
+  delete envMock.SEARCH_DISABLED;
   mocks.addStep.mockResolvedValue({ id: "step_outer" });
   mocks.finishStep.mockResolvedValue(undefined);
   mocks.assertWithinBudget.mockResolvedValue({ tokensUsed: 0, limit: 250000 });
@@ -68,6 +77,13 @@ beforeEach(() => {
 });
 
 describe("discovererNode", () => {
+  it("refuses to run when SEARCH_DISABLED=1 (operator kill switch)", async () => {
+    envMock.SEARCH_DISABLED = "1";
+    await expect(discovererNode(baseState)).rejects.toThrow(/SEARCH_DISABLED/);
+    expect(mocks.runLLM).not.toHaveBeenCalled();
+    expect(mocks.dispatchSearch).not.toHaveBeenCalled();
+  });
+
   it("throws if state.plan is null", async () => {
     await expect(
       discovererNode({ ...baseState, plan: null }),

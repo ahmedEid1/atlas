@@ -67,6 +67,21 @@ const envSchema = z.object({
   // subsides. No deploy needed.
   DEMO_DISABLED: z.string().optional(),
 
+  // V2 outbound search — operator kill switch for the discoverer node.
+  // When "1", lib/agent/nodes/discoverer.ts refuses to fan out to any
+  // provider regardless of project.searchScope. Existing in-flight runs
+  // see the error mid-run; new runs that need outbound silently coerce
+  // to uploaded_only behaviour. The intended use is the same
+  // panic-button pattern as DEMO_DISABLED — flip the env when an
+  // outbound provider misbehaves (Exa quota exhausted, OpenAlex
+  // 5xx-storm) so runs continue without those calls. No deploy needed.
+  SEARCH_DISABLED: z.string().optional(),
+
+  // V2 outbound search — Exa API key. Required only when a project's
+  // searchProviders array contains "exa"; OpenAlex + arXiv work without
+  // it. Free tier covers 1000 searches/mo at https://exa.ai.
+  EXA_API_KEY: z.string().optional(),
+
   // Optional: comma-separated list of email addresses (case-insensitive)
   // permitted to view server-side admin pages under /admin/*. Empty or
   // unset means nobody — every /admin/* request returns 404 even for
