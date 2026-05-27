@@ -127,3 +127,8 @@ Please open a GitHub issue marked `[security]` on
 [github.com/ahmedEid1/thoth](https://github.com/ahmedEid1/thoth). No
 bug bounty, no NDA — this is an open-source project; the most useful
 response we can offer is a public fix + credit in the commit.
+
+The same policy is advertised at
+[`/.well-known/security.txt`](https://thoth-slr.vercel.app/.well-known/security.txt)
+per RFC 9116 for security scanners and researchers who look there
+first.
