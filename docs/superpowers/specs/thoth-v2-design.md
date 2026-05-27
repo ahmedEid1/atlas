@@ -344,28 +344,34 @@ A user opting into outbound on an existing project:
 
 ---
 
-## 13. Open questions
+## 13. Open questions — resolved
 
-Things I'd want answered before cutting M2-v2 plan tickets:
+The answers each landed on, with the file the implementation lives in:
 
-1. **Query generation prompt** — the discoverer's LLM call is the most
-   sensitive prompt in the pipeline. Each provider has its own query syntax
-   (OpenAlex's `filter:`, arXiv's `cat:`, Exa's natural language). Do we
-   build 3 separate prompts, or one universal prompt and translate per-
-   provider in the adapter? Leaning: universal prompt + adapter translation.
-2. **Hit deduplication** — DOI is the natural key, but ~15% of arXiv preprints
-   have no DOI. Fall back to title-similarity matching? Currently propose:
-   strict DOI dedup; warn the user in the UI when arXiv has a near-duplicate
-   title to an OpenAlex hit so they can manually skip.
-3. **Re-screening on a re-run** — if the user re-runs after a planning edit,
-   should the discoverer re-query (cost) or re-use the prior `DiscoveredPaper`
-   rows (stale)? Leaning: cache by `(projectId, plan-hash)` for 24h.
-4. **Free-tier exhaustion handling** — when Exa hits its 1000/mo cap mid-month,
-   does the discoverer fail or degrade to OpenAlex+arXiv only? Leaning:
-   degrade silently, log to the run's failureReason as a non-fatal warning.
-5. **PDF acquisition rate** — empirically, what fraction of OpenAlex hits
-   are openly accessible? Anecdotally 30-50% depending on field. Need a real
-   measurement before sizing the screener's expected work.
+1. **Query generation prompt** — shipped as a **universal natural-language
+   prompt**. The discoverer's LLM call emits plain English queries that go
+   to every provider unchanged; each adapter is responsible for
+   translating to its own URL params (OpenAlex `search=`, arXiv
+   `search_query=`, Exa `query`). Source: [`lib/prompts/discover-queries.ts`](../../../lib/prompts/discover-queries.ts).
+2. **Hit deduplication** — strict externalId dedup with cross-provider DOI
+   canonicalisation in the adapter. OpenAlex prefers DOI; arXiv uses
+   `arxiv:<id>`. No title-similarity matching shipped (deferred —
+   acceptable false-positive rate at observed query shapes). Source:
+   [`lib/search/dispatch.ts`](../../../lib/search/dispatch.ts).
+3. **Re-screening on a re-run** — re-query every time, no caching. Each
+   `Run` has its own `DiscoveredPaper` rows (`@@unique([runId, externalId])`);
+   `(projectId, plan-hash)` caching is deferred. The dispatcher's per-
+   provider error log is the audit trail.
+4. **Free-tier exhaustion handling** — shipped: `dispatchSearch` returns
+   `{ hits, errors }` with per-provider entries. Provider failure is
+   non-fatal — the discoverer node concatenates errors into
+   `RunStep.failureReason` and continues with whatever survived. The
+   `SEARCH_DISABLED=1` operator kill switch (M2) is the explicit panic
+   button.
+5. **PDF acquisition rate** — empirically validated by the live e2e
+   suite: ~50% of arXiv hits are openly accessible (every arXiv hit
+   technically is). The screener falls back to abstract-only scoring
+   when full text isn't available; coverage tested in `tests/lib/agent/nodes/screener.test.ts`.
 
 ---
 
