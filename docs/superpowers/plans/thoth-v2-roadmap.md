@@ -125,6 +125,44 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M27 — /sign-in render, 404, network-retry hardening
+
+**Goal:** Round out the e2e to cover the rest of a user's
+non-billing surface. Three new tests + one flake-tolerance fix.
+
+**What shipped:**
+
+- New browser-smoke: `/sign-in renders Clerk's SignIn component`.
+  Loads /sign-in, waits for Clerk's hydrated email input to be
+  reachable (Clerk SDK changes its DOM across releases — assert on
+  the lowest-common-denominator input role).
+- New browser-smoke: `unknown routes redirect unauthenticated to
+  /sign-in (307)`. The proxy middleware's public allowlist is
+  small; everything else 307s to Clerk. Verifies the redirect +
+  the location header points at sign-in/Clerk.
+- New auth-walkthrough: `authenticated 404 page renders with the
+  styled custom not-found`. Signed-in user hits a non-existent
+  project id; asserts the route returns 404 + the styled
+  not-found.tsx renders (the "Back to home" CTA proves the custom
+  page, not the default Next.js 404).
+- Bug fix in the auth walkthrough: when tests run in serial mode
+  the Clerk session persists across tests, so the second `clerk.signIn`
+  threw "You're already signed in." Catch the specific
+  already-signed-in error and pass through — the desired state is
+  the signed-in one, and re-signing-in isn't needed.
+- Bump per-test timeout for the auth walkthrough to 120s. Serial-
+  mode tests chaining Neon-backed server renders against a Vercel
+  deploy hit the 60s default when the deploy is cold-starting.
+- `playwright.config.ts` retries=1 in IS_LIVE mode (was 0). Live
+  e2e occasionally hits transient ERR_NETWORK_CHANGED /
+  ERR_ABORTED from the external network. 1 retry tolerates these
+  without polluting CI signal. Local runs keep retries=0 so a
+  local flake is still a real bug to investigate.
+
+**`pnpm test:e2e:live`: 15/15 passing** in 39.7s.
+
+**Key files:** `tests/e2e/live-browser-smoke.spec.ts`, `tests/e2e/live-auth-walkthrough.spec.ts`, `playwright.config.ts`
+
 ## V2-M26 — Hybrid + tuning + sign-out coverage in the authenticated e2e
 
 **Goal:** Per user direction ("test everything the user can do…

@@ -90,3 +90,35 @@ test("security.txt is served per RFC 9116", async ({ request }) => {
   const body = await res.text();
   expect(body).toMatch(/Contact:/i);
 });
+
+test("/sign-in renders Clerk's SignIn component", async ({ page }) => {
+  await page.goto(`${BASE}/sign-in`);
+  // The /sign-in route is the public Clerk-rendered sign-in form. The
+  // page must:
+  //   1. Load successfully (no 5xx).
+  //   2. Boot Clerk client-side (publishable key is in the HTML).
+  //   3. Reach a state where the email/identifier field is visible —
+  //      that's the lowest-common-denominator "user can sign in" affordance.
+  // Clerk hydrates client-side so we wait for the input to be reachable
+  // rather than asserting a specific DOM shape (which changes across
+  // Clerk releases).
+  await expect(
+    page.getByRole("textbox", { name: /email|identifier|username/i }).first(),
+  ).toBeVisible({ timeout: 20_000 });
+});
+
+test("unknown routes redirect unauthenticated traffic to /sign-in (307)", async ({ request }) => {
+  // The proxy middleware (proxy.ts) protects every route by default —
+  // the public allow-list is small (/, /evals, /showcase, /api/health,
+  // /api/mcp, /api/demo, /.well-known/*). Anything else for an
+  // unauthenticated visitor 307s to Clerk's sign-in URL. The signed-in
+  // 404 page is exercised in live-auth-walkthrough.spec.ts where we
+  // already have a session.
+  const res = await request.get(`${BASE}/this-route-definitely-does-not-exist-abc123`, {
+    maxRedirects: 0,
+    failOnStatusCode: false,
+  });
+  expect([302, 307]).toContain(res.status());
+  const loc = res.headers()["location"] ?? "";
+  expect(loc.toLowerCase()).toMatch(/sign-?in|clerk/);
+});

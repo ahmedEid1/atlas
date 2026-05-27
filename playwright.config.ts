@@ -16,7 +16,12 @@ const IS_LIVE = !BASE_URL.includes("localhost") && !BASE_URL.includes("127.0.0.1
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
-  retries: 0,
+  // Live e2e against an external network occasionally hits transient
+  // failures (ERR_NETWORK_CHANGED, Clerk cold starts, Vercel edge
+  // failover). 1 retry lets the suite tolerate them without polluting
+  // CI signal. Local runs against the dev server keep retries=0 since
+  // a local flake is a real bug to investigate.
+  retries: IS_LIVE ? 1 : 0,
   use: {
     baseURL: BASE_URL,
     headless: true,

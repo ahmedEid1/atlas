@@ -38,6 +38,12 @@ const SECRET = process.env.CLERK_SECRET_KEY ?? "";
 
 test.describe.configure({ mode: "serial" });
 
+// The default 60s per-test timeout is too tight when serial-mode tests
+// chain Neon-backed server renders against a Vercel deploy (cold-starts
+// add 5-10s per project page render). 120s gives each authenticated
+// test enough headroom without making failures slow to surface.
+test.describe.configure({ timeout: 120_000 });
+
 test.describe("live authenticated walkthrough", () => {
   test.beforeAll(async ({ playwright }, testInfo) => {
     if (!EMAIL || !SECRET) {
@@ -63,7 +69,13 @@ test.describe("live authenticated walkthrough", () => {
       const ctx = await browser.newContext();
       const page = await ctx.newPage();
       await page.goto("/");
-      await clerk.signIn({ page, emailAddress: EMAIL });
+      // Tests run in serial mode within one browser context, so the
+    // Clerk session from the previous test persists. clerk.signIn
+    // throws "You're already signed in" — that's fine, we want the
+    // signed-in state. Treat that specific error as a pass-through.
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
       const apiCtx: APIRequestContext = ctx.request;
       const list = await apiCtx.get("/api/projects");
       if (list.ok()) {
@@ -101,7 +113,13 @@ test.describe("live authenticated walkthrough", () => {
       const ctx = await browser.newContext();
       const page = await ctx.newPage();
       await page.goto("/");
-      await clerk.signIn({ page, emailAddress: EMAIL });
+      // Tests run in serial mode within one browser context, so the
+    // Clerk session from the previous test persists. clerk.signIn
+    // throws "You're already signed in" — that's fine, we want the
+    // signed-in state. Treat that specific error as a pass-through.
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
       await page.goto("/dashboard");
       await page.waitForLoadState("networkidle");
 
@@ -124,7 +142,13 @@ test.describe("live authenticated walkthrough", () => {
   test("sign in, create a project, verify, then delete", async ({ page, context }) => {
     // 1. Sign in to the live deploy via the Clerk testing ticket.
     await page.goto("/");
-    await clerk.signIn({ page, emailAddress: EMAIL });
+    // Tests run in serial mode within one browser context, so the
+    // Clerk session from the previous test persists. clerk.signIn
+    // throws "You're already signed in" — that's fine, we want the
+    // signed-in state. Treat that specific error as a pass-through.
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
 
@@ -144,7 +168,11 @@ test.describe("live authenticated walkthrough", () => {
     await page.getByRole("button", { name: /^create$/i }).click();
 
     // 4. Land on the new project page — the title is the H1.
-    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 15_000 });
+    // 30s timeout because the project page is server-rendered against
+    // Neon — a cold start adds 5-10s on top of the create POST + the
+    // router.push transition. 15s was tight; 30s gives margin without
+    // making the test slow.
+    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 30_000 });
 
     // Grab the project id out of the URL (`/projects/<id>`) so afterAll
     // cleanup can DELETE it if the rest of the test bails out.
@@ -178,7 +206,13 @@ test.describe("live authenticated walkthrough", () => {
     // even with scrollIntoViewIfNeeded.
     await page.setViewportSize({ width: 1280, height: 1400 });
     await page.goto("/");
-    await clerk.signIn({ page, emailAddress: EMAIL });
+    // Tests run in serial mode within one browser context, so the
+    // Clerk session from the previous test persists. clerk.signIn
+    // throws "You're already signed in" — that's fine, we want the
+    // signed-in state. Treat that specific error as a pass-through.
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
 
@@ -204,7 +238,11 @@ test.describe("live authenticated walkthrough", () => {
 
     // Land on the new project page → assert the v2 Discovery
     // configuration panel renders with the picked scope + providers.
-    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 15_000 });
+    // 30s timeout because the project page is server-rendered against
+    // Neon — a cold start adds 5-10s on top of the create POST + the
+    // router.push transition. 15s was tight; 30s gives margin without
+    // making the test slow.
+    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: /discovery configuration/i })).toBeVisible();
     // openalex + arxiv are listed in the provider row (M7 panel format).
     await expect(page.getByText(/openalex.*arxiv|arxiv.*openalex/i).first()).toBeVisible();
@@ -231,7 +269,13 @@ test.describe("live authenticated walkthrough", () => {
   test("create a hybrid project with all tuning options, verify persistence, then delete", async ({ page, context }) => {
     await page.setViewportSize({ width: 1280, height: 1400 });
     await page.goto("/");
-    await clerk.signIn({ page, emailAddress: EMAIL });
+    // Tests run in serial mode within one browser context, so the
+    // Clerk session from the previous test persists. clerk.signIn
+    // throws "You're already signed in" — that's fine, we want the
+    // signed-in state. Treat that specific error as a pass-through.
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
 
@@ -252,7 +296,11 @@ test.describe("live authenticated walkthrough", () => {
     await page.getByRole("checkbox", { name: /skip discovery approval/i }).check();
 
     await page.getByRole("button", { name: /^create$/i }).click();
-    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 15_000 });
+    // 30s timeout because the project page is server-rendered against
+    // Neon — a cold start adds 5-10s on top of the create POST + the
+    // router.push transition. 15s was tight; 30s gives margin without
+    // making the test slow.
+    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 30_000 });
 
     // Verify the project-page Discovery configuration panel renders the
     // configured values. Scope label is "Hybrid (uploaded + outbound)".
@@ -297,12 +345,45 @@ test.describe("live authenticated walkthrough", () => {
     createdProjectIds.delete(projectId);
   });
 
+  // Authenticated 404 — the custom not-found.tsx renders a styled
+  // page with three escape hatches (Back home / Open dashboard /
+  // See a sample review). For unauthenticated visitors the proxy
+  // middleware 307s to /sign-in (covered in live-browser-smoke.spec.ts);
+  // for SIGNED-IN visitors hitting an unknown owned-resource path,
+  // the route handler returns 404. Both paths preserve the
+  // existence-probe defense: "doesn't exist" and "exists but unowned"
+  // both return the same 404 (security-and-privacy.md §5).
+  test("authenticated 404 page renders with the styled custom not-found", async ({ page }) => {
+    await page.goto("/");
+    // Tests run in serial mode within one browser context, so the
+    // Clerk session from the previous test persists. clerk.signIn
+    // throws "You're already signed in" — that's fine, we want the
+    // signed-in state. Treat that specific error as a pass-through.
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
+
+    // Hit a project id that definitely doesn't exist + isn't owned by
+    // this user. Same 404 either way.
+    const response = await page.goto("/projects/does-not-exist-abc123");
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole("heading", { name: /not found/i })).toBeVisible();
+    // The "Back to home" CTA proves the styled custom 404 (not the default).
+    await expect(page.getByRole("link", { name: /back to home/i })).toBeVisible();
+  });
+
   // Real-user sign-out exercises the Clerk session-revoke + redirect
   // back to home. Verifies the auth UI flips back to the unauthenticated
   // state (Sign in button visible, no "New project" button).
   test("sign out clears the session + reveals the unauthenticated home", async ({ page }) => {
     await page.goto("/");
-    await clerk.signIn({ page, emailAddress: EMAIL });
+    // Tests run in serial mode within one browser context, so the
+    // Clerk session from the previous test persists. clerk.signIn
+    // throws "You're already signed in" — that's fine, we want the
+    // signed-in state. Treat that specific error as a pass-through.
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
 
