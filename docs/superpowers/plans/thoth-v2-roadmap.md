@@ -125,6 +125,30 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M19 — SEARCH_DISABLED fail-fast at runs-start
+
+**Goal:** When the operator flips `SEARCH_DISABLED=1` (the v2 kill
+switch from M2c), outbound/hybrid projects could still start a
+run from the UI. The planner would then run + bill ~2k LLM tokens,
+the plan_gate would interrupt + bill HITL latency, and only THEN
+the discoverer would throw with the SEARCH_DISABLED message — at
+which point the user has paid for half a planning round. Lousy
+fail-mode UX + wasted spend.
+
+**What shipped:**
+
+- `/api/projects/[id]/runs` now reads `env.SEARCH_DISABLED` and,
+  when set, returns **503 search_disabled** with a clear
+  user-readable message for outbound/hybrid scope. The Run row is
+  never created, no Trigger.dev task is enqueued, no LLM tokens
+  are billed.
+- uploaded_only projects still start normally — they don't touch
+  the search providers, so the kill-switch doesn't apply to them.
+- Two new tests cover the 503 path for outbound and the
+  pass-through for uploaded_only when `SEARCH_DISABLED=1`.
+
+**Key files:** `app/api/projects/[id]/runs/route.ts`, `tests/api/runs-start.test.ts`
+
 ## V2-M18 — Multi-tenant unique-constraint fix
 
 **Goal:** Eighth audit bug. `CorpusItem.externalDoi` and

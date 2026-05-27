@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
+const envMock = { SEARCH_DISABLED: undefined as string | undefined };
+vi.mock("@/lib/env", () => ({ env: envMock }));
+
 vi.mock("@/lib/auth", () => ({ requireUser: vi.fn() }));
 vi.mock("@/lib/db", () => ({
   db: {
@@ -45,7 +48,10 @@ function installTxMock(opts: {
   return { txFindFirst, txExecuteRaw };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  envMock.SEARCH_DISABLED = undefined;
+});
 
 describe("POST /api/projects/[id]/runs", () => {
   it("creates a run and enqueues the task", async () => {
@@ -296,6 +302,50 @@ describe("POST /api/projects/[id]/runs", () => {
     expect(body.error).toMatch(/at least one search provider/);
     expect(createRun).not.toHaveBeenCalled();
     expect(enqueueRunReview).not.toHaveBeenCalled();
+  });
+
+  it("V2 outbound: returns 503 search_disabled when SEARCH_DISABLED=1 (no planner spend wasted)", async () => {
+    envMock.SEARCH_DISABLED = "1";
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "p1", ownerId: "u1", question: "Q?",
+      searchScope: "outbound", searchProviders: ["openalex"],
+    } as never);
+
+    const { POST } = await import("@/app/api/projects/[id]/runs/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/projects/p1/runs", { method: "POST" }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string; message: string };
+    expect(body.error).toBe("search_disabled");
+    expect(body.message).toMatch(/temporarily disabled/);
+    // Crucially: NO run was created + NO trigger enqueued.
+    expect(createRun).not.toHaveBeenCalled();
+    expect(enqueueRunReview).not.toHaveBeenCalled();
+  });
+
+  it("uploaded_only ignores SEARCH_DISABLED (V1 path doesn't touch search providers)", async () => {
+    envMock.SEARCH_DISABLED = "1";
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "p1", ownerId: "u1", question: "Q?",
+      searchScope: "uploaded_only", searchProviders: [],
+    } as never);
+    vi.mocked(db.corpusItem.count).mockResolvedValue(3 as never);
+    installTxMock({ existingActive: null });
+    vi.mocked(createRun).mockResolvedValue({ id: "r1" } as never);
+    vi.mocked(enqueueRunReview).mockResolvedValue({ id: "trg_x" } as never);
+
+    const { POST } = await import("@/app/api/projects/[id]/runs/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/projects/p1/runs", { method: "POST" }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(201);
   });
 
   it("V2 hybrid: rejects 409 when corpus is empty (hybrid still needs uploads)", async () => {

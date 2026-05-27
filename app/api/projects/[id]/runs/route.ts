@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createRun, setRunStatus } from "@/lib/agent/runs";
 import { enqueueRunReview } from "@/lib/trigger-client";
+import { env } from "@/lib/env";
 
 export async function POST(
   _req: NextRequest,
@@ -45,6 +46,22 @@ export async function POST(
             "Outbound mode requires at least one search provider (OpenAlex / arXiv / Exa). Edit the project's search providers and try again.",
         },
         { status: 409 },
+      );
+    }
+    // Fail fast when the operator kill-switch is set: without this, the
+    // planner would run + bill ~2k LLM tokens, the plan_gate would
+    // interrupt + bill HITL latency, and the discoverer would only THEN
+    // throw with the SEARCH_DISABLED message — by which point the user
+    // has paid for half a planning round. 503 here keeps the failure mode
+    // crisp and matches the discoverer's runtime check.
+    if (env.SEARCH_DISABLED === "1") {
+      return NextResponse.json(
+        {
+          error: "search_disabled",
+          message:
+            "Outbound search is temporarily disabled on this deploy (operator kill-switch). Try again later, or switch the project to uploaded-only.",
+        },
+        { status: 503 },
       );
     }
   }
