@@ -125,6 +125,34 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M28 — Real-user PDF upload in the live e2e
+
+**Goal:** The most user-visible action not yet under live test
+coverage was "upload a PDF + see it parse." Add a test that
+exercises the entire upload → R2 → CorpusItem PENDING/PARSING
+chain against the live deploy.
+
+**What shipped:**
+
+- New auth-walkthrough test: signs in, creates a project, uploads
+  `tests/e2e/fixtures/short.pdf` via the UploadButton's hidden
+  `<input type="file">`, asserts the corpus item's
+  PENDING/PARSING/PARSED badge appears within 30s, then DELETEs
+  the project. Does NOT wait for the OCR round-trip to complete —
+  the badge appearance is enough proof that the upload + Trigger.dev
+  enqueue both worked.
+- Pattern mirrors `tests/e2e/upload-flow.spec.ts` (local) but
+  pointed at the live deploy with cleanup baked in.
+
+**Per-CI-run cost:** 1 R2 PUT + 1 Mistral OCR (small PDF, free-tier
+acceptable) + 1 DB INSERT + 1 DB DELETE. The R2 blob orphans on
+cleanup (CorpusItem cascade only drops the DB row, not the blob);
+acceptable leak rate at the CI cadence.
+
+**`pnpm test:e2e:live`: 16/16 passing** in 54.7s.
+
+**Key files:** `tests/e2e/live-auth-walkthrough.spec.ts`
+
 ## V2-M27 — /sign-in render, 404, network-retry hardening
 
 **Goal:** Round out the e2e to cover the rest of a user's

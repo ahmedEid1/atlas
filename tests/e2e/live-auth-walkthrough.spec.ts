@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { clerk, clerkSetup } from "@clerk/testing/playwright";
+import path from "node:path";
 import dotenv from "dotenv";
 
 /**
@@ -340,6 +341,56 @@ test.describe("live authenticated walkthrough", () => {
     expect(project.searchProviders.sort()).toEqual(["arxiv", "openalex"]);
 
     // Clean up.
+    const del = await apiCtx.delete(`/api/projects/${projectId}`);
+    expect(del.status()).toBe(204);
+    createdProjectIds.delete(projectId);
+  });
+
+  // PDF upload — exercises the real user action of "I have a PDF, I want
+  // Thoth to OCR it." Lands a CorpusItem in PENDING/PARSING state on the
+  // live deploy. Does NOT wait for PARSED (a full Mistral OCR + DB update
+  // round-trip can take 30-90s; the PENDING/PARSING badge appearance is
+  // enough proof that upload + Trigger.dev enqueue worked).
+  //
+  // Per-CI-run cost: 1 R2 PUT + 1 Mistral OCR call. The R2 blob orphans
+  // when the project is deleted (CorpusItem cascade only removes the DB
+  // row, not the R2 object); acceptable leak rate for the CI cadence.
+  test("upload a PDF and verify it enters the corpus list", async ({ page, context }) => {
+    await page.goto("/");
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
+    await page.goto("/dashboard");
+    await page.waitForLoadState("networkidle");
+
+    // Create a fresh project to hold the upload.
+    await page.getByRole("button", { name: /new project/i }).click();
+    const title = `E2E live walkthrough upload — ${new Date().toISOString()}`;
+    await page.getByLabel(/title/i).fill(title);
+    await page
+      .getByLabel(/research question/i)
+      .fill("Does the upload + Mistral OCR pipeline work end-to-end on the live deploy?");
+    await page.getByRole("button", { name: /^create$/i }).click();
+    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 30_000 });
+
+    const url = page.url();
+    const projectId = url.match(/\/projects\/([^/]+)/)![1]!;
+    createdProjectIds.add(projectId);
+
+    // Upload the small fixture PDF via the hidden file input on UploadButton.
+    const pdfPath = path.resolve(__dirname, "fixtures/short.pdf");
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(pdfPath);
+
+    // The corpus item should appear within 15s — the upload completes
+    // synchronously (R2 PUT + CorpusItem row in PENDING state); the
+    // Trigger.dev parse-pdf job kicks the row forward to PARSING.
+    const statusBadge = page.getByText(/^(pending|parsing|parsed)$/i);
+    await expect(statusBadge).toBeVisible({ timeout: 30_000 });
+
+    // Clean up — DELETE cascades the CorpusItem row. (R2 blob is the one
+    // leak; not worth a per-test R2 cleanup script for the CI rate.)
+    const apiCtx = context.request;
     const del = await apiCtx.delete(`/api/projects/${projectId}`);
     expect(del.status()).toBe(204);
     createdProjectIds.delete(projectId);
