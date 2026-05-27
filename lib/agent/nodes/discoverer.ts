@@ -132,6 +132,52 @@ export async function discovererNode(
       });
     }
 
+    // 4b. Hybrid mode — also wrap PARSED user-uploaded CorpusItems as
+    // synthetic DiscoveredPaper rows so the screener evaluates them
+    // alongside the outbound hits. Without this, hybrid-mode uploaded PDFs
+    // are dead in the water (the graph routes hybrid through discoverer,
+    // never retriever, so without this synthetic injection the uploaded
+    // PDFs never enter the screening flow). corpusItemId is pre-set so
+    // the fetcher's idempotency check skips them; initialScore=1.0
+    // (user-uploaded = strong prior).
+    if (state.searchScope === "hybrid") {
+      const uploaded = await db.corpusItem.findMany({
+        where: { projectId: state.projectId, status: "PARSED" },
+        select: {
+          id: true, source: true, parsedMarkdown: true, summary: true,
+          externalDoi: true, externalArxivId: true,
+        },
+      });
+      if (uploaded.length > 0) {
+        type SummaryShape = { abstract?: string } | null;
+        await db.discoveredPaper.createMany({
+          data: uploaded.map((c) => {
+            const summary = c.summary as SummaryShape;
+            // Title heuristic: first markdown heading > filename > id.
+            const firstHeading = c.parsedMarkdown
+              ?.split("\n").find((l) => l.startsWith("# "))?.replace(/^#\s*/, "");
+            const filename = c.source.split("/").pop() ?? c.id;
+            return {
+              runId: state.runId,
+              provider: "uploaded",
+              externalId: `uploaded:${c.id}`,
+              title: (firstHeading ?? filename).slice(0, 500),
+              authors: [],
+              abstract: summary?.abstract ?? null,
+              publicationYear: null,
+              venue: null,
+              citationCount: null,
+              oaUrl: null,
+              accessStatus: "open",
+              initialScore: 1.0,
+              corpusItemId: c.id,
+            };
+          }),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     // Re-fetch with assigned ids so state.discoveredPapers refs are stable.
     const rows = await db.discoveredPaper.findMany({
       where: { runId: state.runId },

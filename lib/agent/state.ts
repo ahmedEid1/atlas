@@ -21,7 +21,10 @@ export type CandidateCorpusItem = {
  */
 export type DiscoveredPaperRef = {
   id: string;                              // DB row id (DiscoveredPaper.id)
-  provider: "openalex" | "arxiv" | "exa";
+  // "uploaded" is the synthetic provider used in hybrid mode for
+  // user-uploaded PARSED CorpusItems that the discoverer wraps into the
+  // discovery flow so the screener evaluates them alongside outbound hits.
+  provider: "openalex" | "arxiv" | "exa" | "uploaded";
   externalId: string;
   title: string;
   abstract: string | null;
