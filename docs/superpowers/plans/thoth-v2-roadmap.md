@@ -125,6 +125,32 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M34 — Markdown download for the draft
+
+**Goal:** Real UX gap — users can read the draft in the page but
+can't keep a copy without copy-pasting. For a research tool whose
+output IS the review, that's a significant friction.
+
+**What shipped:**
+
+- New route: `GET /api/runs/[id]/draft.md`. Returns the draft
+  markdown as `Content-Disposition: attachment; filename="thoth-<runId>.md"`.
+  `Cache-Control: no-store` so a re-run's fresh draft isn't masked by
+  the browser's cached copy. 404 for "no such run", "not yours",
+  or "no draft yet" (same existence-probe defense as the rest of
+  the API).
+- `DraftView` gains an optional `runId` prop + renders a
+  "Download .md" link next to the heading when set. Uses native
+  `<a download>` so no client-side state is needed.
+- Run-detail page passes `runId` through. The showcase page
+  intentionally doesn't — the seeded exemplar is a public
+  read-only artifact, not the user's own data to save.
+- 4 new tests in `tests/api/runs-draft-md.test.ts` cover: 200
+  with correct headers + body, 404 (no draft), 404 (unowned),
+  401 (unauthenticated).
+
+**Key files:** `app/api/runs/[id]/draft.md/route.ts`, `components/runs/draft-view.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`, `tests/api/runs-draft-md.test.ts`
+
 ## V2-M33 — SSRF defense in the fetcher
 
 **Goal:** The V2 fetcher pulls PDFs from URLs in `DiscoveredPaper.oaUrl`,
