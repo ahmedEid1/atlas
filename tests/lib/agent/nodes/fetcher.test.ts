@@ -37,6 +37,7 @@ const baseState: AgentState = {
   draft: null, critique: null, critiqueIterations: 0,
   searchScope: "outbound", searchProviders: ["openalex", "arxiv"],
   searchMaxHits: null,
+  skipDiscoveryGate: false,
   discoveryQueries: [], discoveredPapers: [],
   discoveryApproved: null, screeningDecisions: [],
 };

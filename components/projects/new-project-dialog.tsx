@@ -22,6 +22,7 @@ export function NewProjectDialog() {
   const [yearStart, setYearStart] = useState<string>("");
   const [yearEnd, setYearEnd] = useState<string>("");
   const [maxHits, setMaxHits] = useState<string>("");
+  const [skipDiscoveryGate, setSkipDiscoveryGate] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -56,6 +57,7 @@ export function NewProjectDialog() {
           if (Number.isFinite(ye)) body.searchYearEnd = ye;
           const mh = Number.parseInt(maxHits, 10);
           if (Number.isFinite(mh)) body.searchMaxHits = mh;
+          if (skipDiscoveryGate) body.skipDiscoveryGate = true;
         }
         const res = await fetch("/api/projects", {
           method: "POST",
@@ -212,6 +214,20 @@ export function NewProjectDialog() {
               <p className="text-xs text-muted-foreground">
                 Year range filters published papers across all providers. Max hits caps how many papers reach the screener; lower = cheaper, higher = broader.
               </p>
+              <label className="flex items-start gap-2 pt-1 text-sm">
+                <input
+                  type="checkbox"
+                  checked={skipDiscoveryGate}
+                  onChange={(e) => setSkipDiscoveryGate(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="font-medium">Skip discovery approval</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Auto-approve discovered papers — the agent doesn&apos;t pause for review between the discoverer and fetcher. The token + max-hits caps still apply.
+                  </span>
+                </span>
+              </label>
             </fieldset>
           )}
         </div>

@@ -65,6 +65,7 @@ const baseState = {
       searchScope: "uploaded_only" as const,
       searchProviders: [],
       searchMaxHits: null,
+      skipDiscoveryGate: false,
       discoveryQueries: [],
       discoveredPapers: [],
       discoveryApproved: null,
