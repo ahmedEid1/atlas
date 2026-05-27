@@ -5,9 +5,7 @@ milestone-specific — read the section for the milestone you're shipping.
 
 ## Always do before tagging
 
-- [ ] `pnpm tsc --noEmit` clean
-- [ ] `pnpm lint` clean
-- [ ] `pnpm vitest run` — full suite green
+- [ ] `pnpm verify` clean (runs `typecheck` + `lint` + `test` — full suite green)
 - [ ] No uncommitted changes (`git status` clean)
 - [ ] CHANGELOG entry added in `README.md` Roadmap
 - [ ] `package.json` version bumped to match the tag
