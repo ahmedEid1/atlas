@@ -12,7 +12,7 @@
 [![Public evals](https://img.shields.io/badge/evals-public-C9A961?style=flat-square)](https://thoth-slr.vercel.app/evals)
 [![MCP Registry](https://img.shields.io/badge/MCP-registered-orange?style=flat-square)](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-461%20passing-success?style=flat-square)](#)
+[![Tests](https://img.shields.io/badge/tests-462%20passing-success?style=flat-square)](#)
 [![Status](https://img.shields.io/badge/status-v1.0.1-informational?style=flat-square)](#)
 [![Deploy cost](https://img.shields.io/badge/deploy-%240%2Fmo-brightgreen?style=flat-square)](#)
 
@@ -108,6 +108,18 @@ pnpm dev:trigger           # Trigger.dev worker (separate terminal)
 ```
 
 See [`.env.example`](.env.example) for the full env-var list. Non-obvious ones: `S3_FORCE_PATH_STYLE=true` for MinIO; `CLERK_WEBHOOK_SIGNING_SECRET` only when wiring Clerk's webhook in prod.
+
+### Trying the v2 outbound flow
+
+1. Sign in → **New project**.
+2. Pick **Outbound search**. Default providers: OpenAlex + arXiv (both free, no API key needed). Tick Exa too if you've set `EXA_API_KEY` on the deploy.
+3. Optionally set year range + max hits per run (default 50, ceiling 100).
+4. Write a research question and click **Create**.
+5. On the project page, click **Start review**. No uploads needed — the discoverer builds the corpus.
+6. Approve the plan, then review the **Discovery approval card**: query list + per-row checkboxes against the discovered papers. Uncheck anything off-topic, then **Approve**.
+7. The fetcher OCRs the kept open-access PDFs, the screener votes include/exclude per paper, the **Papers approval card** appears with the screener's include set. Uncheck any false positives, approve, and the assessor → drafter → critic → cite_check pipeline runs as in v1.
+
+Power users can tick **Skip discovery approval** at project-create time to bypass the discovery HITL gate (cost-cap + max-hits ceiling still apply). MCP clients can use `list_discovered_papers` + `get_search_queries` to inspect any run after the fact.
 
 ## Tests
 

@@ -125,6 +125,25 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M21 — Dispatcher all-providers-fail coverage + README v2 quickstart
+
+**Goal:** Two small finishes.
+
+**What shipped:**
+
+- New dispatcher test: when EVERY configured provider rejects (network
+  timeout / 503 / missing API key on the same run), `dispatchSearch` must
+  return `{hits: [], errors: [...all three...]}` and NOT throw. An uncaught
+  rejection here would crash the discoverer node and the whole run; the
+  empty-hits-with-error-log shape lets the run gracefully end at the
+  discovery_gate with the user seeing "0 papers found, here's why."
+- README gains a "Trying the v2 outbound flow" subsection under
+  Quickstart — 7-step walkthrough from sign-in through screener verdict,
+  plus a note on the skipDiscoveryGate power-user option and the V2 MCP
+  introspection tools.
+
+**Key files:** `tests/lib/search/dispatch.test.ts`, `README.md`
+
 ## V2-M20 — Discovered-paper click-through links + author display
 
 **Goal:** When users see a discovered paper in the DiscoverySummary
