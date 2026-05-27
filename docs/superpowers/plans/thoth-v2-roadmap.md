@@ -125,6 +125,33 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M25 — v2-mode authenticated e2e (create outbound + verify config panel)
+
+**Goal:** Extend M24's authenticated walkthrough with a v2-shape test:
+sign in, open New Project, pick **Outbound search**, fill the
+question, submit, land on the project page, assert the **Discovery
+configuration** panel renders with the picked scope + providers, then
+delete to clean up.
+
+**What shipped:**
+
+- New test in `tests/e2e/live-auth-walkthrough.spec.ts`: drives the
+  outbound radio button, verifies the provider checkboxes fieldset
+  shows ("at least one is required" hint), submits, then asserts
+  the project page's v2 panel renders the **Outbound search** scope
+  label + the **openalex, arxiv** provider row.
+- Viewport set to 1280×1400 for this test because the V2 dialog
+  grows tall (radio buttons + provider checkboxes + tuning
+  fieldset) and the Create button drops below the default 720px
+  fold. Default viewport remains untouched for other tests.
+- Cleanup pattern unchanged — afterAll DELETEs via the M24 endpoint;
+  the beforeAll defensive sweep now matches "E2E live walkthrough"
+  prefix (broader, catches v2 orphans too).
+- `pnpm test:e2e:live` total surface: **10/10 passing** (3 MCP +
+  5 browser + 2 authenticated walkthroughs).
+
+**Key files:** `tests/e2e/live-auth-walkthrough.spec.ts`
+
 ## V2-M24 — DELETE /api/projects/[id] + authenticated live walkthrough
 
 **Goal:** Per user direction ("it's ok add them, to your test and
