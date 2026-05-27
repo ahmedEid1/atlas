@@ -24,6 +24,7 @@ export function PapersApprovalCard({
     new Set(proposed.map((p) => p.corpusItemId)),
   );
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   function toggle(id: string) {
@@ -35,25 +36,51 @@ export function PapersApprovalCard({
     });
   }
 
+  // Same error-mapping pattern as plan-approval-card.tsx — without it, a
+  // failed approval would silently `router.refresh()` and the user would see
+  // the same card reappear with no explanation.
+  async function readError(res: Response): Promise<string> {
+    const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    switch (res.status) {
+      case 401: return "Your session expired. Please sign in again.";
+      case 403: return body.message ?? "You don't have permission to act on this checkpoint.";
+      case 404: return "Checkpoint not found — it may have already been processed.";
+      case 409: return body.message ?? "Checkpoint already decided — refresh to see the current state.";
+      default: return body.message ?? body.error ?? `Action failed (HTTP ${res.status}).`;
+    }
+  }
+
   function approve() {
+    setError(null);
     startTransition(async () => {
-      await fetch(`/api/runs/${runId}/checkpoints/${checkpointId}/approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ corpusItemIds: [...selected] }),
-      });
-      router.refresh();
+      try {
+        const res = await fetch(`/api/runs/${runId}/checkpoints/${checkpointId}/approve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ corpusItemIds: [...selected] }),
+        });
+        if (!res.ok) { setError(await readError(res)); return; }
+        router.refresh();
+      } catch {
+        setError("Could not reach the server. Check your connection.");
+      }
     });
   }
 
   function reject() {
+    setError(null);
     startTransition(async () => {
-      await fetch(`/api/runs/${runId}/checkpoints/${checkpointId}/reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: "User aborted at papers gate" }),
-      });
-      router.refresh();
+      try {
+        const res = await fetch(`/api/runs/${runId}/checkpoints/${checkpointId}/reject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: "User aborted at papers gate" }),
+        });
+        if (!res.ok) { setError(await readError(res)); return; }
+        router.refresh();
+      } catch {
+        setError("Could not reach the server. Check your connection.");
+      }
     });
   }
 
@@ -94,6 +121,11 @@ export function PapersApprovalCard({
           {isPending ? "Approving…" : `Approve ${selected.size}`}
         </Button>
       </div>
+      {error && (
+        <p role="alert" aria-live="polite" className="text-destructive text-xs leading-snug">
+          {error}
+        </p>
+      )}
     </Card>
   );
 }
