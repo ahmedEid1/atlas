@@ -48,24 +48,16 @@ export const metadata: Metadata = {
     siteName: "Thoth",
     type: "website",
     locale: "en_GB",
-    images: [
-      {
-        // SVG works on most modern crawlers; platforms that reject it fall
-        // back to the title+description card, which is still richer than the
-        // bare default we had before. A purpose-built PNG OG card would land
-        // in a follow-up via app/opengraph-image.tsx (Next.js Metadata Files).
-        url: "/thoth-logo.svg",
-        width: 512,
-        height: 512,
-        alt: "Thoth — sacred ibis logo",
-      },
-    ],
+    // og:image is provided by `app/opengraph-image.tsx` (Next.js Metadata
+    // Files take priority over a manual `images` field declared here).
   },
   twitter: {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/thoth-logo.svg"],
+    // twitter:image is omitted on purpose — Twitter / X / Slack all fall
+    // back to og:image when twitter:image is absent, which means we don't
+    // have to duplicate the OG render in a separate twitter-image.tsx.
   },
 };
 
