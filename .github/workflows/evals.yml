@@ -93,7 +93,7 @@ jobs:
       CLERK_WEBHOOK_SIGNING_SECRET: ${{ secrets.CLERK_WEBHOOK_SIGNING_SECRET }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Enable Corepack
         run: corepack enable
@@ -103,7 +103,7 @@ jobs:
         # `overrides` lives (out of package.json into pnpm-workspace.yaml)
         # and frozen-lockfile installs reject the format drift.
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: pnpm
