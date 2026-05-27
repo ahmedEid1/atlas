@@ -299,7 +299,7 @@ model ScreeningDecision {
 model EvalRun {
   id        String   @id @default(cuid())
   goldenId  String // e.g., "000-cbt-back-pain"
-  metric    String // "citation_recall" | "citation_precision" | "claim_faithfulness" | "expected_claim_coverage"
+  metric    String // V1: "citation_recall" | "citation_precision" | "claim_faithfulness" | "expected_claim_coverage". V2: "discovery_recall" | "screening_precision"
   score     Float // 0.0-1.0
   runId     String? // optional FK-ish link to the underlying Thoth Run (not enforced; eval runs may delete the Run row afterwards)
   commitSha String // git commit at time of run

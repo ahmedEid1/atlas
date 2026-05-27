@@ -28,6 +28,12 @@ export const GoldenQuestionSchema = z
     papers: z.array(PaperSchema).min(1, "at least one paper is required"),
     expectedPapers: z.array(z.string().min(1)).min(1),
     expectedClaims: z.array(z.string().min(1)).min(1),
+    // V2 — optional list of expected external ids (DOIs / arXiv ids /
+    // OpenAlex W-ids) for outbound goldens. When set, the eval CLI
+    // computes discovery_recall + screening_precision against this list;
+    // when undefined (every existing V1 golden), those metrics are
+    // skipped so the dashboard doesn't fill with vacuous 1.00 rows.
+    expectedDois: z.array(z.string().min(3)).optional(),
     metadata: MetadataSchema,
   })
   // `papers[].id` must be unique within the question — `lib/eval/seed-corpus.ts`

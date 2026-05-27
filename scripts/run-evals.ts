@@ -9,13 +9,21 @@ import {
   citationPrecision,
   claimFaithfulness,
   expectedClaimCoverage,
+  discoveryRecall,
+  screeningPrecision,
 } from "@/lib/eval/metrics";
 import { db } from "@/lib/db";
 import { createRun, persistIncludedPapers, persistClaims, finishRun } from "@/lib/agent/runs";
 
 type MetricRow = {
   goldenId: string;
-  metric: "citation_recall" | "citation_precision" | "claim_faithfulness" | "expected_claim_coverage";
+  metric:
+    | "citation_recall"
+    | "citation_precision"
+    | "claim_faithfulness"
+    | "expected_claim_coverage"
+    | "discovery_recall"
+    | "screening_precision";
   score: number;
 };
 
@@ -141,6 +149,26 @@ async function main(): Promise<void> {
       { goldenId: g.id, metric: "claim_faithfulness",       score: claimFaithfulness(claimChecks) },
       { goldenId: g.id, metric: "expected_claim_coverage",  score: expectedClaimCoverage(g.expectedClaims, result.draft ?? "") },
     ];
+
+    // V2 metrics: only computed when the golden expressed an expectation
+    // (`expectedDois` set) AND the run actually went through the discoverer
+    // / screener nodes. V1 goldens leave expectedDois undefined → these
+    // metrics aren't emitted (vacuous-true would otherwise inflate the
+    // dashboard with meaningless 1.00 rows).
+    if (g.expectedDois && g.expectedDois.length > 0) {
+      const discoveredExternalIds = result.discoveredPapers.map((p) => p.externalId);
+      const screenedIncludedExternalIds = result.screeningDecisions
+        .filter((s) => s.include)
+        .map((s) => {
+          const paper = result.discoveredPapers.find((p) => p.id === s.discoveredPaperId);
+          return paper?.externalId;
+        })
+        .filter((id): id is string => id !== undefined);
+      metrics.push(
+        { goldenId: g.id, metric: "discovery_recall",      score: discoveryRecall(g.expectedDois, discoveredExternalIds) },
+        { goldenId: g.id, metric: "screening_precision",   score: screeningPrecision(g.expectedDois, screenedIncludedExternalIds) },
+      );
+    }
     allRows.push(...metrics);
 
     // Persist EvalRun rows

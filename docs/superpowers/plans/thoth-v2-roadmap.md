@@ -125,6 +125,33 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M10 — Eval CLI + dashboard wire V2 metrics
+
+**Goal:** Make the public `/evals` dashboard ready for V2 outbound
+goldens the moment one lands, without a separate code change.
+
+**What shipped:**
+
+- `lib/eval/golden-schema.ts` gains optional
+  `expectedDois: string[]` field (turns out the earlier M3a milestone
+  documented this but never actually committed the schema change —
+  the previous compaction summary recorded code that wasn't on disk).
+  Now properly committed with 3 schema tests covering present /
+  absent / too-short cases.
+- `scripts/run-evals.ts` imports `discoveryRecall` +
+  `screeningPrecision`, computes both when the golden has
+  `expectedDois` AND the run produced `discoveredPapers`.
+  V1 goldens leave `expectedDois` undefined, so the V1 metric set
+  emits unchanged — no vacuous-true 1.00 rows polluting the
+  dashboard.
+- `MetricRow` type widened with the two new metric names.
+- `/evals` page METRICS array gains "Discovery recall (v2)" +
+  "Screening precision (v2)" tiles. Aggregate stays per-metric so
+  a v2-mode golden's data won't show until it actually lands.
+- EvalRun schema comment updated to mention the new metric names.
+
+**Key files:** `scripts/run-evals.ts`, `app/evals/page.tsx`, `lib/eval/golden-schema.ts`, `tests/lib/eval/golden-schema.test.ts`
+
 ## V2-M9 — Run-detail discovery summary
 
 **Goal:** Make a v2 run legible at a glance — what queries ran, what

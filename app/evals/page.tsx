@@ -40,6 +40,16 @@ const METRICS = [
     label: "Expected-claim coverage",
     short: "Does the draft mention the canonical findings reviewers expect?",
   },
+  {
+    key: "discovery_recall",
+    label: "Discovery recall (v2)",
+    short: "For outbound runs: did the discoverer find the expected papers across providers?",
+  },
+  {
+    key: "screening_precision",
+    label: "Screening precision (v2)",
+    short: "Of the papers the screener admitted, what fraction were the expected ones?",
+  },
 ] as const;
 
 export default async function EvalsPage() {
