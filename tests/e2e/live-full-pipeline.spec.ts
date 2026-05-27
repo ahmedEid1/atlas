@@ -477,4 +477,92 @@ test.describe("live full agent-pipeline", () => {
     expect(del.status()).toBe(204);
     createdProjectIds.delete(projectId);
   });
+
+  // Hybrid mode — verifies M13's "uploaded PDFs merge into the screening
+  // pool alongside outbound hits" fix works end-to-end on the live deploy.
+  // Without M13, hybrid projects silently dropped uploaded PDFs even
+  // though the runs-start route required at least one PARSED upload.
+  test("V2 hybrid: uploaded PDF + outbound discovery merge into the papers_gate", async ({ page, context }) => {
+    test.setTimeout(8 * 60 * 1000);
+    await page.setViewportSize({ width: 1280, height: 1400 });
+    await page.goto("/");
+    await clerk.signIn({ page, emailAddress: EMAIL }).catch((err: unknown) => {
+      if (!/already signed in/i.test(String(err))) throw err;
+    });
+    await page.goto("/dashboard");
+    await page.waitForLoadState("networkidle");
+
+    // Create the hybrid project with skipDiscoveryGate so we only need
+    // to click plan + papers approvals.
+    await page.getByRole("button", { name: /new project/i }).click();
+    const title = `E2E full-pipeline hybrid — ${new Date().toISOString()}`;
+    await page.getByLabel(/title/i).fill(title);
+    await page
+      .getByLabel(/research question/i)
+      .fill("How does mixture-of-experts routing improve transformer scaling efficiency?");
+    await page.getByRole("radio", { name: /hybrid/i }).check();
+    await page.getByRole("checkbox", { name: /openalex/i }).uncheck();
+    await page.getByLabel(/max hits per run/i).fill("2");
+    await page.getByRole("checkbox", { name: /skip discovery approval/i }).check();
+    await page.getByRole("button", { name: /^create$/i }).click();
+    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 30_000 });
+
+    const projectId = page.url().match(/\/projects\/([^/]+)/)![1]!;
+    createdProjectIds.add(projectId);
+
+    // Upload the fixture PDF — hybrid REQUIRES at least one PARSED upload
+    // per the runs-start guard (M2c).
+    const pdfPath = path.resolve(__dirname, "fixtures/short.pdf");
+    await page.locator('input[type="file"]').setInputFiles(pdfPath);
+    // Wait for PARSED — M13 only merges PARSED uploads, so the test must
+    // wait for OCR to finish before starting the review.
+    await expect(page.getByText(/^parsed$/i)).toBeVisible({ timeout: 120_000 });
+
+    // Start the run.
+    await page.getByRole("button", { name: /start review/i }).click();
+    await expect(page.getByRole("heading", { name: /review proposed plan/i }))
+      .toBeVisible({ timeout: 4 * 60 * 1000 });
+    await page.getByRole("button", { name: /approve plan/i }).click();
+
+    // Papers gate fires after discoverer (synthetic upload + 2 arXiv hits)
+    // → fetcher → screener. M13 means the uploaded paper enters the
+    // screener with initialScore=1.0, almost always voted include=true.
+    await expect(page.getByRole("heading", { name: /approve included papers/i }))
+      .toBeVisible({ timeout: 4 * 60 * 1000 });
+
+    // The papers_gate shows N included papers — at least 1 should be
+    // the uploaded fixture (M13 verification). We can't easily inspect
+    // which corpusItemId is which without API access, but we CAN assert
+    // that the "Approve N" button is enabled (N >= 1, proving the
+    // screener admitted at least one paper from either source).
+    const approveBtn = page.getByRole("button", { name: /^approve \d+$/i });
+    await expect(approveBtn).toBeEnabled({ timeout: 5_000 });
+
+    // Verify via the API that the run includes a paper sourced from
+    // the upload (M13's synthetic DiscoveredPaper with provider="uploaded").
+    const runId = page.url().match(/\/runs\/([^/?#]+)/)![1]!;
+    const runRes = await context.request.get(`/api/runs/${runId}`);
+    expect(runRes.ok()).toBeTruthy();
+    const run = (await runRes.json()) as {
+      discoveredPapers: Array<{ provider: string; externalId: string }>;
+    };
+    // M13 invariant: at least one DiscoveredPaper row has
+    // provider="uploaded" (the synthetic wrap of the PARSED CorpusItem).
+    const uploadedSynthetic = run.discoveredPapers.find((d) => d.provider === "uploaded");
+    expect(uploadedSynthetic, "M13: hybrid mode must wrap PARSED uploads as provider='uploaded' DiscoveredPaper rows")
+      .toBeDefined();
+    expect(uploadedSynthetic!.externalId).toMatch(/^uploaded:/);
+
+    // Reject the rest of the pipeline — assessor + drafter + critic +
+    // cite_check would take 3+ min and we've already proven the M13 path
+    // (the synthetic upload made it into discoveredPapers). The COMPLETED
+    // happy-path test already covers the v1-tail.
+    await page.getByRole("button", { name: /reject all/i }).click();
+    await expect(page.getByText(/^rejected$/i).first()).toBeVisible({ timeout: 60_000 });
+
+    // Clean up.
+    const del = await context.request.delete(`/api/projects/${projectId}`);
+    expect(del.status()).toBe(204);
+    createdProjectIds.delete(projectId);
+  });
 });
