@@ -125,6 +125,44 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M32 — Hybrid full-pipeline e2e + run-detail API includes V2 surface
+
+**Goal:** Verify M13's hybrid-mode-merges-uploaded-PDFs fix works
+end-to-end on the live deploy. The unit tests cover the
+synthetic-DiscoveredPaper-wrap logic; this is the live confirmation
+that uploaded PDFs actually reach the screener alongside outbound
+hits when running through the deployed worker + Mistral free tier.
+
+**What shipped:**
+
+- New live e2e test: `V2 hybrid: uploaded PDF + outbound discovery
+  merge into the papers_gate`. Drives a hybrid project — uploads
+  short.pdf, waits for PARSED, starts the run with skipDiscoveryGate
+  + maxHits=2, approves the plan, then:
+    - Asserts the papers_gate fires with an enabled "Approve N"
+      button (N≥1 — proves the screener admitted at least one paper
+      from EITHER the uploaded synthetic or the outbound hits).
+    - Hits `GET /api/runs/<id>` and asserts at least one
+      `discoveredPapers[].provider === "uploaded"` row with
+      `externalId` starting with `uploaded:` — the M13 invariant
+      that hybrid mode wraps PARSED uploads as synthetic
+      DiscoveredPaper rows.
+    - Rejects to avoid the expensive assessor + cite_check tail
+      (the COMPLETED-draft path is covered by M31's test).
+- New API surface: `GET /api/runs/<id>` now includes
+  `discoveredPapers` (with their `screening` join) — was previously
+  fetched separately by the run-detail server component. The new
+  shape lets the live test inspect M13 via a single round-trip;
+  external clients (MCP, future observability) benefit too.
+- 1 new unit test in `tests/api/runs-get.test.ts` locking the
+  contract: two-row outbound+hybrid response asserts provider
+  widening + screening object-or-null per row.
+
+**Live verification:** Pass (one flaky retry — Mistral RPM blip on
+the first attempt, green on retry per playwright IS_LIVE retries=1).
+
+**Key files:** `tests/e2e/live-full-pipeline.spec.ts`, `app/api/runs/[id]/route.ts`, `tests/api/runs-get.test.ts`
+
 ## V2-M31 — COMPLETED happy-path + reject-papers e2e
 
 **Goal:** Cover the single biggest user story still untested
