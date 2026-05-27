@@ -105,16 +105,45 @@ export async function discovererNode(
     // configured. Highest-scored hits survive the cut.
     const projectCap = state.searchMaxHits ?? env.MAX_DISCOVERED_PAPERS_PER_RUN;
     const hardCap = Math.min(projectCap, env.MAX_DISCOVERED_PAPERS_PER_RUN);
-    const merged = Array.from(dedup.values())
-      .sort((a, b) => b.initialScore - a.initialScore)
+    const sortedMerged = Array.from(dedup.values()).sort(
+      (a, b) => b.initialScore - a.initialScore,
+    );
+
+    // 3b. Hybrid cross-source dedup. When the user has already uploaded a
+    // paper that the outbound search ALSO surfaced (matching DOI or arXiv
+    // id), prefer the upload — it already has parsedMarkdown + OCR, no
+    // re-fetch needed. Without this, the same paper would get screened
+    // twice (different externalIds, different CorpusItem rows) and
+    // potentially cited twice in the draft.
+    let uploadedRecords: Array<{
+      id: string; source: string; parsedMarkdown: string | null;
+      summary: unknown; externalDoi: string | null; externalArxivId: string | null;
+    }> = [];
+    const uploadedExternalIds = new Set<string>();
+    if (state.searchScope === "hybrid") {
+      uploadedRecords = await db.corpusItem.findMany({
+        where: { projectId: state.projectId, status: "PARSED" },
+        select: {
+          id: true, source: true, parsedMarkdown: true, summary: true,
+          externalDoi: true, externalArxivId: true,
+        },
+      });
+      for (const c of uploadedRecords) {
+        if (c.externalDoi) uploadedExternalIds.add(c.externalDoi);
+        if (c.externalArxivId) uploadedExternalIds.add(`arxiv:${c.externalArxivId}`);
+      }
+    }
+
+    const survivingOutbound = sortedMerged
+      .filter((h) => !uploadedExternalIds.has(h.externalId))
       .slice(0, hardCap);
 
     // 4. Persist every survivor as a DiscoveredPaper row. createMany is
     //    fast; @@unique([runId, externalId]) skipDuplicates makes it
     //    idempotent if the node re-runs (e.g. after a Trigger.dev retry).
-    if (merged.length > 0) {
+    if (survivingOutbound.length > 0) {
       await db.discoveredPaper.createMany({
-        data: merged.map((h) => ({
+        data: survivingOutbound.map((h) => ({
           runId: state.runId,
           provider: h.provider,
           externalId: h.externalId,
@@ -140,18 +169,10 @@ export async function discovererNode(
     // PDFs never enter the screening flow). corpusItemId is pre-set so
     // the fetcher's idempotency check skips them; initialScore=1.0
     // (user-uploaded = strong prior).
-    if (state.searchScope === "hybrid") {
-      const uploaded = await db.corpusItem.findMany({
-        where: { projectId: state.projectId, status: "PARSED" },
-        select: {
-          id: true, source: true, parsedMarkdown: true, summary: true,
-          externalDoi: true, externalArxivId: true,
-        },
-      });
-      if (uploaded.length > 0) {
-        type SummaryShape = { abstract?: string } | null;
-        await db.discoveredPaper.createMany({
-          data: uploaded.map((c) => {
+    if (state.searchScope === "hybrid" && uploadedRecords.length > 0) {
+      type SummaryShape = { abstract?: string } | null;
+      await db.discoveredPaper.createMany({
+          data: uploadedRecords.map((c) => {
             const summary = c.summary as SummaryShape;
             // Title heuristic: first markdown heading > filename > id.
             const firstHeading = c.parsedMarkdown
@@ -175,7 +196,6 @@ export async function discovererNode(
           }),
           skipDuplicates: true,
         });
-      }
     }
 
     // Re-fetch with assigned ids so state.discoveredPapers refs are stable.

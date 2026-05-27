@@ -125,6 +125,33 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M16 — Hybrid cross-source dedup
+
+**Goal:** Edge case turned up while auditing hybrid mode: if a user
+had uploaded paper-X (so `CorpusItem.externalDoi="10.1/foo"`) AND
+the outbound search ALSO surfaced paper-X via OpenAlex with
+`externalId="10.1/foo"`, the discoverer would persist BOTH as
+separate `DiscoveredPaper` rows. The screener would evaluate both,
+the assessor would extract claims from both, and the drafter could
+cite the same paper twice (once as the upload, once as the OCR'd
+download). Subtle but real bug in hybrid mode.
+
+**What shipped:**
+
+- The discoverer's hybrid branch now reads
+  `CorpusItem.externalDoi` + `externalArxivId` (the same columns
+  the fetcher populates) for every PARSED upload BEFORE persisting
+  outbound hits. Any outbound hit whose externalId matches an
+  uploaded DOI or `arxiv:<id>` is dropped before the createMany.
+  Uploads always win — they already have parsedMarkdown + summary,
+  no re-fetch needed.
+- One new discoverer test asserts the dedup: outbound returns 3
+  hits (two duplicate, one new), uploads cover the two duplicates,
+  the outbound createMany ends up with just the "genuinely new"
+  one while both uploads still get wrapped as synthetic rows.
+
+**Key files:** `lib/agent/nodes/discoverer.ts`, `tests/lib/agent/nodes/discoverer.test.ts`
+
 ## V2-M15 — Honor papersApproved.corpusItemIds (V1 bug found in V2 audit)
 
 **Goal:** Fifth audit bug, and the oldest one of the five — exists
