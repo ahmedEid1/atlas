@@ -1,15 +1,24 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import "dotenv/config";
 
-describe("object-store (integration)", () => {
-  beforeAll(async () => {
-    const endpoint = process.env.S3_ENDPOINT ?? "http://localhost:9010";
-    const res = await fetch(`${endpoint}/minio/health/live`).catch(() => null);
-    if (!res?.ok) {
-      throw new Error(`MinIO not reachable at ${endpoint} — run \`docker compose up -d\``);
-    }
-  });
+// Probe MinIO at import time. When unreachable (the common case for a fresh
+// `pnpm test` without `docker compose up -d`) skip the suite cleanly with a
+// one-line note instead of failing — these are integration tests, the README
+// documents the docker prerequisite, and a hard failure here misleads new
+// contributors into thinking the codebase is broken.
+const s3Endpoint = process.env.S3_ENDPOINT ?? "http://localhost:9010";
+const minioProbe = await fetch(`${s3Endpoint}/minio/health/live`).catch(() => null);
+const minioReady = !!minioProbe?.ok;
+
+if (!minioReady) {
+  console.warn(
+    `[object-store] MinIO not reachable at ${s3Endpoint} — skipping integration tests. ` +
+      `Run \`docker compose up -d\` to enable.`,
+  );
+}
+
+describe.skipIf(!minioReady)("object-store (integration)", () => {
 
   it("puts and fetches an object", async () => {
     const { putObject, getObjectBytes } = await import("@/lib/object-store");
