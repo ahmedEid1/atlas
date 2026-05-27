@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({
-  db: { mcpCall: { count: vi.fn() } },
+  db: { mcpCall: { count: vi.fn(), findFirst: vi.fn() } },
 }));
 
 import { db } from "@/lib/db";
@@ -34,11 +34,34 @@ describe("checkRateLimit", () => {
     expect(res).toEqual({ ok: false, retryAfter: 60, errorCode: "rate_limited" });
   });
 
-  it("returns { ok: false } when daily cap is hit", async () => {
+  it("returns { ok: false } with accurate retryAfter when daily cap is hit", async () => {
     vi.mocked(db.mcpCall.count)
       .mockResolvedValueOnce(0 as never)
       .mockResolvedValueOnce(0 as never)
       .mockResolvedValueOnce(RATE_LIMITS.perDay as never);
+    // Oldest in-window call is 23h old, so the window slides in ~3600s.
+    const twentyThreeHoursAgo = new Date(Date.now() - 23 * 3600_000);
+    vi.mocked(db.mcpCall.findFirst).mockResolvedValueOnce({ createdAt: twentyThreeHoursAgo } as never);
+
+    const res = await checkRateLimit("u1", "list_reviews");
+    expect(res.ok).toBe(false);
+    if (res.ok === false) {
+      expect(res.errorCode).toBe("rate_limited");
+      // 3600 ± slack for the wall-clock between Date.now() calls
+      expect(res.retryAfter).toBeGreaterThan(3590);
+      expect(res.retryAfter).toBeLessThanOrEqual(3600);
+    }
+  });
+
+  it("falls back to retryAfter=60 if daily-window oldest row can't be found", async () => {
+    // Defensive path: count says 1000 but findFirst returns null (race / data
+    // anomaly). Must not crash — falls back to the minute-cap value.
+    vi.mocked(db.mcpCall.count)
+      .mockResolvedValueOnce(0 as never)
+      .mockResolvedValueOnce(0 as never)
+      .mockResolvedValueOnce(RATE_LIMITS.perDay as never);
+    vi.mocked(db.mcpCall.findFirst).mockResolvedValueOnce(null as never);
+
     const res = await checkRateLimit("u1", "list_reviews");
     expect(res).toEqual({ ok: false, retryAfter: 60, errorCode: "rate_limited" });
   });
