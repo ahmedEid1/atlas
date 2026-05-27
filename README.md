@@ -12,7 +12,7 @@
 [![Public evals](https://img.shields.io/badge/evals-public-C9A961?style=flat-square)](https://thoth-slr.vercel.app/evals)
 [![MCP Registry](https://img.shields.io/badge/MCP-registered-orange?style=flat-square)](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-410%20passing-success?style=flat-square)](#)
+[![Tests](https://img.shields.io/badge/tests-429%20passing-success?style=flat-square)](#)
 [![Status](https://img.shields.io/badge/status-v1.0.1-informational?style=flat-square)](#)
 [![Deploy cost](https://img.shields.io/badge/deploy-%240%2Fmo-brightgreen?style=flat-square)](#)
 
@@ -66,6 +66,8 @@ curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth" | jq '
 - `list_reviews` — list your Thoth reviews with critic + faithfulness scores
 - `get_review_draft` — fetch the markdown draft of a completed review
 - `get_citation_audit` — fetch the per-claim cite_check verdict report
+- `list_discovered_papers` *(v2)* — every paper the discoverer surfaced for an outbound review, with fetch + screening status
+- `get_search_queries` *(v2)* — the natural-language search queries the discoverer LLM generated, plus per-provider error log
 
 See [`docs/mcp/tools.md`](docs/mcp/tools.md) for the full tool reference and [`docs/mcp/security.md`](docs/mcp/security.md) for the auth + audit model.
 

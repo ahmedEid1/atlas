@@ -125,6 +125,27 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M5 — MCP introspection for V2
+
+**Goal:** Bring V2 capability into the MCP surface so external clients
+(claude.ai, Cursor, Claude Desktop) can inspect outbound runs the same
+way they inspect V1 reviews.
+
+**What shipped:**
+
+- `list_discovered_papers(reviewId)` — every paper the discoverer
+  surfaced for an outbound run, plus per-paper fetch status + screener
+  verdict + initial relevance score. Returns empty + searchScope hint
+  for uploaded_only runs.
+- `get_search_queries(reviewId)` — LLM-generated search queries
+  (sourced from the APPROVE_DISCOVERY checkpoint's proposal),
+  provider set, and per-provider error log from RunStep.
+- Updated `tests/lib/mcp/tools-annotations.test.ts` + `mcp-route.test.ts`
+  to assert the 5-tool surface.
+- `docs/mcp/tools.md` + README MCP tool list updated.
+
+**Key files:** `lib/mcp/tools/list-discovered-papers.ts`, `lib/mcp/tools/get-search-queries.ts`, `lib/mcp/tools/index.ts`, `tests/lib/mcp/tools/{list-discovered-papers,get-search-queries}.test.ts`, `docs/mcp/tools.md`
+
 ## V2-M4 — Docs sync + ceremony
 
 **Goal:** Make the V2 capability legible to anyone landing in the README
@@ -156,8 +177,6 @@ Open V2-spec items that didn't ship in v2.0:
   a follow-up commit.
 - **Real v2-mode goldens** + `EVAL_MODE=outbound` CI path. The metrics
   + schema field are wired; the YAMLs themselves need maintainer input.
-- **MCP tools for V2 introspection** — `list_discovered_papers` and
-  `get_search_queries` were proposed at v2.1+. Not in v2.0.
 - **Query-editing in the discovery_gate UI.** The first cut shows
   queries read-only and lets the user reject + re-plan if they're wrong.
   Edit-in-place is a v2.x UX upgrade.

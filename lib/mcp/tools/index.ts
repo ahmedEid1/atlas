@@ -8,6 +8,12 @@ import {
 import {
   getCitationAuditTool, getCitationAuditInput, getCitationAuditOutput,
 } from "@/lib/mcp/tools/get-citation-audit";
+import {
+  listDiscoveredPapersTool, listDiscoveredPapersInput, listDiscoveredPapersOutput,
+} from "@/lib/mcp/tools/list-discovered-papers";
+import {
+  getSearchQueriesTool, getSearchQueriesInput, getSearchQueriesOutput,
+} from "@/lib/mcp/tools/get-search-queries";
 import type { McpUserCtx } from "@/lib/mcp/auth";
 
 /**
@@ -76,6 +82,22 @@ export const MCP_TOOLS: RegisteredTool[] = [
     annotations: READ_ONLY_ANNOTATIONS,
     handler: getCitationAuditTool,
   },
+  {
+    name: "list_discovered_papers",
+    title: "List discovered papers (v2 outbound search)",
+    description: "Read-only. For outbound/hybrid v2 reviews, returns every paper the discoverer surfaced (across OpenAlex / arXiv / Exa), each with its initial relevance score, whether the fetcher acquired the PDF, and the screener's include/exclude verdict. Empty list for uploaded_only reviews. 404 for unowned reviews.",
+    inputSchema: listDiscoveredPapersInput.shape,
+    annotations: READ_ONLY_ANNOTATIONS,
+    handler: listDiscoveredPapersTool,
+  },
+  {
+    name: "get_search_queries",
+    title: "Get the search queries Thoth ran (v2 outbound search)",
+    description: "Read-only. For outbound/hybrid v2 reviews, returns the natural-language search queries the discoverer LLM generated from the research question, the provider set the run targeted, and any per-provider error messages. Empty queries for uploaded_only reviews. 404 for unowned reviews.",
+    inputSchema: getSearchQueriesInput.shape,
+    annotations: READ_ONLY_ANNOTATIONS,
+    handler: getSearchQueriesTool,
+  },
 ];
 
 // Re-export for downstream type imports
@@ -83,4 +105,6 @@ export {
   listReviewsInput, listReviewsOutput,
   getReviewDraftInput, getReviewDraftOutput,
   getCitationAuditInput, getCitationAuditOutput,
+  listDiscoveredPapersInput, listDiscoveredPapersOutput,
+  getSearchQueriesInput, getSearchQueriesOutput,
 };

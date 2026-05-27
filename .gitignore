@@ -15,6 +15,7 @@ python/sample.pdf
 AGENTS.md
 CLAUDE.md
 tsconfig.tsbuildinfo
+.claude/
 
 /app/generated/
 

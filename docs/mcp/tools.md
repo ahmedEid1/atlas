@@ -1,6 +1,6 @@
 # Thoth MCP — Tools Reference
 
-Thoth's MCP server exposes 3 read-only tools over your Thoth reviews.
+Thoth's MCP server exposes 5 read-only tools over your Thoth reviews.
 
 Install URL: `https://thoth-slr.vercel.app/api/mcp/mcp`
 Registry entry: [`io.github.ahmedEid1/thoth`](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) on the official MCP Registry.
@@ -110,3 +110,96 @@ available) a quoted excerpt from the supporting paper.
 
 **Errors:** `not_found` (404) when the review doesn't exist or isn't
 owned by you. Empty `claims` array when cite_check hasn't run yet.
+
+---
+
+## `list_discovered_papers` *(v2 outbound search)*
+
+**Side-effects:** read-only · $0 · no LLM at call time
+
+For outbound/hybrid v2 reviews, returns every paper the discoverer
+surfaced across OpenAlex / arXiv / Exa — each with its initial
+relevance score, whether the fetcher acquired the PDF, and the
+screener's include/exclude verdict + reason.
+
+Returns an empty `papers` list with `searchScope: "uploaded_only"`
+when called on a v1 (uploaded-only) review.
+
+**Input:**
+```json
+{ "reviewId": "string" }
+```
+
+**Output:**
+```json
+{
+  "reviewId": "string",
+  "searchScope": "uploaded_only | outbound | hybrid",
+  "totalDiscovered": "integer",
+  "totalScreenedIn": "integer",
+  "totalScreenedOut": "integer",
+  "papers": [
+    {
+      "discoveredPaperId": "string",
+      "provider": "openalex | arxiv | exa",
+      "externalId": "string (DOI / arXiv id / OpenAlex W-id)",
+      "title": "string",
+      "authors": "string[]",
+      "publicationYear": "integer | null",
+      "venue": "string | null",
+      "citationCount": "integer | null",
+      "oaUrl": "string | null (open-access PDF URL when known)",
+      "accessStatus": "open | paywalled | unknown",
+      "initialScore": "number 0..1 (discoverer's relevance heuristic)",
+      "fetched": "boolean (true once the fetcher OCR'd the PDF)",
+      "screening": {
+        "include": "boolean",
+        "relevanceScore": "number 0..1",
+        "reason": "string (screener's reasoning)"
+      } // or null if the screener hasn't run on this paper yet
+    }
+  ]
+}
+```
+
+**Errors:** `not_found` (404) when the review doesn't exist or isn't
+owned by you.
+
+---
+
+## `get_search_queries` *(v2 outbound search)*
+
+**Side-effects:** read-only · $0 · no LLM at call time
+
+For outbound/hybrid v2 reviews, returns the natural-language search
+queries the discoverer LLM generated from the research question, the
+provider set the run targeted, and any per-provider error messages
+(e.g. "exa: missing API key" when Exa was selected without
+`EXA_API_KEY`).
+
+Returns empty `queries` with `searchScope: "uploaded_only"` when
+called on a v1 review.
+
+**Input:**
+```json
+{ "reviewId": "string" }
+```
+
+**Output:**
+```json
+{
+  "reviewId": "string",
+  "searchScope": "uploaded_only | outbound | hybrid",
+  "searchProviders": "string[] (provider names enabled for the run)",
+  "queries": "string[] (LLM-generated search queries)",
+  "providerErrors": [
+    {
+      "nodeName": "discoverer",
+      "failureReason": "string (e.g. 'partial: exa: missing API key')"
+    }
+  ]
+}
+```
+
+**Errors:** `not_found` (404) when the review doesn't exist or isn't
+owned by you.

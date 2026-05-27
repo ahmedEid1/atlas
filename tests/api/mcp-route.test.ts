@@ -47,7 +47,7 @@ describe("POST /api/mcp/[transport]", () => {
     expect(res.headers.get("www-authenticate")).toContain("resource_metadata");
   });
 
-  it("returns the 3 registered tools on tools/list with a valid JWT", async () => {
+  it("returns the v1 + v2 registered tools on tools/list with a valid JWT", async () => {
     vi.mocked(verifyClerkToken).mockResolvedValue({
       token: "good-jwt",
       clientId: "client_test",
@@ -68,7 +68,13 @@ describe("POST /api/mcp/[transport]", () => {
     expect(dataLine, `expected an SSE data: line in response, got:\n${raw}`).toBeDefined();
     const body = JSON.parse(dataLine!.slice(5).trim());
     expect(body.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(
-      ["get_citation_audit", "get_review_draft", "list_reviews"],
+      [
+        "get_citation_audit",
+        "get_review_draft",
+        "get_search_queries",
+        "list_discovered_papers",
+        "list_reviews",
+      ],
     );
   });
 });

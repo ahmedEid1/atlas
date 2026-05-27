@@ -10,12 +10,14 @@ import { MCP_TOOLS } from "@/lib/mcp/tools";
  * annotations — or shipping a write tool with the wrong hints — fails CI.
  */
 describe("MCP_TOOLS annotations", () => {
-  it("registers at least the three current read-only tools", () => {
-    expect(MCP_TOOLS.length).toBeGreaterThanOrEqual(3);
+  it("registers the v1 + v2 read-only tools", () => {
+    expect(MCP_TOOLS.length).toBeGreaterThanOrEqual(5);
     const names = MCP_TOOLS.map((t) => t.name).sort();
     expect(names).toEqual(expect.arrayContaining([
       "get_citation_audit",
       "get_review_draft",
+      "get_search_queries",
+      "list_discovered_papers",
       "list_reviews",
     ]));
   });
