@@ -71,6 +71,59 @@ describe("GET /api/runs/[id]", () => {
     expect(byId.get("cp_pending")).toBe(false);
   });
 
+  // V2 (post-M32): outbound + hybrid runs accumulate DiscoveredPaper rows
+  // with their ScreeningDecision join. The route now includes them in the
+  // response so the run-detail server component + external clients (MCP
+  // tools, live e2e) can inspect the V2 surface in one round-trip.
+  it("includes discoveredPapers (with screening) for outbound runs", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.run.findUnique).mockResolvedValue({
+      id: "r1",
+      status: "AWAITING_PAPERS_APPROVAL",
+      project: { ownerId: "u1" },
+      steps: [],
+      checkpoints: [],
+      includedPapers: [],
+      discoveredPapers: [
+        {
+          id: "dp1",
+          provider: "arxiv",
+          externalId: "arxiv:2310.06770",
+          title: "Paper one",
+          initialScore: 0.9,
+          corpusItemId: "ci1",
+          screening: { include: true, relevanceScore: 0.85, reason: "matches scope" },
+        },
+        {
+          id: "dp2",
+          provider: "uploaded",
+          externalId: "uploaded:ci_a",
+          title: "User upload",
+          initialScore: 1.0,
+          corpusItemId: "ci_a",
+          screening: null,
+        },
+      ],
+    } as never);
+
+    const { GET } = await import("@/app/api/runs/[id]/route");
+    const res = await GET(new NextRequest("http://localhost/api/runs/r1"), {
+      params: Promise.resolve({ id: "r1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      discoveredPapers: Array<{ provider: string; externalId: string; screening: unknown }>;
+    };
+    expect(body.discoveredPapers).toHaveLength(2);
+    // Provider widening: M13's "uploaded" synthetic appears alongside real
+    // provider hits.
+    expect(body.discoveredPapers.map((d) => d.provider).sort()).toEqual(["arxiv", "uploaded"]);
+    // Screening is included when present; null when the screener hasn't
+    // voted on a paper yet.
+    expect(body.discoveredPapers[0]!.screening).toBeTruthy();
+    expect(body.discoveredPapers[1]!.screening).toBeNull();
+  });
+
   it("returns 404 for non-owner", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
     vi.mocked(db.run.findUnique).mockResolvedValue({
