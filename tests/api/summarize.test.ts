@@ -68,4 +68,22 @@ describe("POST /api/corpus/[id]/summarize", () => {
     expect(res.status).toBe(409);
     expect(enqueueSummarizePaper).not.toHaveBeenCalled();
   });
+
+  it("returns 502 with a stable error code when Trigger.dev enqueue throws", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.corpusItem.findUnique).mockResolvedValue({
+      id: "c1",
+      status: "PARSED",
+      project: { ownerId: "u1" },
+    } as never);
+    vi.mocked(enqueueSummarizePaper).mockRejectedValue(new Error("trigger dev down"));
+
+    const { POST } = await import("@/app/api/corpus/[id]/summarize/route");
+    const res = await POST(mkReq("c1"), { params: Promise.resolve({ id: "c1" }) });
+
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: string; message: string };
+    expect(body.error).toBe("summarize_enqueue_failed");
+    expect(body.message).toMatch(/try again/i);
+  });
 });

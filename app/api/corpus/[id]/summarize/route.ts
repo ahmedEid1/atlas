@@ -25,6 +25,24 @@ export async function POST(
     );
   }
 
-  const run = await enqueueSummarizePaper(id);
-  return NextResponse.json({ runId: run.id }, { status: 202 });
+  // Mirror the catch-and-translate pattern from /api/projects/[id]/runs:
+  // a Trigger.dev outage shouldn't propagate as a generic 500 — the client
+  // can't distinguish that from any other server fault. 502 with a stable
+  // error code lets the corpus-item-list surface a useful message.
+  let handle: { id: string };
+  try {
+    handle = await enqueueSummarizePaper(id);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[corpus/summarize] enqueueSummarizePaper failed for ${id}:`, err);
+    return NextResponse.json(
+      {
+        error: "summarize_enqueue_failed",
+        message: "Could not start the summary task. Try again in a moment.",
+        detail: msg.slice(0, 200),
+      },
+      { status: 502 },
+    );
+  }
+  return NextResponse.json({ runId: handle.id }, { status: 202 });
 }
