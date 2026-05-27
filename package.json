@@ -16,6 +16,7 @@
     "dev:trigger": "trigger dev",
     "trigger:deploy": "trigger deploy",
     "test:e2e": "playwright test",
+    "test:e2e:live": "PLAYWRIGHT_BASE_URL=https://thoth-slr.vercel.app playwright test tests/e2e/mcp-smoke.spec.ts --project=chromium",
     "eval": "tsx scripts/run-evals.ts",
     "eval:check": "tsx scripts/check-eval-regression.ts",
     "seed:showcase": "tsx scripts/seed-showcase-review.ts",
