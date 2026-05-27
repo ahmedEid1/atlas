@@ -125,7 +125,12 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--thoth-rule)] border border-[var(--thoth-rule)] rounded-lg overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-[var(--thoth-rule)] border border-[var(--thoth-rule)] rounded-lg overflow-hidden">
+          <Differentiator
+            num="00"
+            title="Outbound web search (v2)"
+            body="Switch a project to outbound or hybrid and Thoth's discoverer → fetcher → screener nodes find papers themselves across OpenAlex, arXiv, and Exa — no uploads needed."
+          />
           <Differentiator
             num="01"
             title="cite_check post-pass"
@@ -172,7 +177,7 @@ export default function Home() {
             // Keep this count in sync with the README's badge and the
             // "Verified engineering proofs" table — search for the
             // string literal on bumps so this surface doesn't drift.
-            label="410 tests · tsc · lint · all green"
+            label="466 tests + 16 live e2e · tsc · lint · all green"
           />
           <Proof label="SHA-256 audit log on every MCP call · no raw input stored" />
           <Proof label="$0 / month deploy on free tiers" />
@@ -196,7 +201,7 @@ export default function Home() {
           >
             plans
           </a>
-          {" → TDD subagents → reviewed → shipped. v1.0.1 live; engineering complete."}
+          {" → TDD subagents → reviewed → shipped. v2.0 live (outbound search across OpenAlex + arXiv + Exa)."}
         </p>
       </section>
     </main>
