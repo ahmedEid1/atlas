@@ -50,14 +50,19 @@ test.describe("upload flow", () => {
     await expect(statusBadge).toBeVisible({ timeout: 15_000 });
   });
 
-  // Skipped until M3 deployment infra (Linux + GPU) where marker-pdf doesn't hang.
-  // On Windows CPU-only the text-recognition stage of marker stalls indefinitely.
-  // The unit test in `tests/trigger/parse-pdf.test.ts` already proves the PARSING → PARSED
-  // transition contract via mocked python.runScript.
+  // Skipped: requires a real Mistral OCR round-trip on every CI run — slow,
+  // free-tier-rate-limited, and flaky enough to be net-negative as a smoke
+  // signal. The PARSING → PARSED contract is already covered by the unit
+  // test in `tests/trigger/parse-pdf.test.ts` with the Mistral SDK mocked.
+  // (Earlier comment here referenced `marker-pdf` + "M3 deployment" — both
+  // outdated; the parser is HTTP Mistral OCR since v0.1.0 / M1.)
   test.skip("uploaded PDF reaches PARSED status with non-empty markdown", async ({ page }) => {
     await page.goto("/dashboard");
     await expect(page.getByText(/^parsed$/i)).toBeVisible({ timeout: 120_000 });
     await page.getByRole("button", { name: /^view$/i }).click();
+    // DraftView now renders via react-markdown rather than <pre>; this
+    // assertion would also need to be retargeted at the rendered markdown
+    // block (e.g. a heading from the draft) if/when this test is enabled.
     const codeBlock = page.locator("pre").first();
     await expect(codeBlock).not.toBeEmpty();
   });
