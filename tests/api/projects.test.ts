@@ -55,6 +55,88 @@ describe("POST /api/projects", () => {
     const res = await POST(req);
     expect(res.status).toBe(400);
   });
+
+  // V2 outbound configuration tests.
+  it("accepts searchScope=outbound with explicit providers + year range + max-hits", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.create).mockResolvedValue({ id: "p2" } as never);
+
+    const { POST } = await import("@/app/api/projects/route");
+    const res = await POST(new NextRequest("http://localhost/api/projects", {
+      method: "POST",
+      body: JSON.stringify({
+        title: "GAT review",
+        question: "Q",
+        searchScope: "outbound",
+        searchProviders: ["openalex", "arxiv"],
+        searchYearStart: 2018,
+        searchYearEnd: 2025,
+        searchMaxHits: 30,
+      }),
+    }));
+
+    expect(res.status).toBe(201);
+    expect(db.project.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        searchScope: "outbound",
+        searchProviders: ["openalex", "arxiv"],
+        searchYearStart: 2018,
+        searchYearEnd: 2025,
+        searchMaxHits: 30,
+        ownerId: "u1",
+      }),
+    });
+  });
+
+  it("auto-defaults outbound-without-providers to ['openalex','arxiv']", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.create).mockResolvedValue({ id: "p3" } as never);
+
+    const { POST } = await import("@/app/api/projects/route");
+    await POST(new NextRequest("http://localhost/api/projects", {
+      method: "POST",
+      body: JSON.stringify({ title: "T", question: "Q", searchScope: "outbound" }),
+    }));
+
+    expect(db.project.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        searchScope: "outbound",
+        searchProviders: ["openalex", "arxiv"],
+      }),
+    });
+  });
+
+  it("rejects searchYearStart > searchYearEnd", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+
+    const { POST } = await import("@/app/api/projects/route");
+    const res = await POST(new NextRequest("http://localhost/api/projects", {
+      method: "POST",
+      body: JSON.stringify({
+        title: "T", question: "Q",
+        searchYearStart: 2025, searchYearEnd: 2020,
+      }),
+    }));
+
+    expect(res.status).toBe(400);
+    expect(db.project.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects searchMaxHits above the 100 hard ceiling", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+
+    const { POST } = await import("@/app/api/projects/route");
+    const res = await POST(new NextRequest("http://localhost/api/projects", {
+      method: "POST",
+      body: JSON.stringify({
+        title: "T", question: "Q",
+        searchScope: "outbound", searchMaxHits: 250,
+      }),
+    }));
+
+    expect(res.status).toBe(400);
+    expect(db.project.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/projects/[id]", () => {

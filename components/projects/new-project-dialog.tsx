@@ -19,6 +19,9 @@ export function NewProjectDialog() {
   const [question, setQuestion] = useState("");
   const [scope, setScope] = useState<SearchScope>("uploaded_only");
   const [providers, setProviders] = useState<Set<Provider>>(new Set(["openalex", "arxiv"]));
+  const [yearStart, setYearStart] = useState<string>("");
+  const [yearEnd, setYearEnd] = useState<string>("");
+  const [maxHits, setMaxHits] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -43,6 +46,16 @@ export function NewProjectDialog() {
         };
         if (scope !== "uploaded_only") {
           body.searchProviders = [...providers];
+          // Year-range + maxHits are optional. Empty string = "let the
+          // server default it" (don't send the field). NaN guard catches
+          // garbage input — the server-side Zod schema would reject it
+          // anyway but we avoid the round-trip.
+          const ys = Number.parseInt(yearStart, 10);
+          if (Number.isFinite(ys)) body.searchYearStart = ys;
+          const ye = Number.parseInt(yearEnd, 10);
+          if (Number.isFinite(ye)) body.searchYearEnd = ye;
+          const mh = Number.parseInt(maxHits, 10);
+          if (Number.isFinite(mh)) body.searchMaxHits = mh;
         }
         const res = await fetch("/api/projects", {
           method: "POST",
@@ -158,6 +171,47 @@ export function NewProjectDialog() {
                   </label>
                 ))}
               </div>
+            </fieldset>
+          )}
+
+          {scope !== "uploaded_only" && (
+            <fieldset className="space-y-3 border rounded p-3">
+              <legend className="text-xs font-medium px-1">Search tuning (optional)</legend>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="year-start" className="text-xs">From year</Label>
+                  <Input
+                    id="year-start"
+                    inputMode="numeric"
+                    placeholder="e.g. 2018"
+                    value={yearStart}
+                    onChange={(e) => setYearStart(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="year-end" className="text-xs">To year</Label>
+                  <Input
+                    id="year-end"
+                    inputMode="numeric"
+                    placeholder="e.g. 2025"
+                    value={yearEnd}
+                    onChange={(e) => setYearEnd(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="max-hits" className="text-xs">Max hits per run (default 50, ceiling 100)</Label>
+                <Input
+                  id="max-hits"
+                  inputMode="numeric"
+                  placeholder="50"
+                  value={maxHits}
+                  onChange={(e) => setMaxHits(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Year range filters published papers across all providers. Max hits caps how many papers reach the screener; lower = cheaper, higher = broader.
+              </p>
             </fieldset>
           )}
         </div>

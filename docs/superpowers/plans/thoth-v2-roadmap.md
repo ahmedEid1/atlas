@@ -125,6 +125,31 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M8 — Search tuning surface (year range + max-hits in the create dialog)
+
+**Goal:** Expose the search-tuning knobs the API already accepted but
+the UI didn't surface, so power users can pick year range + max-hits
+at project-create time without having to hit the API directly.
+
+**What shipped:**
+
+- `app/api/projects/route.ts` create schema gains optional
+  `searchMaxHits` (Zod: int 1-100). Year range was already on the
+  schema; this commit's tests are the first to assert the
+  `yearStart > yearEnd` refine actually fails closed.
+- `NewProjectDialog` grows a "Search tuning (optional)" fieldset
+  (visible only when scope ≠ uploaded_only) with year-start, year-end,
+  and max-hits number inputs. Empty fields = "use the server default"
+  (the parsed values are skipped if NaN). Caption explains the
+  free-tier cost trade-off.
+- `tests/api/projects.test.ts` gains four new tests: outbound with
+  explicit providers + year range + max-hits, outbound-without-providers
+  auto-defaulting to OpenAlex+arXiv, yearStart>yearEnd → 400,
+  searchMaxHits above the 100 ceiling → 400. (The first two were
+  live code paths from M2c with no test coverage; backfilling now.)
+
+**Key files:** `app/api/projects/route.ts`, `components/projects/new-project-dialog.tsx`, `tests/api/projects.test.ts`
+
 ## V2-M7 — Project-level V2 visibility + outbound start gate
 
 **Goal:** Make a v2-configured project legible from the UI and let

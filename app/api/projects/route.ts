@@ -16,6 +16,10 @@ const createSchema = z.object({
     .optional(),
   searchYearStart: z.number().int().min(1900).max(2100).optional(),
   searchYearEnd: z.number().int().min(1900).max(2100).optional(),
+  // Per-project cap on discoverer hits. Hard ceiling 100 matches the env
+  // knob's ceiling (see lib/env.ts MAX_DISCOVERED_PAPERS_PER_RUN) so a
+  // project can never ask for more than the operator configured.
+  searchMaxHits: z.number().int().min(1).max(100).optional(),
 }).refine(
   (data) =>
     !data.searchYearStart ||

@@ -12,7 +12,7 @@
 [![Public evals](https://img.shields.io/badge/evals-public-C9A961?style=flat-square)](https://thoth-slr.vercel.app/evals)
 [![MCP Registry](https://img.shields.io/badge/MCP-registered-orange?style=flat-square)](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-435%20passing-success?style=flat-square)](#)
+[![Tests](https://img.shields.io/badge/tests-439%20passing-success?style=flat-square)](#)
 [![Status](https://img.shields.io/badge/status-v1.0.1-informational?style=flat-square)](#)
 [![Deploy cost](https://img.shields.io/badge/deploy-%240%2Fmo-brightgreen?style=flat-square)](#)
 
