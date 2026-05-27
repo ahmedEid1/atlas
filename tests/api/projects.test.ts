@@ -11,6 +11,7 @@ vi.mock("@/lib/db", () => ({
       create: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      deleteMany: vi.fn(),
     },
   },
 }));
@@ -170,5 +171,52 @@ describe("GET /api/projects/[id]", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string };
     expect(body.id).toBe("p1");
+  });
+});
+
+describe("DELETE /api/projects/[id]", () => {
+  it("deletes the owned project + cascades + returns 204", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.deleteMany).mockResolvedValue({ count: 1 } as never);
+
+    const { DELETE } = await import("@/app/api/projects/[id]/route");
+    const res = await DELETE(
+      new NextRequest("http://localhost/api/projects/p1", { method: "DELETE" }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(204);
+    // Composite-where filter pushes the owner check to the DB layer.
+    expect(db.project.deleteMany).toHaveBeenCalledWith({
+      where: { id: "p1", ownerId: "u1" },
+    });
+  });
+
+  it("returns 404 when project does not exist or is not owned", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    // deleteMany returns count=0 when the where clause matches nothing —
+    // this covers both "doesn't exist" and "owned by someone else."
+    vi.mocked(db.project.deleteMany).mockResolvedValue({ count: 0 } as never);
+
+    const { DELETE } = await import("@/app/api/projects/[id]/route");
+    const res = await DELETE(
+      new NextRequest("http://localhost/api/projects/p_other", { method: "DELETE" }),
+      { params: Promise.resolve({ id: "p_other" }) },
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    vi.mocked(requireUser).mockRejectedValue(new Error("unauth"));
+
+    const { DELETE } = await import("@/app/api/projects/[id]/route");
+    const res = await DELETE(
+      new NextRequest("http://localhost/api/projects/p1", { method: "DELETE" }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(401);
+    expect(db.project.deleteMany).not.toHaveBeenCalled();
   });
 });

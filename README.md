@@ -38,7 +38,7 @@ Thoth turns a research question into an evidence-grounded literature review. Two
 | **Live app** | [thoth-slr.vercel.app](https://thoth-slr.vercel.app) (Clerk sign-in) |
 | **Public eval dashboard** | [`/evals`](https://thoth-slr.vercel.app/evals) — recall/precision/faithfulness/coverage over a 17-question versioned golden set (14 real-paper SLR questions across LLM/ML/SE + 3 synthetic seeds), refreshed weekly via CI |
 | **Official MCP Registry entry** | [`io.github.ahmedEid1/thoth`](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) — `status: active` |
-| **Tests** | 463 unit/integration + 8 live e2e (3 MCP-transport + 5 real-browser public-surface), all green; tsc + lint clean |
+| **Tests** | 466 unit/integration + 9 live e2e (3 MCP-transport + 5 real-browser public-surface + 1 authenticated walkthrough with auto-cleanup), all green; tsc + lint clean |
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
 | **Deploy cost** | $0 / month (Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers) |
 | **Self-host fallback** | One-VM deploy on Oracle Cloud Always Free (4 ARM cores, 24 GB RAM) — [`docs/self-host/`](docs/self-host/oracle-cloud-quickstart.md) |
@@ -126,7 +126,7 @@ Power users can tick **Skip discovery approval** at project-create time to bypas
 ```bash
 pnpm verify                                                              # typecheck + lint + test — the pre-tag check (RELEASING.md)
 pnpm test                                                                # 410 unit/integration tests on their own
-pnpm test:e2e:live  # 8 e2e against https://thoth-slr.vercel.app: 3 MCP-transport + 5 real-browser public-surface
+pnpm test:e2e:live  # 9 e2e against https://thoth-slr.vercel.app: 3 MCP-transport + 5 real-browser public-surface + 1 authenticated walkthrough (auto-skips without CLERK_SECRET_KEY)
 pnpm tsx scripts/verify-mcp-audit.ts                                     # spot-check the McpCall audit log
 ```
 
