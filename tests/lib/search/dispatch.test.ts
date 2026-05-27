@@ -124,4 +124,30 @@ describe("dispatchSearch", () => {
     expect(r.errors[0]!.provider).toBe("unknown");
     expect(r.errors[0]!.message).toBe("boom");
   });
+
+  // Worst-case for outbound search: every provider rejects. Discoverer should
+  // see empty hits + per-provider error entries and continue (the run will
+  // then have an empty discoveredPapers list and the screener / fetcher gate
+  // on it returning empty). Dispatcher MUST NOT throw — that would be an
+  // uncaught rejection in the discoverer node and crash the run.
+  it("returns empty hits + every provider's error when ALL providers fail", async () => {
+    vi.mocked(openalexSearch).mockRejectedValue(
+      new SearchProviderError("openalex", "network timeout"),
+    );
+    vi.mocked(arxivSearch).mockRejectedValue(
+      new SearchProviderError("arxiv", "503 Service Unavailable"),
+    );
+    vi.mocked(exaSearch).mockRejectedValue(
+      new SearchProviderError("exa", "missing API key"),
+    );
+
+    const r = await dispatchSearch({
+      query: { query: "x" },
+      providers: ["openalex", "arxiv", "exa"],
+    });
+
+    expect(r.hits).toEqual([]);
+    expect(r.errors).toHaveLength(3);
+    expect(r.errors.map((e) => e.provider).sort()).toEqual(["arxiv", "exa", "openalex"]);
+  });
 });
