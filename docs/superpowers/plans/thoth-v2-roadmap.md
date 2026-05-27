@@ -125,6 +125,33 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M15 — Honor papersApproved.corpusItemIds (V1 bug found in V2 audit)
+
+**Goal:** Fifth audit bug, and the oldest one of the five — exists
+since V1's papers_gate landed. The PapersApprovalCard's per-row
+checkbox sent `corpusItemIds` (the still-kept list) to the approve
+endpoint, the approve endpoint persisted it on
+HumanCheckpoint.decisionPayload, the trigger task ran the resume —
+and then **no node ever filtered against it**. Unchecking a paper at
+papers_gate did nothing. The assessor processed every paper, the
+drafter cited every paper, the user's intent vanished. Same shape of
+silent-no-op as keptExternalIds (M11) and skipDiscoveryGate (M14).
+
+**What shipped:**
+
+- `papersApprovalGate` in `lib/agent/graph.ts` now reads the
+  resume decision's `corpusItemIds` (when present + approved) and
+  filters `state.includedPapers` to that set before the assessor
+  runs. The filter applies whether the includedPapers came from
+  V1's retriever or V2's screener; both flow through the same
+  shared gate.
+- One new end-to-end graph test: retriever produces three included
+  papers (c1, c2, c3), the user's resume payload says
+  `corpusItemIds: ["c1", "c3"]`, assessor mock captures the
+  includedPapers it actually sees, assert it sees only c1+c3.
+
+**Key files:** `lib/agent/graph.ts`, `tests/lib/agent/graph.test.ts`
+
 ## V2-M14 — Wire Project.skipDiscoveryGate (was declared, never honored)
 
 **Goal:** Fourth v2 audit bug. `Project.skipDiscoveryGate` has existed

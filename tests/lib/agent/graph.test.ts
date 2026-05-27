@@ -140,6 +140,53 @@ describe("agent graph", () => {
     expect(mocks.citeCheck).toHaveBeenCalledTimes(1);
   });
 
+  it("papers_gate: filters state.includedPapers to corpusItemIds the user kept (was a no-op pre-M15)", async () => {
+    mocks.planner.mockResolvedValue({
+      plan: {
+        picoc: { population: "p", intervention: "i", comparison: "c", outcome: "o", context: "ctx" },
+        subQuestions: [], inclusionCriteria: [], exclusionCriteria: [],
+      },
+    });
+    mocks.retriever.mockResolvedValue({
+      includedPapers: [
+        { corpusItemId: "c1", relevanceScore: 0.9, inclusionReason: "r1" },
+        { corpusItemId: "c2", relevanceScore: 0.8, inclusionReason: "r2" },
+        { corpusItemId: "c3", relevanceScore: 0.7, inclusionReason: "r3" },
+      ],
+    });
+    let assessorSawIncluded: Array<{ corpusItemId: string }> = [];
+    mocks.assessor.mockImplementation((s: { includedPapers: Array<{ corpusItemId: string }> }) => {
+      assessorSawIncluded = s.includedPapers;
+      return Promise.resolve({ claims: [] });
+    });
+    mocks.drafter.mockResolvedValue({ draft: "X" });
+    mocks.critic.mockResolvedValue({
+      critique: {
+        decision: "approve", overallScore: 4,
+        rubric: { faithfulness: 4, completeness: 4, citationQuality: 4, clarity: 4 },
+        actionableFeedback: "ok",
+      },
+      critiqueIterations: 1,
+    });
+    mocks.citeCheck.mockResolvedValue({});
+
+    const { buildGraph } = await import("@/lib/agent/graph");
+    const { Command } = await import("@langchain/langgraph");
+    const graph = await buildGraph();
+    const config = { configurable: { thread_id: "r_kept" } };
+
+    await graph.invoke({ ...initialState, runId: "r_kept" }, config);
+    await graph.invoke(new Command({ resume: { approved: true } }), config); // plan_gate
+    // User checks c1 and c3, drops c2.
+    await graph.invoke(
+      new Command({ resume: { approved: true, corpusItemIds: ["c1", "c3"] } }),
+      config,
+    );
+
+    // CRITICAL: assessor should ONLY see c1 + c3, not the c2 the user dropped.
+    expect(assessorSawIncluded.map((p) => p.corpusItemId).sort()).toEqual(["c1", "c3"]);
+  });
+
   it("V2 outbound: routes plan_gate → discoverer → discovery_gate → fetcher → screener → papers_gate, skipping retriever", async () => {
     mocks.planner.mockResolvedValue({
       plan: {

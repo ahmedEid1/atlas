@@ -63,8 +63,23 @@ function papersApprovalGate(state: AgentState): Partial<AgentState> {
   const decision = interrupt({
     kind: "APPROVE_PAPERS",
     includedPapers: state.includedPapers,
-  });
-  return { papersApproved: decision as AgentState["papersApproved"] };
+  }) as AgentState["papersApproved"];
+
+  // Honor the user's per-row drops from the papers approval card. The
+  // PapersApprovalCard ships a `corpusItemIds` array of every still-checked
+  // paper; the assessor downstream loops over state.includedPapers so
+  // pruning here means a dropped paper never reaches claim extraction
+  // (saving LLM tokens) AND never makes it into the draft. Without this
+  // filter the checkboxes were a no-op — same shape of bug as the v2
+  // discovery_gate's keptExternalIds (fixed in M11).
+  if (decision?.approved && decision.corpusItemIds) {
+    const kept = new Set(decision.corpusItemIds);
+    return {
+      papersApproved: decision,
+      includedPapers: state.includedPapers.filter((p) => kept.has(p.corpusItemId)),
+    };
+  }
+  return { papersApproved: decision };
 }
 
 /**
