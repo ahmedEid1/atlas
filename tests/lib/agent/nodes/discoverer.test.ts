@@ -370,6 +370,68 @@ describe("discovererNode", () => {
     });
   });
 
+  it("hybrid mode: drops outbound hits whose externalId matches an uploaded paper's DOI/arxiv id", async () => {
+    mocks.runLLM.mockResolvedValue({
+      output: { queries: ["q1"], rationale: "x." },
+      traceUrl: "",
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2, cacheReadInputTokens: 0 },
+    });
+    // Outbound returns three hits, two of which match uploaded papers.
+    mocks.dispatchSearch.mockResolvedValue({
+      hits: [
+        {
+          provider: "openalex" as const, externalId: "10.1/duplicated",
+          title: "Already uploaded", authors: [], abstract: null,
+          publicationYear: 2024, venue: null, citationCount: null,
+          oaUrl: "https://x.org/d.pdf", accessStatus: "open" as const, initialScore: 0.95,
+        },
+        {
+          provider: "arxiv" as const, externalId: "arxiv:2401.99999",
+          title: "Already uploaded arxiv version", authors: [], abstract: null,
+          publicationYear: 2024, venue: null, citationCount: null,
+          oaUrl: "https://arxiv.org/pdf/2401.99999", accessStatus: "open" as const, initialScore: 0.9,
+        },
+        {
+          provider: "openalex" as const, externalId: "10.1/genuinely-new",
+          title: "Brand new", authors: [], abstract: null,
+          publicationYear: 2024, venue: null, citationCount: null,
+          oaUrl: "https://x.org/n.pdf", accessStatus: "open" as const, initialScore: 0.85,
+        },
+      ],
+      errors: [],
+    });
+    mocks.findMany.mockResolvedValue([]);
+    // Two PARSED uploads: one with a matching DOI, one with a matching arxiv id.
+    mocks.corpusFindMany.mockResolvedValue([
+      {
+        id: "ci_a", source: "p.pdf", parsedMarkdown: "# A",
+        summary: null,
+        externalDoi: "10.1/duplicated", externalArxivId: null,
+      },
+      {
+        id: "ci_b", source: "q.pdf", parsedMarkdown: "# B",
+        summary: null,
+        externalDoi: null, externalArxivId: "2401.99999",
+      },
+    ]);
+
+    await discovererNode({ ...baseState, searchScope: "hybrid" as const });
+
+    // The first createMany call is for OUTBOUND survivors only. The two
+    // duplicates should have been filtered out before insertion.
+    const outboundCall = mocks.createMany.mock.calls[0]![0];
+    expect(outboundCall.data).toHaveLength(1);
+    expect(outboundCall.data[0]).toMatchObject({ externalId: "10.1/genuinely-new" });
+
+    // The second createMany call is for the uploaded wrappers — both
+    // present, neither dropped.
+    const uploadedCall = mocks.createMany.mock.calls[1]![0];
+    expect(uploadedCall.data).toHaveLength(2);
+    expect(uploadedCall.data.map((d: { externalId: string }) => d.externalId).sort()).toEqual([
+      "uploaded:ci_a", "uploaded:ci_b",
+    ]);
+  });
+
   it("outbound mode: does NOT load uploaded CorpusItems", async () => {
     mocks.runLLM.mockResolvedValue({
       output: { queries: ["q1"], rationale: "x." },
