@@ -14,12 +14,13 @@ const EVAL_EMAIL = "evals@thoth.local";
 
 /**
  * Provisions a fresh user/project/corpus from a golden question. CorpusItems
- * are inserted directly as PARSED (skipping marker-pdf) with the inline
- * markdown + summary the YAML provides. This keeps evals fast and free.
+ * are inserted directly as PARSED (no PDF round-trip — the markdown + summary
+ * come from the YAML) so eval sweeps don't burn Mistral OCR quota on every
+ * run and don't depend on the parse pipeline being healthy.
  *
  * Before creating the new project, deletes any prior project with the same
  * title (cascades to corpus, runs, claims, claim checks). This keeps Neon's
- * 0.5 GB free tier from accumulating eval data across nightly runs — only
+ * 0.5 GB free tier from accumulating eval data across weekly sweeps — only
  * ONE project per golden question lives at a time. Trend history is preserved
  * in the EvalRun table (untouched by the cascade).
  */

@@ -336,7 +336,7 @@ Results are written to the `EvalRun` table (`goldenId, metric, score, runId?, co
 
 ### Regression script
 
-`pnpm eval:check` (`scripts/check-eval-regression.ts`) compares the current run's metrics to the last `master` run and exits non-zero if any metric drops more than the configured threshold. It is intended to be wired into CI; today it runs manually (the `.github/workflows/evals.yml` slot is reserved but unwired pending the M6 30-question dataset — running it nightly on 3 synthetic goldens would burn LLM budget without much signal).
+`pnpm eval:check` (`scripts/check-eval-regression.ts`) compares each metric in the current sweep to the **high-water-mark** for that `(goldenId, metric)` across history — not the most-recent prior baseline, which proved too noisy under Mistral free-tier sampling variance. The script logs over-threshold drops with the `✗` marker but is **advisory** — exits 0 in all cases. Empirical sweeps on identical agent code showed ±25-40% per-metric variance on small-N goldens (4-5 expected papers), wider than any usable hard-gate threshold. Three paths would restore a hard gate (move off free tier, multi-trial median, larger expected-paper lists); none are taken today. Wired into the weekly `.github/workflows/evals.yml` cron + `workflow_dispatch` trigger.
 
 ### Current state
 
