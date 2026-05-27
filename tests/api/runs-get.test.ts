@@ -21,7 +21,7 @@ describe("GET /api/runs/[id]", () => {
       status: "AWAITING_PLAN_APPROVAL",
       project: { ownerId: "u1" },
       steps: [{ id: "s1", nodeName: "planner" }],
-      checkpoints: [{ id: "cp1", kind: "APPROVE_PLAN", status: "PENDING" }],
+      checkpoints: [{ id: "cp1", kind: "APPROVE_PLAN", status: "PENDING", terminalError: null, lastDeliveryAttemptAt: null }],
     } as never);
 
     const { GET } = await import("@/app/api/runs/[id]/route");
@@ -29,10 +29,17 @@ describe("GET /api/runs/[id]", () => {
       params: Promise.resolve({ id: "r1" }),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; steps: unknown[]; checkpoints: unknown[] };
+    const body = (await res.json()) as {
+      id: string;
+      steps: unknown[];
+      checkpoints: Array<Record<string, unknown>>;
+    };
     expect(body.id).toBe("r1");
     expect(body.steps).toHaveLength(1);
     expect(body.checkpoints).toHaveLength(1);
+    // waitToken is a server-side secret — confirm it never crosses the JSON
+    // boundary even when the route returns the run to its owner.
+    expect("waitToken" in body.checkpoints[0]!).toBe(false);
   });
 
   it("returns 404 for non-owner", async () => {
