@@ -99,8 +99,13 @@ function ItemCard({ item }: { item: Item }) {
     startTransition(async () => {
       const res = await fetch(`/api/corpus/${item.id}/summarize`, { method: "POST" });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        setSummariseError(body.error ?? `Failed (${res.status})`);
+        // The route returns one of two shapes (see /api/corpus/[id]/summarize/route.ts):
+        //   - 409: { error: "Corpus item is parsing, not yet PARSED" }  (error IS the message)
+        //   - 502: { error: "summarize_enqueue_failed", message: "Could not start…" }
+        // Prefer `message` when present (the human-readable copy) so the user
+        // doesn't see the raw error code on a Trigger.dev outage.
+        const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+        setSummariseError(body.message ?? body.error ?? `Failed (${res.status})`);
         return;
       }
       // Wait briefly then refresh so the new summary is read from the server
