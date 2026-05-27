@@ -22,7 +22,10 @@
 
 **Live app:** https://thoth-slr.vercel.app · **Public evals:** https://thoth-slr.vercel.app/evals · **MCP endpoint:** `https://thoth-slr.vercel.app/api/mcp/mcp`
 
-Thoth turns a research question and a corpus of PDFs into an evidence-grounded literature review. A multi-step LangGraph agent (planner → retriever → assessor → drafter → critic) reads the papers, drafts the review, and runs a `cite_check` post-pass that verifies every cited claim against the source paper — flagging hallucinated citations before the user reads the draft.
+Thoth turns a research question into an evidence-grounded literature review. Two modes:
+
+- **Uploaded-only (v1).** You upload PDFs; a LangGraph agent (planner → retriever → assessor → drafter → critic → cite_check) reads them, drafts the review, and verifies every cited claim against its source.
+- **Outbound search (v2, new).** Point Thoth at a question. The agent discovers candidate papers across OpenAlex / arXiv / Exa, downloads the open-access PDFs, screens each against the plan's inclusion criteria, then runs the V1 pipeline on the survivors. The `cite_check` post-pass flags hallucinated citations either way.
 
 ![Thoth MCP demo — Claude.ai catching 6 fabricated citations via cite_check](docs/assets/m5-mcp-demo.gif)
 
@@ -39,10 +42,11 @@ Thoth turns a research question and a corpus of PDFs into an evidence-grounded l
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
 | **Deploy cost** | $0 / month (Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers) |
 | **Self-host fallback** | One-VM deploy on Oracle Cloud Always Free (4 ARM cores, 24 GB RAM) — [`docs/self-host/`](docs/self-host/oracle-cloud-quickstart.md) |
-| **Status** | `v1.0.1` — engineering complete; eval CI runs weekly with an advisory regression check (high-water-mark per (goldenId, metric); see [`scripts/check-eval-regression.ts`](scripts/check-eval-regression.ts) for the rationale) |
+| **Status** | `v2.0` outbound search shipped on top of `v1.0.1`; eval CI runs weekly with an advisory regression check (high-water-mark per (goldenId, metric); see [`scripts/check-eval-regression.ts`](scripts/check-eval-regression.ts) for the rationale) |
 
 ## What makes Thoth different
 
+0. **Outbound web search (v2).** Switch a project to `outbound` or `hybrid` and Thoth's `discoverer → fetcher → screener` nodes find papers themselves across OpenAlex, arXiv, and Exa, acquire the open-access PDFs, OCR them, and apply your plan's inclusion criteria before the V1 pipeline ever sees them. Spec: [`docs/superpowers/specs/thoth-v2-design.md`](docs/superpowers/specs/thoth-v2-design.md).
 1. **`cite_check` post-pass.** Every `[paper_id]` citation in the generated draft is verified against the cited paper before the user reads the draft. The MCP demo above shows Claude.ai using this audit to identify 6 hallucinated statistics in a real SLR draft on the ReAct paper.
 2. **Authenticated, registered MCP server.** Most public MCP servers ship with no auth. Thoth uses OAuth 2.1 + PKCE + Dynamic Client Registration via Clerk (resource-server pattern, RFC 8707), with SHA-256 audit logs and DB-backed sliding-window rate limits. Listed in the official MCP Registry; works in claude.ai, Claude Desktop (via `mcp-remote`), Cursor, and MCP Inspector.
 3. **Public eval dashboard tied to main.** Every commit can run the agent against a versioned golden set; results render at `/evals`. Designed so an eval regression is a public signal, not a hidden one.

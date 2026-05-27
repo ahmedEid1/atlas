@@ -7,7 +7,7 @@
     "url": "https://github.com/ahmedEid1/thoth",
     "source": "github"
   },
-  "version": "1.0.1",
+  "version": "2.0.0",
   "remotes": [
     {
       "type": "streamable-http",

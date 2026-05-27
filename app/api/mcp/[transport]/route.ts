@@ -43,7 +43,7 @@ const baseHandler = createMcpHandler(
     // to the SDK's actual schema without re-typing the whole config.
     serverInfo: {
       name: "thoth",
-      version: "1.0.1",
+      version: "2.0.0",
       title: "Thoth — Agentic SLR",
       description:
         "Authenticated MCP server for systematic literature reviews with verified citations. Surfaces your Thoth reviews + per-claim cite_check audits.",

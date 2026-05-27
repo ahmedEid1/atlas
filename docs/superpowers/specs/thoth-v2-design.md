@@ -1,6 +1,6 @@
-# Thoth v2 — Design (DRAFT)
+# Thoth v2 — Design
 
-**Status:** Proposal, not yet approved. V1 design is at [`thoth-design.md`](./thoth-design.md).
+**Status:** Shipped — milestone log lives in the roadmap doc. V1 design is at [`thoth-design.md`](./thoth-design.md).
 **Owner:** Ahmed Hobeishy
 
 ---
