@@ -19,6 +19,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   });
   if (!project || project.ownerId !== user.id) notFound();
 
+  const scope = project.searchScope as "uploaded_only" | "outbound" | "hybrid";
+  const isOutbound = scope === "outbound" || scope === "hybrid";
+  const parsedCount = project.corpus.filter((c) => c.status === "PARSED").length;
+  // Outbound projects don't need a pre-uploaded corpus — the discoverer builds
+  // it. Hybrid + uploaded_only still need ≥1 PARSED item before the agent has
+  // something to assess.
+  const canStartReview = scope === "outbound" || parsedCount > 0;
+  const SCOPE_LABEL: Record<typeof scope, string> = {
+    uploaded_only: "Uploaded PDFs only",
+    outbound: "Outbound search",
+    hybrid: "Hybrid (uploaded + outbound)",
+  };
+
   return (
     <main id="main" className="max-w-5xl mx-auto px-6 py-10 space-y-8">
       <header>
@@ -26,25 +39,69 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <p className="text-muted-foreground mt-1">{project.question}</p>
       </header>
 
+      {isOutbound && (
+        <section
+          className="rounded-md border bg-[var(--thoth-blue-mist)]/30 px-4 py-3 text-sm"
+          aria-labelledby="discovery-config-heading"
+        >
+          <h2 id="discovery-config-heading" className="font-medium text-[var(--thoth-blue-ink)]">
+            Discovery configuration
+          </h2>
+          <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
+            <div>
+              <dt className="text-muted-foreground">Scope</dt>
+              <dd className="font-medium">{SCOPE_LABEL[scope]}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Providers</dt>
+              <dd className="font-mono">
+                {project.searchProviders.length > 0
+                  ? project.searchProviders.join(", ")
+                  : <span className="italic text-muted-foreground">none configured</span>}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Max hits per run</dt>
+              <dd>{project.searchMaxHits}</dd>
+            </div>
+            {(project.searchYearStart || project.searchYearEnd) && (
+              <div className="col-span-2 sm:col-span-3">
+                <dt className="text-muted-foreground">Year range</dt>
+                <dd>
+                  {project.searchYearStart ?? "—"}{" – "}{project.searchYearEnd ?? "—"}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
+
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Corpus</h2>
           <UploadButton projectId={project.id} />
         </div>
-        <CorpusItemList items={project.corpus as unknown as Parameters<typeof CorpusItemList>[0]["items"]} />
+        {scope === "outbound" && project.corpus.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Outbound projects don&apos;t need uploaded PDFs — the discoverer will build the
+            corpus from your configured providers. You can still upload PDFs to seed the run;
+            they&apos;ll be parsed and counted alongside the discovered ones.
+          </p>
+        ) : (
+          <CorpusItemList items={project.corpus as unknown as Parameters<typeof CorpusItemList>[0]["items"]} />
+        )}
       </section>
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Reviews</h2>
-          <StartReviewButton
-            projectId={project.id}
-            disabled={project.corpus.filter((c) => c.status === "PARSED").length === 0}
-          />
+          <StartReviewButton projectId={project.id} disabled={!canStartReview} />
         </div>
         {project.runs.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            No reviews yet. Start one once at least one paper is parsed.
+            {scope === "outbound"
+              ? "No reviews yet. Start one — the agent will discover candidate papers, screen them, then draft the review."
+              : "No reviews yet. Start one once at least one paper is parsed."}
           </p>
         ) : (
           <ul className="space-y-2">

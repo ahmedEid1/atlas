@@ -125,6 +125,35 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M7 — Project-level V2 visibility + outbound start gate
+
+**Goal:** Make a v2-configured project legible from the UI and let
+outbound projects start a review without a pre-uploaded corpus.
+
+**What shipped:**
+
+- Project detail page (`app/projects/[id]/page.tsx`) gains a
+  "Discovery configuration" panel for outbound + hybrid projects:
+  scope label, provider list, max-hits cap, optional year range.
+  Uploaded_only projects render identically to V1 (the panel is
+  hidden) so V1 users see no change.
+- `canStartReview` branches on `project.searchScope`. Outbound
+  projects no longer need a parsed corpus item before the
+  start-review button is clickable — the discoverer builds the
+  corpus itself. Hybrid still requires uploads (matches the existing
+  runs-start API guard).
+- "No reviews yet" hint copy is scope-aware: outbound projects get
+  "Start one — the agent will discover candidate papers, screen
+  them…" instead of V1's "once at least one paper is parsed".
+- Project list (`components/projects/project-list.tsx`) renders a
+  small `v2` (outbound) / `hybrid` badge next to the title so users
+  can spot mode at a glance on the dashboard.
+- runs-start route gains three new tests covering outbound (corpus
+  check skipped), outbound-without-providers (409), and hybrid with
+  empty corpus (409 with the hybrid-shaped message).
+
+**Key files:** `app/projects/[id]/page.tsx`, `components/projects/project-list.tsx`, `tests/api/runs-start.test.ts`
+
 ## V2-M6 — Cost-cap safety knobs (per-spec §7)
 
 **Goal:** Implement the cost-cap knobs the v2 design promised so a

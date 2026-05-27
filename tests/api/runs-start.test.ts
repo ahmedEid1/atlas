@@ -249,4 +249,73 @@ describe("POST /api/projects/[id]/runs", () => {
     expect(createRun).toHaveBeenCalledTimes(1);
     expect(enqueueRunReview).toHaveBeenCalledTimes(1);
   });
+
+  // V2 outbound-mode coverage. The runs-start route was extended in M2c so
+  // outbound projects skip the corpus check (the discoverer builds the
+  // corpus) but still require ≥1 search provider. Hybrid keeps the corpus
+  // check + the provider check.
+  it("V2 outbound: starts a run without any PARSED corpus items", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "p1", ownerId: "u1", question: "Q?",
+      searchScope: "outbound", searchProviders: ["openalex", "arxiv"],
+    } as never);
+    installTxMock({ existingActive: null });
+    vi.mocked(createRun).mockResolvedValue({ id: "r1" } as never);
+    vi.mocked(enqueueRunReview).mockResolvedValue({ id: "trg_x" } as never);
+    vi.mocked(setRunStatus).mockResolvedValue(undefined as never);
+
+    const { POST } = await import("@/app/api/projects/[id]/runs/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/projects/p1/runs", { method: "POST" }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(201);
+    // The discoverer builds the corpus — the corpus check should not run.
+    expect(db.corpusItem.count).not.toHaveBeenCalled();
+    expect(createRun).toHaveBeenCalledTimes(1);
+    expect(enqueueRunReview).toHaveBeenCalledWith("r1");
+  });
+
+  it("V2 outbound: rejects 409 when the project has zero search providers", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "p1", ownerId: "u1", question: "Q?",
+      searchScope: "outbound", searchProviders: [],
+    } as never);
+
+    const { POST } = await import("@/app/api/projects/[id]/runs/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/projects/p1/runs", { method: "POST" }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/at least one search provider/);
+    expect(createRun).not.toHaveBeenCalled();
+    expect(enqueueRunReview).not.toHaveBeenCalled();
+  });
+
+  it("V2 hybrid: rejects 409 when corpus is empty (hybrid still needs uploads)", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "p1", ownerId: "u1", question: "Q?",
+      searchScope: "hybrid", searchProviders: ["openalex"],
+    } as never);
+    vi.mocked(db.corpusItem.count).mockResolvedValue(0 as never);
+
+    const { POST } = await import("@/app/api/projects/[id]/runs/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/projects/p1/runs", { method: "POST" }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    // Specifically the hybrid-shaped error message (not the uploaded-only one).
+    expect(body.error).toMatch(/Hybrid mode|switch the project's search scope/);
+    expect(createRun).not.toHaveBeenCalled();
+  });
 });
