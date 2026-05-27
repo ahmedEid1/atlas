@@ -30,6 +30,10 @@ export async function GET(
       steps: { orderBy: { startedAt: "asc" } },
       checkpoints: {
         orderBy: { createdAt: "asc" },
+        // waitToken is selected here so we can DERIVE awaitingDelivery off it
+        // server-side; it's stripped from the response shape below before any
+        // bytes leave the server. Matches the derivation in the run-detail
+        // server page (app/projects/[id]/runs/[runId]/page.tsx:50).
         select: {
           id: true,
           kind: true,
@@ -42,7 +46,7 @@ export async function GET(
           attemptCount: true,
           lastDeliveryAttemptAt: true,
           terminalError: true,
-          // waitToken intentionally omitted — server-side secret.
+          waitToken: true,
         },
       },
       includedPapers: true,
@@ -55,9 +59,12 @@ export async function GET(
   const { checkpoints, ...rest } = run;
   return NextResponse.json({
     ...rest,
-    checkpoints: checkpoints.map((c) => ({
+    checkpoints: checkpoints.map(({ waitToken, ...c }) => ({
       ...c,
-      awaitingDelivery: c.terminalError === null && c.lastDeliveryAttemptAt !== null && c.status !== "PENDING",
+      // Stranded = decision committed in Phase 1 (status != PENDING) but
+      // Phase 2 (waitToken null-out) hasn't succeeded yet. waitToken itself
+      // is stripped from the returned object via destructuring above.
+      awaitingDelivery: c.status !== "PENDING" && waitToken !== null,
     })),
   });
 }
