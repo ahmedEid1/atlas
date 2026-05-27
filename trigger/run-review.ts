@@ -173,13 +173,33 @@ export const runReviewTask = schemaTask({
       const claims = lastState.claims;
       const planApproved = lastState.planApproved;
       const papersApproved = lastState.papersApproved;
+      const discoveryApproved = lastState.discoveryApproved as
+        | { approved: boolean; rejectionReason?: string }
+        | null
+        | undefined;
 
       if (planApproved && !planApproved.approved) {
-        await setRunStatus({ runId, status: "REJECTED" });
+        await setRunStatus({
+          runId, status: "REJECTED",
+          failureReason: planApproved.rejectionReason ?? "Plan rejected at HITL gate",
+        });
+        return { ok: true, status: "REJECTED" as const };
+      }
+      // V2 — outbound discovery rejection. Without this branch, a rejected
+      // discovery_gate fell through to the "no draft → FAILED" path below,
+      // mis-classifying user intent as agent failure.
+      if (discoveryApproved && !discoveryApproved.approved) {
+        await setRunStatus({
+          runId, status: "REJECTED",
+          failureReason: discoveryApproved.rejectionReason ?? "Discovery rejected at HITL gate",
+        });
         return { ok: true, status: "REJECTED" as const };
       }
       if (papersApproved && !papersApproved.approved) {
-        await setRunStatus({ runId, status: "REJECTED" });
+        await setRunStatus({
+          runId, status: "REJECTED",
+          failureReason: papersApproved.rejectionReason ?? "Papers rejected at HITL gate",
+        });
         return { ok: true, status: "REJECTED" as const };
       }
       if (claims && claims.length > 0) await persistClaims({ runId, claims });

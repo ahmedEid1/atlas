@@ -42,10 +42,18 @@ export async function setRunStatus(args: {
     | "FETCHING"
     | "SCREENING";
   triggerRunId?: string;
+  // Optional human-readable reason for REJECTED / FAILED transitions, surfaced
+  // on the run-detail page next to the status pill so users (and operators)
+  // see why a run ended without having to dig through RunStep rows.
+  failureReason?: string;
 }): Promise<void> {
   await db.run.update({
     where: { id: args.runId },
-    data: { status: args.status, ...(args.triggerRunId ? { triggerRunId: args.triggerRunId } : {}) },
+    data: {
+      status: args.status,
+      ...(args.triggerRunId ? { triggerRunId: args.triggerRunId } : {}),
+      ...(args.failureReason !== undefined ? { failureReason: args.failureReason.slice(0, 1000) } : {}),
+    },
   });
 }
 

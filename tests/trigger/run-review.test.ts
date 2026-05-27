@@ -123,7 +123,42 @@ describe("run-review task", () => {
     expect(runs.finishRun).not.toHaveBeenCalled();
     expect(runs.failRun).not.toHaveBeenCalled();
     expect(runs.setRunStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ runId: "r1", status: "REJECTED" }),
+      expect.objectContaining({
+        runId: "r1",
+        status: "REJECTED",
+        failureReason: "Out of scope",
+      }),
     );
+  });
+
+  it("V2 — marks the run REJECTED when the discovery gate is rejected", async () => {
+    mocks.graphInvoke
+      .mockResolvedValueOnce({
+        __interrupt__: [{ value: { kind: "APPROVE_DISCOVERY", queries: ["q"], discoveredPapers: [] } }],
+      })
+      .mockResolvedValueOnce({
+        discoveryApproved: { approved: false, rejectionReason: "Off-topic queries" },
+      });
+
+    mocks.waitForToken.mockReturnValueOnce({
+      unwrap: () => Promise.resolve({ approved: false, rejectionReason: "Off-topic queries" }),
+    });
+
+    const mod = await import("@/trigger/run-review");
+    const task = mod.runReviewTask as unknown as {
+      run: (p: { runId: string }) => Promise<unknown>;
+    };
+    await task.run({ runId: "r1" });
+
+    expect(runs.setRunStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: "r1",
+        status: "REJECTED",
+        failureReason: "Off-topic queries",
+      }),
+    );
+    // Critical: the discovery rejection must NOT be misclassified as FAILED.
+    expect(runs.failRun).not.toHaveBeenCalled();
+    expect(runs.finishRun).not.toHaveBeenCalled();
   });
 });

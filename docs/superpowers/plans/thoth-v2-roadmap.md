@@ -125,6 +125,32 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M12 — Rejection-reason plumbing (bug fix)
+
+**Goal:** Two bugs surfaced while auditing V2 critical paths. Both
+were silent UX losses.
+
+**What shipped:**
+
+- `trigger/run-review.ts` now handles `discoveryApproved.approved=false`
+  symmetrically with planApproved + papersApproved. Before this fix,
+  rejecting the discovery_gate ended the graph at END with no draft,
+  and the trigger task fell through to the "no draft → FAILED" path
+  — mis-classifying user rejection as agent failure. Status now
+  goes to REJECTED, matching the V1 plan / papers rejection
+  behaviour.
+- `setRunStatus()` gains an optional `failureReason` arg. All three
+  rejection paths (plan, discovery, papers) now persist the user's
+  rejection reason from the HumanCheckpoint to Run.failureReason,
+  so the run-detail page's existing `run.failureReason && <p>`
+  block actually surfaces "Why is this run REJECTED?" instead of
+  staying empty.
+- 1 new test in `tests/trigger/run-review.test.ts` covers the
+  discovery rejection path end-to-end; the existing plan-rejection
+  test was strengthened to assert failureReason propagation.
+
+**Key files:** `trigger/run-review.ts`, `lib/agent/runs.ts`, `tests/trigger/run-review.test.ts`
+
 ## V2-M11 — Honor keptExternalIds in fetcher (bug fix)
 
 **Goal:** Make the DiscoveryApprovalCard's per-row checkbox actually
