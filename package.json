@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "verify": "pnpm typecheck && pnpm lint && pnpm test",
     "dev:trigger": "trigger dev",
     "trigger:deploy": "trigger deploy",
