@@ -5,6 +5,9 @@ type Project = {
   title: string;
   question: string;
   updatedAt: Date;
+  // V2 — optional so the showcase project (built from a v1-shape fixture)
+  // and any other v1-style caller can omit them without lighting up "unknown".
+  searchScope?: "uploaded_only" | "outbound" | "hybrid";
 };
 
 /**
@@ -56,6 +59,14 @@ export function ProjectList({ projects }: { projects: Project[] }) {
                 style={{ fontWeight: 500, fontVariationSettings: "'opsz' 72" }}
               >
                 {p.title}
+                {(p.searchScope === "outbound" || p.searchScope === "hybrid") && (
+                  <span
+                    className="ml-2 align-middle text-[0.6rem] font-sans font-medium uppercase tracking-wider text-[var(--thoth-blue)] bg-[var(--thoth-blue-mist)]/50 px-1.5 py-0.5 rounded"
+                    title={p.searchScope === "outbound" ? "Outbound search" : "Hybrid (uploaded + outbound)"}
+                  >
+                    {p.searchScope === "hybrid" ? "hybrid" : "v2"}
+                  </span>
+                )}
               </h2>
               <p className="text-sm text-[var(--thoth-stone)] mt-2 line-clamp-2 leading-relaxed">
                 {p.question}
