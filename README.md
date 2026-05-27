@@ -38,7 +38,7 @@ Thoth turns a research question into an evidence-grounded literature review. Two
 | **Live app** | [thoth-slr.vercel.app](https://thoth-slr.vercel.app) (Clerk sign-in) |
 | **Public eval dashboard** | [`/evals`](https://thoth-slr.vercel.app/evals) — recall/precision/faithfulness/coverage over a 17-question versioned golden set (14 real-paper SLR questions across LLM/ML/SE + 3 synthetic seeds), refreshed weekly via CI |
 | **Official MCP Registry entry** | [`io.github.ahmedEid1/thoth`](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) — `status: active` |
-| **Tests** | 466 unit/integration + 9 live e2e (3 MCP-transport + 5 real-browser public-surface + 1 authenticated walkthrough with auto-cleanup), all green; tsc + lint clean |
+| **Tests** | 466 unit/integration + 10 live e2e (3 MCP-transport + 5 real-browser public-surface + 2 authenticated walkthroughs with auto-cleanup), all green; tsc + lint clean |
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
 | **Deploy cost** | $0 / month (Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers) |
 | **Self-host fallback** | One-VM deploy on Oracle Cloud Always Free (4 ARM cores, 24 GB RAM) — [`docs/self-host/`](docs/self-host/oracle-cloud-quickstart.md) |

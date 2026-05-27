@@ -69,7 +69,7 @@ test.describe("live authenticated walkthrough", () => {
       if (list.ok()) {
         const projects = (await list.json()) as Array<{ id: string; title: string }>;
         for (const p of projects) {
-          if (p.title.startsWith("E2E live walkthrough — ")) {
+          if (p.title.startsWith("E2E live walkthrough")) {
             await apiCtx.delete(`/api/projects/${p.id}`);
             // 404 is fine — concurrent runs may race. 405 means the
             // DELETE endpoint isn't on the live deploy yet; we'll let
@@ -165,5 +165,62 @@ test.describe("live authenticated walkthrough", () => {
     await page.waitForLoadState("networkidle");
     // The project title should no longer appear on the dashboard list.
     await expect(page.getByText(title)).toHaveCount(0);
+  });
+
+  // V2 outbound project shape — exercises the search-scope radio + provider
+  // checkboxes in the create dialog + the Discovery configuration panel on
+  // the project page. Does NOT click "Start review" (would bill LLM tokens
+  // + enqueue Trigger.dev work + hit OpenAlex live).
+  test("create an outbound v2 project, verify the discovery config panel, then delete", async ({ page, context }) => {
+    // The v2 dialog grows tall once Outbound is picked (provider checkboxes
+    // + search-tuning fieldset). Use a tall viewport so the Create button
+    // stays in-view; the default 720px viewport pushes it below the fold
+    // even with scrollIntoViewIfNeeded.
+    await page.setViewportSize({ width: 1280, height: 1400 });
+    await page.goto("/");
+    await clerk.signIn({ page, emailAddress: EMAIL });
+    await page.goto("/dashboard");
+    await page.waitForLoadState("networkidle");
+
+    // Open dialog → pick Outbound search → fill + create.
+    await page.getByRole("button", { name: /new project/i }).click();
+    const title = `E2E live walkthrough v2 — ${new Date().toISOString()}`;
+    await page.getByLabel(/title/i).fill(title);
+    await page
+      .getByLabel(/research question/i)
+      .fill("Does outbound search find papers Thoth's uploaded-only mode would miss?");
+
+    // The "Outbound search" radio button + provider checkboxes are
+    // hidden until visible — they're rendered inside the dialog from
+    // the moment it opens. The default provider set is OpenAlex + arXiv.
+    await page.getByRole("radio", { name: /outbound search/i }).check();
+
+    // Verify the providers fieldset becomes visible with the defaults
+    // pre-checked. Specifying providers redundantly is fine; the create
+    // schema accepts the explicit list.
+    await expect(page.getByText(/at least one is required/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /^create$/i }).click();
+
+    // Land on the new project page → assert the v2 Discovery
+    // configuration panel renders with the picked scope + providers.
+    await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /discovery configuration/i })).toBeVisible();
+    // openalex + arxiv are listed in the provider row (M7 panel format).
+    await expect(page.getByText(/openalex.*arxiv|arxiv.*openalex/i).first()).toBeVisible();
+    // "Outbound search" appears as the Scope value.
+    await expect(page.getByText(/^outbound search$/i)).toBeVisible();
+
+    const url = page.url();
+    const match = url.match(/\/projects\/([^/]+)/);
+    expect(match, `project url did not match /projects/<id>: ${url}`).not.toBeNull();
+    const projectId = match![1]!;
+    createdProjectIds.add(projectId);
+
+    // Clean up.
+    const apiCtx = context.request;
+    const del = await apiCtx.delete(`/api/projects/${projectId}`);
+    expect(del.status()).toBe(204);
+    createdProjectIds.delete(projectId);
   });
 });
