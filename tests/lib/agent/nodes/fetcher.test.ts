@@ -94,6 +94,68 @@ describe("fetcherNode", () => {
     expect(r.discoveredPapers![0]!.corpusItemId).toBeNull();
   });
 
+  // V2 keptExternalIds — when the user dropped a paper at the discovery
+  // gate, the fetcher must NOT download it, the screener must NOT bill an
+  // LLM call on it (downstream pruning), but the underlying DiscoveredPaper
+  // DB row stays so the MCP `list_discovered_papers` tool can still report
+  // "the discoverer surfaced N, you kept M, the screener admitted K."
+  it("only fetches papers in discoveryApproved.keptExternalIds when provided", async () => {
+    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url, init?: RequestInit) => {
+        if (init?.method === "HEAD") {
+          return new Response(null, {
+            status: 200,
+            headers: { "content-type": "application/pdf", "content-length": String(pdfBytes.length) },
+          });
+        }
+        return new Response(pdfBytes.buffer, { status: 200 });
+      }),
+    );
+    mocks.corpusItemCreate.mockResolvedValueOnce({ id: "ci_kept" });
+
+    const a = openHit("2401.kept", "https://arxiv.org/pdf/2401.kept");
+    const b = openHit("2401.drop", "https://arxiv.org/pdf/2401.drop");
+
+    const r = await fetcherNode({
+      ...baseState,
+      discoveredPapers: [a, b],
+      // User checked one paper, dropped the other.
+      discoveryApproved: { approved: true, keptExternalIds: [a.externalId] },
+    });
+
+    // Only the kept paper was downloaded + OCR'd.
+    expect(mocks.parsePdfWithMistral).toHaveBeenCalledTimes(1);
+    expect(mocks.corpusItemCreate).toHaveBeenCalledTimes(1);
+    // Returned state.discoveredPapers contains ONLY the kept paper so the
+    // screener (which loops over state.discoveredPapers) never bills on the
+    // dropped one.
+    expect(r.discoveredPapers).toHaveLength(1);
+    expect(r.discoveredPapers![0]!.externalId).toBe(a.externalId);
+    expect(r.discoveredPapers![0]!.corpusItemId).toBe("ci_kept");
+  });
+
+  it("falls back to fetching every discovered paper when keptExternalIds is undefined", async () => {
+    // Approved-as-is path: user clicked "Approve N" without dropping
+    // anything, so discoveryApproved is { approved: true } with no keptList.
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(null, { status: 403 }), // doesn't matter — we assert call count
+    ));
+
+    const a = openHit("2401.a", "https://arxiv.org/pdf/2401.a");
+    const b = openHit("2401.b", "https://arxiv.org/pdf/2401.b");
+
+    await fetcherNode({
+      ...baseState,
+      discoveredPapers: [a, b],
+      discoveryApproved: { approved: true },
+    });
+
+    // Both papers were attempted (HEAD calls).
+    expect((globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it("downloads + OCRs + persists CorpusItem for open papers", async () => {
     const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]); // "%PDF"
     vi.stubGlobal(

@@ -46,7 +46,16 @@ export async function fetcherNode(
   const outerStep = await addStep({ runId: state.runId, nodeName: "fetcher" });
 
   try {
-    const fetchable = state.discoveredPapers.filter(
+    // V2 — honor the user's per-row drops from the discovery_gate. When
+    // discoveryApproved.keptExternalIds is set, only papers in that list
+    // pass to the fetcher (and downstream the screener). When unset, every
+    // discovered paper is kept (the user approved-as-is).
+    const keptIds = state.discoveryApproved?.keptExternalIds;
+    const kept = keptIds
+      ? state.discoveredPapers.filter((p) => keptIds.includes(p.externalId))
+      : state.discoveredPapers;
+
+    const fetchable = kept.filter(
       (p) =>
         p.accessStatus === "open" &&
         typeof p.oaUrl === "string" &&
@@ -60,10 +69,14 @@ export async function fetcherNode(
       (paper) => fetchOne(state, paper),
     );
 
-    // Merge the updated refs back into the full set (keep paywalled / failed
-    // entries unchanged in state so the screener still sees them).
+    // Merge the updated refs back into the kept set (keep paywalled / failed
+    // entries unchanged in state so the screener still sees them — but only
+    // among papers the user kept). Papers the user dropped at discovery_gate
+    // are pruned from state here so the screener never bills LLM calls on
+    // them; the underlying DiscoveredPaper DB rows remain so the run-detail
+    // page / MCP tools can still show "the discoverer surfaced N, you kept M".
     const updatedById = new Map(updatedRefs.map((u) => [u.id, u]));
-    const merged: DiscoveredPaperRef[] = state.discoveredPapers.map(
+    const merged: DiscoveredPaperRef[] = kept.map(
       (p) => updatedById.get(p.id) ?? p,
     );
 
