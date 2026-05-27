@@ -424,6 +424,6 @@ The following are deliberately deferred. Each is a known gap, not an oversight.
 - **Pricing / SaaS billing**. Open-source, free-to-self-host. No billing surface.
 - **MCP write tools**. `start_review`, `cancel_run`, `delete_review` are out by design — read-only keeps the public MCP surface cheap and bounded.
 - **Pre-cloned sample SLR for guests**. The clone helper survives in code but is not on the demo path; the empty-dashboard flow is more honest about what Thoth does.
-- **30-question real-paper golden set**. The harness runs end-to-end with 3 synthetic goldens today; 30 real ones are the M6 work item.
+- **30-question real-paper golden set**. v1.0.0 shipped 14 real-paper goldens (`evals/golden/{003..016}-*.yaml`) on top of the 3 synthetic seeds for a total of 17. Growing the set to 30 would tighten the per-metric variance bound (the small-N denominator is what forced the regression check to advisory mode), but no schedule for the additional 13 yet.
 - **Anomaly detection over `McpCall`**. The data is captured; the cron is deferred.
 - **CSP**. Excluded from the security-headers pass for now.
