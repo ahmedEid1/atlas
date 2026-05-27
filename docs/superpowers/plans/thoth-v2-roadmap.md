@@ -125,6 +125,53 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M24 — DELETE /api/projects/[id] + authenticated live walkthrough
+
+**Goal:** Per user direction ("it's ok add them, to your test and
+clean the databases from them afterward"): drive a real authenticated
+user through the deployed app, creating real DB rows, then clean
+them up. Required a `DELETE /api/projects/[id]` endpoint that didn't
+exist — users had no way to delete projects from anywhere.
+
+**What shipped:**
+
+- `DELETE /api/projects/[id]` in `app/api/projects/[id]/route.ts`.
+  Uses `db.project.deleteMany({ where: { id, ownerId } })` so the
+  owner check happens at the DB layer atomically; cascade-deletes
+  every owned row (CorpusItem, Run, HumanCheckpoint, IncludedPaper,
+  ExtractedClaim, ClaimCheck, DiscoveredPaper, ScreeningDecision)
+  via the existing `onDelete: Cascade` foreign keys. 204 on
+  success; 404 (not 403) when not found or not owned, matching the
+  rest of the API's existence-probe defense.
+- 3 unit tests for the route: 204 on owned, 404 on
+  unowned/missing, 401 unauthenticated.
+- New `tests/e2e/live-auth-walkthrough.spec.ts`: signs in via Clerk
+  testing token, opens the New Project dialog, creates a project
+  on the live deploy, asserts the project page renders, then
+  DELETEs it and verifies it's gone from the dashboard. Auto-skips
+  when CLERK_SECRET_KEY / E2E_EMAIL aren't set so CI runs without
+  prod credentials still pass.
+- Defensive `beforeAll` cleanup sweep: enumerates the test user's
+  projects and deletes any whose title starts with the test's
+  prefix, so an orphan from a previous crashed run gets swept up
+  next time.
+- `afterAll` belt-and-braces cleanup deletes anything the in-test
+  cleanup missed.
+- README test row + RELEASING.md MCP-smoke checklist updated to
+  reflect the 9-test live suite.
+
+**Why this matters:** an authenticated walkthrough exercises the
+real `requireUser` middleware, real Clerk OAuth, real Postgres
+writes, real cascade-delete on a project + its (about-to-exist)
+children. The earlier 8 tests were public-surface only — this is
+the first e2e that proves the auth-gated UI actually works against
+the deployed instance.
+
+**Cost:** ~3 DB INSERTs + 3 DELETEs per CI run. No LLM tokens,
+no Trigger.dev enqueue, no Mistral OCR.
+
+**Key files:** `app/api/projects/[id]/route.ts`, `tests/api/projects.test.ts`, `tests/e2e/live-auth-walkthrough.spec.ts`, `playwright.config.ts`, `package.json`
+
 ## V2-M23 — Live-deploy real-browser e2e smoke
 
 **Goal:** The existing `pnpm test:e2e:live` only exercised the MCP
