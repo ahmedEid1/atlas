@@ -36,7 +36,7 @@ export default defineConfig({
           // surface smoke. Both exercise the deploy without needing a
           // Clerk-session setup (mcp-smoke runs the unauthenticated half
           // of the OAuth flow; live-browser-smoke hits only public pages).
-          testMatch: /(mcp-smoke|live-browser-smoke|live-auth-walkthrough)\.spec\.ts/,
+          testMatch: /(mcp-smoke|live-browser-smoke|live-auth-walkthrough|live-full-pipeline)\.spec\.ts/,
         },
       ]
     : [

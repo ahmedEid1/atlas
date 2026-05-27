@@ -17,6 +17,7 @@
     "trigger:deploy": "trigger deploy",
     "test:e2e": "playwright test",
     "test:e2e:live": "PLAYWRIGHT_BASE_URL=https://thoth-slr.vercel.app playwright test tests/e2e/mcp-smoke.spec.ts tests/e2e/live-browser-smoke.spec.ts tests/e2e/live-auth-walkthrough.spec.ts --project=chromium",
+    "test:e2e:live:full": "PLAYWRIGHT_BASE_URL=https://thoth-slr.vercel.app playwright test tests/e2e/live-full-pipeline.spec.ts --project=chromium",
     "eval": "tsx scripts/run-evals.ts",
     "eval:check": "tsx scripts/check-eval-regression.ts",
     "seed:showcase": "tsx scripts/seed-showcase-review.ts",
