@@ -31,6 +31,8 @@ export function CitationFaithfulnessWidget({
   claimChecks,
 }: CitationFaithfulnessWidgetProps) {
   const [open, setOpen] = useState(false);
+  // useId would be nicer but the widget is used once per page so a static id
+  // works and reads more naturally in the DOM inspector / aria-controls value.
   const panelId = "citation-faithfulness-verdicts";
   if (faithfulnessScore == null) return null;
   const pct = Math.round(faithfulnessScore * 100);
@@ -61,8 +63,13 @@ export function CitationFaithfulnessWidget({
           {open ? "Hide" : "Show"} per-citation verdicts
         </button>
       )}
-      {open && (
-        <div id={panelId} className="mt-3 space-y-2 max-h-96 overflow-y-auto">
+      {/* Keep the disclosure panel in the DOM at all times and toggle
+          visibility with `hidden` rather than conditionally rendering it.
+          aria-controls must reference an existing element to satisfy the
+          WAI-ARIA Disclosure pattern; conditionally rendering breaks that
+          reference when collapsed. */}
+      {claimChecks.length > 0 && (
+        <div id={panelId} hidden={!open} className="mt-3 space-y-2 max-h-96 overflow-y-auto">
           {claimChecks.map((c) => (
             <div
               key={c.id}
