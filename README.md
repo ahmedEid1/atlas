@@ -135,7 +135,7 @@ Don't want to depend on Vercel + Neon + R2 + Langfuse Cloud? See [`docs/self-hos
 
 ## Built with spec-driven development
 
-The full design is at [`docs/superpowers/specs/thoth-design.md`](docs/superpowers/specs/thoth-design.md); the build order (M1 → M6) is at [`docs/superpowers/plans/thoth-roadmap.md`](docs/superpowers/plans/thoth-roadmap.md). The release checklist is at [`RELEASING.md`](RELEASING.md). Brand guidelines: [`docs/brand.md`](docs/brand.md).
+The full design is at [`docs/superpowers/specs/thoth-design.md`](docs/superpowers/specs/thoth-design.md); the build order (M1 → v1.0.1 + post-release polish) is at [`docs/superpowers/plans/thoth-roadmap.md`](docs/superpowers/plans/thoth-roadmap.md). The release checklist is at [`RELEASING.md`](RELEASING.md). Brand guidelines: [`docs/brand.md`](docs/brand.md).
 
 ## Roadmap & changelog
 
