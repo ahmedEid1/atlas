@@ -45,11 +45,11 @@ async function main() {
   for (const g of byTool) {
     console.log(`  ${g.toolName.padEnd(20)} ${g.status.padEnd(6)} ${g._count._all}`);
   }
+
+  await db.$disconnect();
 }
 
-main()
-  .catch((e) => {
-    console.error("✗ Failed:", e);
-    process.exit(1);
-  })
-  .finally(() => process.exit(0));
+main().catch((e) => {
+  console.error("✗ Failed:", e);
+  process.exit(1);
+});
