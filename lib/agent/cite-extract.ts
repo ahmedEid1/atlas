@@ -27,12 +27,17 @@ function splitSentences(text: string): string[] {
 
 /**
  * Parse all `[paper_id]` citations from a draft. For each citation, return the
- * surrounding sentence as the "claim". A sentence with two citations yields
- * two entries (one per citation), both with the same claim text.
+ * surrounding sentence as the "claim". A sentence with two DIFFERENT paper ids
+ * yields two entries (one per id), both with the same claim text. A sentence
+ * with the same paper id mentioned twice (e.g. "Smith found X [c1] and Jones
+ * reported Y [c1]") yields one entry — duplicate (paperId, sentence) pairs are
+ * deduplicated so cite_check doesn't burn a paid LLM call producing the same
+ * verdict for an identical prompt.
  */
 export function extractCitations(draft: string): ExtractedCitation[] {
   const sentences = splitSentences(draft);
   const results: ExtractedCitation[] = [];
+  const seen = new Set<string>();
   for (const sentence of sentences) {
     CITATION_REGEX.lastIndex = 0;
     let m: RegExpExecArray | null;
@@ -42,6 +47,9 @@ export function extractCitations(draft: string): ExtractedCitation[] {
       if (after === "(") continue;
       const paperId = m[1];
       if (paperId === undefined) continue;
+      const key = `${paperId}::${sentence}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       results.push({ paperId, claim: sentence });
     }
   }
