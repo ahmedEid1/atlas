@@ -125,6 +125,38 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M13 — Hybrid mode actually merges uploaded PDFs (bug fix)
+
+**Goal:** Hybrid projects (`searchScope='hybrid'`) required ≥1 PARSED
+corpus item at runs-start but the graph routed them straight to the
+discoverer (never the retriever), so uploaded PDFs were dead in the
+water — the screener never saw them, the assessor never saw them,
+the user's uploads were silently dropped.
+
+**What shipped:**
+
+- After the search-provider dedup, the discoverer now also
+  enumerates `PARSED` `CorpusItem` rows for the project and wraps
+  each as a synthetic `DiscoveredPaper` row with
+  `provider="uploaded"`, `externalId="uploaded:${corpusItem.id}"`,
+  `initialScore=1.0` (user upload = strong prior), and
+  `corpusItemId` pre-set so the fetcher's idempotency check skips
+  the OCR step. Title is heuristic: first markdown heading > the
+  source's filename > the corpus id.
+- The screener (which iterates `state.discoveredPapers`) now sees
+  uploaded + outbound papers in one pass and emits IncludedPaper
+  rows for either source when its verdict is include=true.
+- `DiscoveredPaperRef.provider` type widens to include `"uploaded"`.
+  `PROVIDER_BADGE` in DiscoverySummary + DiscoveryApprovalCard
+  picks up the new value so uploaded papers render with an
+  "Uploaded" tag instead of the raw provider name.
+- Two new discoverer tests: hybrid mode wraps PARSED uploads as
+  synthetic rows (asserting provider/externalId/title/abstract
+  shape); outbound mode does NOT call corpusItem.findMany at all
+  (so V1 / pure-outbound semantics are unchanged).
+
+**Key files:** `lib/agent/nodes/discoverer.ts`, `lib/agent/state.ts`, `components/runs/discovery-summary.tsx`, `components/runs/discovery-approval-card.tsx`, `tests/lib/agent/nodes/discoverer.test.ts`
+
 ## V2-M12 — Rejection-reason plumbing (bug fix)
 
 **Goal:** Two bugs surfaced while auditing V2 critical paths. Both

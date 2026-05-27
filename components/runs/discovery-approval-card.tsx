@@ -25,6 +25,7 @@ const PROVIDER_BADGE: Record<string, string> = {
   openalex: "OpenAlex",
   arxiv: "arXiv",
   exa: "Exa",
+  uploaded: "Uploaded",
 };
 
 /**

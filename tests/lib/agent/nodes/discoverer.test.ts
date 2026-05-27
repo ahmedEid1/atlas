@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   assertWithinBudget: vi.fn(),
   createMany: vi.fn(),
   findMany: vi.fn(),
+  corpusFindMany: vi.fn(),
   envMock: { MAX_DISCOVERED_PAPERS_PER_RUN: 50 } as {
     SEARCH_DISABLED?: string;
     MAX_DISCOVERED_PAPERS_PER_RUN: number;
@@ -30,6 +31,9 @@ vi.mock("@/lib/db", () => ({
     discoveredPaper: {
       createMany: mocks.createMany,
       findMany: mocks.findMany,
+    },
+    corpusItem: {
+      findMany: mocks.corpusFindMany,
     },
   },
 }));
@@ -73,10 +77,12 @@ beforeEach(() => {
     if (typeof v === "function" && "mockReset" in v) (v as { mockReset: () => void }).mockReset();
   }
   delete envMock.SEARCH_DISABLED;
+  envMock.MAX_DISCOVERED_PAPERS_PER_RUN = 50;
   mocks.addStep.mockResolvedValue({ id: "step_outer" });
   mocks.finishStep.mockResolvedValue(undefined);
   mocks.assertWithinBudget.mockResolvedValue({ tokensUsed: 0, limit: 250000 });
   mocks.createMany.mockResolvedValue({ count: 0 });
+  mocks.corpusFindMany.mockResolvedValue([]);
   mocks.findMany.mockResolvedValue([]);
 });
 
@@ -310,6 +316,71 @@ describe("discovererNode", () => {
 
     const createCall = mocks.createMany.mock.calls[0]![0];
     expect(createCall.data).toHaveLength(2);
+  });
+
+  it("hybrid mode: wraps PARSED uploaded CorpusItems as synthetic DiscoveredPaper rows", async () => {
+    mocks.runLLM.mockResolvedValue({
+      output: { queries: ["q1"], rationale: "x." },
+      traceUrl: "",
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2, cacheReadInputTokens: 0 },
+    });
+    mocks.dispatchSearch.mockResolvedValue({ hits: [], errors: [] });
+    mocks.findMany.mockResolvedValue([]);
+    // Two PARSED user uploads. The discoverer should wrap them as
+    // provider="uploaded" DiscoveredPaper rows with corpusItemId pre-set
+    // so the fetcher skips them.
+    mocks.corpusFindMany.mockResolvedValue([
+      {
+        id: "ci_a", source: "corpus/p1/abc.pdf",
+        parsedMarkdown: "# Foundational RAG paper\n\nText...",
+        summary: { abstract: "Original RAG architecture description." },
+        externalDoi: null, externalArxivId: null,
+      },
+      {
+        id: "ci_b", source: "corpus/p1/xyz.pdf",
+        parsedMarkdown: "no heading here",
+        summary: null,
+        externalDoi: null, externalArxivId: null,
+      },
+    ]);
+
+    await discovererNode({ ...baseState, searchScope: "hybrid" as const });
+
+    // The hybrid branch fires a second createMany call (the first one is
+    // for outbound hits, which is empty in this test → may be skipped).
+    const calls = mocks.createMany.mock.calls;
+    const lastCall = calls[calls.length - 1]![0];
+    expect(lastCall.data).toHaveLength(2);
+    expect(lastCall.data[0]).toMatchObject({
+      provider: "uploaded",
+      externalId: "uploaded:ci_a",
+      title: "Foundational RAG paper",
+      abstract: "Original RAG architecture description.",
+      corpusItemId: "ci_a",
+      initialScore: 1.0,
+      accessStatus: "open",
+    });
+    expect(lastCall.data[1]).toMatchObject({
+      provider: "uploaded",
+      externalId: "uploaded:ci_b",
+      title: "xyz.pdf",
+      abstract: null,
+      corpusItemId: "ci_b",
+    });
+  });
+
+  it("outbound mode: does NOT load uploaded CorpusItems", async () => {
+    mocks.runLLM.mockResolvedValue({
+      output: { queries: ["q1"], rationale: "x." },
+      traceUrl: "",
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2, cacheReadInputTokens: 0 },
+    });
+    mocks.dispatchSearch.mockResolvedValue({ hits: [], errors: [] });
+    mocks.findMany.mockResolvedValue([]);
+
+    await discovererNode({ ...baseState, searchScope: "outbound" as const });
+
+    expect(mocks.corpusFindMany).not.toHaveBeenCalled();
   });
 
   it("env cap wins when the per-project value exceeds it", async () => {
