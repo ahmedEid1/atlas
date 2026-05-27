@@ -28,14 +28,44 @@ const STATUS_VARIANT: Record<Item["status"], "default" | "secondary" | "destruct
 export function CorpusItemList({ items }: { items: Item[] }) {
   const router = useRouter();
 
-  // Poll while parse pipeline is mid-flight. (M3 will swap to Trigger.dev realtime.)
+  // Poll while parse pipeline is mid-flight. Pauses when the tab is hidden
+  // so a backgrounded upload page doesn't keep firing 2s router.refresh()
+  // hits at the Vercel function quota for nothing. Mirrors the visibility
+  // logic on the run-detail RefreshTick.
+  // (Trigger.dev's realtime SDK could replace the polling entirely; left
+  // as polling so far because the parse pipeline finishes in ~30-60s and
+  // the realtime subscription needs an auth-token route + JWT plumbing.)
   useEffect(() => {
     const anyParsing = items.some(
       (i) => i.status === "PENDING" || i.status === "PARSING",
     );
     if (!anyParsing) return;
-    const t = setInterval(() => router.refresh(), 2000);
-    return () => clearInterval(t);
+
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      if (intervalId !== undefined) return;
+      intervalId = setInterval(() => router.refresh(), 2000);
+    };
+    const stop = () => {
+      if (intervalId === undefined) return;
+      clearInterval(intervalId);
+      intervalId = undefined;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        router.refresh();
+        start();
+      } else {
+        stop();
+      }
+    };
+
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [items, router]);
 
   if (items.length === 0) {
@@ -73,8 +103,10 @@ function ItemCard({ item }: { item: Item }) {
         setSummariseError(body.error ?? `Failed (${res.status})`);
         return;
       }
-      // Wait briefly then refresh so the new summary is read from the server component.
-      // M3 swaps this for Trigger.dev realtime subscription.
+      // Wait briefly then refresh so the new summary is read from the server
+      // component once the Trigger.dev `summarize-paper` task finishes. 3s is
+      // empirically enough on the free tier; the next list-level poll will
+      // catch up if it isn't.
       setTimeout(() => router.refresh(), 3000);
     });
   }
