@@ -275,7 +275,12 @@ Open V2-spec items that didn't ship in v2.0:
   which is the on-disk audit. A dedicated table is easier to query but
   not load-bearing yet.
 - **Real v2-mode goldens** + `EVAL_MODE=outbound` CI path. The metrics
-  + schema field are wired; the YAMLs themselves need maintainer input.
+  + schema field are wired *and* `lib/eval/headless-runner.ts` now
+  accepts `searchScope` + `searchProviders` so callers can drive an
+  outbound run end-to-end through the eval harness with an empty
+  corpus. What's still missing is the YAML inputs themselves — picking
+  goldens with verifiable arXiv DOIs that aren't trivial to surface
+  needs maintainer judgement. The framework is ready to consume them.
 - **Query-editing in the discovery_gate UI.** The first cut shows
   queries read-only and lets the user reject + re-plan if they're wrong.
   Edit-in-place is a v2.x UX upgrade.

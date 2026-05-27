@@ -1,6 +1,6 @@
 import { Command } from "@langchain/langgraph";
 import { buildGraph } from "@/lib/agent/graph";
-import type { AgentState } from "@/lib/agent/state";
+import type { AgentState, SearchScope } from "@/lib/agent/state";
 import { db } from "@/lib/db";
 
 export type HeadlessRunArgs = {
@@ -8,6 +8,15 @@ export type HeadlessRunArgs = {
   projectId: string;
   question: string;
   corpusItemIds: string[];
+  /**
+   * V2 — opt-in outbound search configuration. Default `uploaded_only`
+   * preserves the V1 eval flow used by every existing golden YAML.
+   * When set to `outbound` / `hybrid`, the headless run hits real
+   * provider APIs (OpenAlex / arXiv / Exa) — gate this behind an env
+   * flag in the eval CLI so it doesn't fire on every CI run.
+   */
+  searchScope?: SearchScope;
+  searchProviders?: Array<"openalex" | "arxiv" | "exa">;
 };
 
 export type HeadlessRunResult = AgentState & {
@@ -29,16 +38,29 @@ export async function runHeadless(args: HeadlessRunArgs): Promise<HeadlessRunRes
   const graph = await buildGraph();
   const config = { configurable: { thread_id: args.runId } };
 
-  // Fetch the seeded CorpusItems and map them into the CandidateCorpusItem shape the
-  // planner/retriever expect (mirrors trigger/run-review.ts:hydrate-initial-state).
-  const corpus = await db.corpusItem.findMany({
-    where: { id: { in: args.corpusItemIds } },
-    select: { id: true, source: true, summary: true, status: true },
-  });
-  if (corpus.length !== args.corpusItemIds.length) {
-    throw new Error(
-      `runHeadless: only found ${corpus.length}/${args.corpusItemIds.length} CorpusItems by id`,
-    );
+  const scope: SearchScope = args.searchScope ?? "uploaded_only";
+
+  // V1 + hybrid still need PARSED CorpusItems before the assessor runs.
+  // Pure outbound skips the corpus lookup so callers can pass an empty
+  // corpusItemIds array (the discoverer builds the corpus itself).
+  let candidateCorpusItems: AgentState["candidateCorpusItems"] = [];
+  if (scope !== "outbound") {
+    const corpus = await db.corpusItem.findMany({
+      where: { id: { in: args.corpusItemIds } },
+      select: { id: true, source: true, summary: true, status: true },
+    });
+    if (corpus.length !== args.corpusItemIds.length) {
+      throw new Error(
+        `runHeadless: only found ${corpus.length}/${args.corpusItemIds.length} CorpusItems by id`,
+      );
+    }
+    candidateCorpusItems = corpus.map((c) => ({
+      id: c.id,
+      title: c.source.split("/").pop() ?? c.id,
+      summary: c.summary as
+        | { abstract: string; studyType: string; relevanceToSLR: string }
+        | null,
+    }));
   }
 
   // Initial invocation seeds the run; subsequent invocations pass a Command to resume from interrupts.
@@ -46,13 +68,9 @@ export async function runHeadless(args: HeadlessRunArgs): Promise<HeadlessRunRes
     runId: args.runId,
     projectId: args.projectId,
     question: args.question,
-    candidateCorpusItems: corpus.map((c) => ({
-      id: c.id,
-      title: c.source.split("/").pop() ?? c.id,
-      summary: c.summary as
-        | { abstract: string; studyType: string; relevanceToSLR: string }
-        | null,
-    })),
+    candidateCorpusItems,
+    searchScope: scope,
+    searchProviders: args.searchProviders ?? [],
   };
 
   let state: AgentState | undefined;
