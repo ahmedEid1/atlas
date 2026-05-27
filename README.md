@@ -39,7 +39,7 @@ Thoth turns a research question and a corpus of PDFs into an evidence-grounded l
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
 | **Deploy cost** | $0 / month (Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers) |
 | **Self-host fallback** | One-VM deploy on Oracle Cloud Always Free (4 ARM cores, 24 GB RAM) — [`docs/self-host/`](docs/self-host/oracle-cloud-quickstart.md) |
-| **Status** | `v1.0.1` — engineering complete; eval CI runs weekly with regression gate |
+| **Status** | `v1.0.1` — engineering complete; eval CI runs weekly with an advisory regression check (high-water-mark per (goldenId, metric); see [`scripts/check-eval-regression.ts`](scripts/check-eval-regression.ts) for the rationale) |
 
 ## What makes Thoth different
 
