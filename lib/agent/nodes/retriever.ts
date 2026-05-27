@@ -57,6 +57,10 @@ export async function retrieverNode(state: AgentState): Promise<Partial<AgentSta
       } catch (err) {
         const reason = err instanceof Error ? err.message : String(err);
         await finishStep({ stepId: innerStep.id, failureReason: reason.slice(0, 1000) });
+        // BudgetExceededError (and any other error) bubbles — retriever has
+        // no per-paper soft-fail story like cite-check, because silently
+        // skipping a paper here biases the inclusion decision and the user
+        // can't tell which paper was dropped. Mirror of assessor.ts:60-64.
         if (err instanceof BudgetExceededError) throw err;
         throw err;
       }
