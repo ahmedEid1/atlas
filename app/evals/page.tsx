@@ -114,7 +114,16 @@ export default async function EvalsPage() {
           Citation evaluation, in public.
         </h1>
         <p className="mt-5 text-lg text-[var(--thoth-blue-ink)] max-w-2xl leading-relaxed">
-          {goldenIds.length} golden SLR question{goldenIds.length === 1 ? "" : "s"},
+          {/* Prefer totalYamls — the canonical golden set on disk in
+              evals/golden/ — over goldenIds.length, which is the subset that
+              has any EvalRun history yet. With the cron-default 6-golden
+              smoke set, goldenIds.length drifts under the canonical 17 until
+              a workflow_dispatch with goldens=all runs the rest. The "X of Y
+              goldens have data at this commit" badge below clarifies that
+              distinction. Falling back to goldenIds.length keeps the page
+              honest if evals/golden/ readdir fails (totalYamls === 0). */}
+          {(totalYamls > 0 ? totalYamls : goldenIds.length)} golden SLR question
+          {(totalYamls > 0 ? totalYamls : goldenIds.length) === 1 ? "" : "s"},
           4 metrics, the latest commit-of-record run for each. Designed so a
           regression is a public signal — not a hidden one.
         </p>
