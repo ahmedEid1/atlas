@@ -20,7 +20,13 @@ export async function POST(
   }
 
   const body = (await req.json().catch(() => ({}))) as { reason?: string };
-  const reason = body.reason ?? "rejected";
+  // Cap the user-supplied rejection reason. Without this, a malicious or
+  // confused client could ship an unbounded blob that would (a) bloat the
+  // HumanCheckpoint.{rejectionReason, decisionPayload} columns and
+  // (b) ride through wait.completeToken into Trigger.dev. Same 1000-char
+  // cap that lib/agent/runs.ts:failRun uses for `failureReason`.
+  const rawReason = typeof body.reason === "string" ? body.reason : "";
+  const reason = (rawReason.length > 0 ? rawReason : "rejected").slice(0, 1000);
   const decisionPayload = { approved: false, rejectionReason: reason };
 
   // Round-4 fix: see approve/route.ts for full rationale. Split into
