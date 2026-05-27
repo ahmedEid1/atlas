@@ -18,10 +18,21 @@ import { Card } from "@/components/ui/card";
  * typographic system the rest of the site uses, without depending on
  * `@tailwindcss/typography`.
  */
-export function DraftView({ draft }: { draft: string }) {
+export function DraftView({ draft, runId }: { draft: string; runId?: string }) {
   return (
     <Card className="p-6 space-y-3">
-      <h3 className="eyebrow text-[var(--thoth-stone)]">Draft review</h3>
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="eyebrow text-[var(--thoth-stone)]">Draft review</h3>
+        {runId && (
+          <a
+            href={`/api/runs/${runId}/draft.md`}
+            download={`thoth-${runId}.md`}
+            className="text-xs text-[var(--thoth-stone)] hover:text-[var(--thoth-blue)] underline-offset-4 hover:underline transition-colors"
+          >
+            Download .md
+          </a>
+        )}
+      </div>
       <div className="text-[var(--thoth-blue-ink)] leading-relaxed text-sm">
         {/* The containing page already owns the single <h1> (project title on
             the showcase / run-detail surfaces). The drafter LLM tends to put

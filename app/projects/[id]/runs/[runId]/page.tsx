@@ -211,7 +211,7 @@ export default async function RunPage({
         </section>
       )}
 
-      {run.draft && <DraftView draft={run.draft} />}
+      {run.draft && <DraftView draft={run.draft} runId={runId} />}
 
       <RefreshTick run={run} />
     </main>
