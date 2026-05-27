@@ -50,7 +50,7 @@ beforeEach(() => vi.clearAllMocks());
 describe("POST /api/projects/[id]/runs", () => {
   it("creates a run and enqueues the task", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
-    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?", searchScope: "uploaded_only", searchProviders: [] } as never);
     vi.mocked(db.corpusItem.count).mockResolvedValue(3 as never);
     installTxMock({ existingActive: null });
     vi.mocked(createRun).mockResolvedValue({ id: "r1" } as never);
@@ -76,7 +76,7 @@ describe("POST /api/projects/[id]/runs", () => {
 
   it("returns 404 for a project the user doesn't own", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
-    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u2", question: "x" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u2", question: "x", searchScope: "uploaded_only", searchProviders: [] } as never);
 
     const { POST } = await import("@/app/api/projects/[id]/runs/route");
     const res = await POST(
@@ -88,7 +88,7 @@ describe("POST /api/projects/[id]/runs", () => {
 
   it("returns 409 if the project has zero PARSED corpus items", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
-    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "x" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "x", searchScope: "uploaded_only", searchProviders: [] } as never);
     vi.mocked(db.corpusItem.count).mockResolvedValue(0 as never);
 
     const { POST } = await import("@/app/api/projects/[id]/runs/route");
@@ -101,7 +101,7 @@ describe("POST /api/projects/[id]/runs", () => {
 
   it("returns 409 run_already_active when an active run exists", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
-    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?", searchScope: "uploaded_only", searchProviders: [] } as never);
     vi.mocked(db.corpusItem.count).mockResolvedValue(3 as never);
     installTxMock({ existingActive: { id: "r_active", status: "DRAFTING" } });
 
@@ -120,7 +120,7 @@ describe("POST /api/projects/[id]/runs", () => {
 
   it("stores Trigger handle on success", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
-    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?", searchScope: "uploaded_only", searchProviders: [] } as never);
     vi.mocked(db.corpusItem.count).mockResolvedValue(3 as never);
     installTxMock({ existingActive: null });
     vi.mocked(createRun).mockResolvedValue({ id: "r1" } as never);
@@ -145,7 +145,7 @@ describe("POST /api/projects/[id]/runs", () => {
 
   it("marks run FAILED + returns 502 if enqueueRunReview throws", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
-    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?", searchScope: "uploaded_only", searchProviders: [] } as never);
     vi.mocked(db.corpusItem.count).mockResolvedValue(3 as never);
     installTxMock({ existingActive: null });
     vi.mocked(createRun).mockResolvedValue({ id: "r1" } as never);
@@ -174,7 +174,7 @@ describe("POST /api/projects/[id]/runs", () => {
     // (so concurrent POSTs serialize), then the findFirst inside the lock
     // sees committed state, then createRun reuses the tx client.
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
-    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?", searchScope: "uploaded_only", searchProviders: [] } as never);
     vi.mocked(db.corpusItem.count).mockResolvedValue(3 as never);
     const { txExecuteRaw, txFindFirst } = installTxMock({ existingActive: null });
     vi.mocked(createRun).mockResolvedValue({ id: "r1" } as never);
@@ -203,7 +203,7 @@ describe("POST /api/projects/[id]/runs", () => {
     // creates the run; the second's findFirst (inside its own transaction,
     // after the first commits) sees the active row and returns conflict.
     vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
-    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?" } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({ id: "p1", ownerId: "u1", question: "Q?", searchScope: "uploaded_only", searchProviders: [] } as never);
     vi.mocked(db.corpusItem.count).mockResolvedValue(3 as never);
 
     // Script $transaction across two calls: first sees no active run,

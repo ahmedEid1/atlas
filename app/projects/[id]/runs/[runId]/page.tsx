@@ -5,6 +5,7 @@ import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill
 import { RunStepList } from "@/components/runs/run-step-list";
 import { PlanApprovalCard } from "@/components/runs/plan-approval-card";
 import { PapersApprovalCard } from "@/components/runs/papers-approval-card";
+import { DiscoveryApprovalCard } from "@/components/runs/discovery-approval-card";
 import { StrandedCheckpointCard } from "@/components/runs/stranded-checkpoint-card";
 import { DraftView } from "@/components/runs/draft-view";
 import { RefreshTick } from "@/components/runs/refresh-tick";
@@ -40,6 +41,9 @@ export default async function RunPage({
 
   const pendingPlan = run.checkpoints.find(
     (c) => c.kind === "APPROVE_PLAN" && c.status === "PENDING",
+  );
+  const pendingDiscovery = run.checkpoints.find(
+    (c) => c.kind === "APPROVE_DISCOVERY" && c.status === "PENDING",
   );
   const pendingPapers = run.checkpoints.find(
     (c) => c.kind === "APPROVE_PAPERS" && c.status === "PENDING",
@@ -79,6 +83,28 @@ export default async function RunPage({
           runId={runId}
           checkpointId={pendingPlan.id}
           plan={(pendingPlan.proposal as { plan: never }).plan ?? (pendingPlan.proposal as never)}
+        />
+      )}
+
+      {pendingDiscovery && (
+        <DiscoveryApprovalCard
+          runId={runId}
+          checkpointId={pendingDiscovery.id}
+          queries={(pendingDiscovery.proposal as { queries: string[] }).queries ?? []}
+          hits={
+            (
+              pendingDiscovery.proposal as {
+                discoveredPapers: Array<{
+                  id: string;
+                  externalId: string;
+                  provider: string;
+                  title: string;
+                  abstract: string | null;
+                  accessStatus: string;
+                }>;
+              }
+            ).discoveredPapers ?? []
+          }
         />
       )}
 

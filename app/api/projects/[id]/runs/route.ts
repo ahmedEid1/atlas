@@ -17,14 +17,36 @@ export async function POST(
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const corpusCount = await db.corpusItem.count({
-    where: { projectId: id, status: "PARSED" },
-  });
-  if (corpusCount === 0) {
-    return NextResponse.json(
-      { error: "Project has no PARSED corpus items to review. Upload and parse at least one PDF first." },
-      { status: 409 },
-    );
+  // V2: outbound runs discover their own corpus via the search providers;
+  // they don't need uploaded PDFs. uploaded_only + hybrid still require at
+  // least one PARSED upload because the V1 retriever runs against uploaded
+  // items first, and a hybrid run with zero uploads is just an outbound run.
+  if (project.searchScope === "uploaded_only" || project.searchScope === "hybrid") {
+    const corpusCount = await db.corpusItem.count({
+      where: { projectId: id, status: "PARSED" },
+    });
+    if (corpusCount === 0) {
+      return NextResponse.json(
+        {
+          error:
+            project.searchScope === "uploaded_only"
+              ? "Project has no PARSED corpus items to review. Upload and parse at least one PDF first."
+              : "Hybrid mode needs at least one PARSED corpus item. Upload a PDF or switch the project's search scope to 'outbound'.",
+        },
+        { status: 409 },
+      );
+    }
+  }
+  if (project.searchScope === "outbound" || project.searchScope === "hybrid") {
+    if (project.searchProviders.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Outbound mode requires at least one search provider (OpenAlex / arXiv / Exa). Edit the project's search providers and try again.",
+        },
+        { status: 409 },
+      );
+    }
   }
 
   // F1: Active-run guard MUST be inside a transaction holding a per-project
