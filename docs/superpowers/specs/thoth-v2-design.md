@@ -369,22 +369,27 @@ Things I'd want answered before cutting M2-v2 plan tickets:
 
 ---
 
-## 14. Milestone breakdown (proposed)
+## 14. Milestone breakdown (shipped)
 
-| Milestone | Scope | Tag |
+| Milestone | Scope | Status |
 |---|---|---|
-| **v2-M0** | Spec sign-off (this doc), schema migration, adapter scaffolding, no agent integration | `v2.0.0-m0` |
-| **v2-M1** | Discoverer + fetcher + screener nodes wired in. OpenAlex + arXiv adapters. Discovery HITL gate. **uploaded-only mode still the default**. | `v2.0.0-m1` |
-| **v2-M2** | Exa adapter, query-edit UI, discovery audit table, `SEARCH_DISABLED` kill switch | `v2.0.0-m2` |
-| **v2-M3** | 5-question v2 eval golden set with `expectedDois`. CI workflow update | `v2.0.0-m3` |
-| **v2-M4** | Default project setup nudges toward outbound. Backward-compat tested end-to-end with a v1 project | `v2.0.0` |
+| **v2-M0** | Schema migration, adapter scaffolding | shipped |
+| **v2-M1** | Discoverer + fetcher + screener nodes wired. OpenAlex + arXiv adapters. Discovery HITL gate | shipped |
+| **v2-M2** | Exa adapter, project-create UI, `SEARCH_DISABLED` kill switch | shipped |
+| **v2-M3** | Eval metrics (`discovery_recall`, `screening_precision`) + `expectedDois` field on the golden schema | shipped |
+| **v2-M4** | v2.0.0 release ceremony + docs | shipped |
 
-Rough estimate: M0-M2 is ~10 days of focused work, M3 needs real-data
-calibration (1-2 weeks), M4 is polish + docs. **Total: ~4 weeks** assuming
-no major rework of any milestone.
-
-Each M ships behind a feature flag (`OUTBOUND_SEARCH_ENABLED=1`) until M4
-flips the default — same pattern as `DEMO_DISABLED` in v1.
+Plus a long iteration tail (M5–M31) covering: MCP introspection tools,
+project-page V2 panel, run-detail discovery summary, cost-cap knobs,
+search-tuning UI, eval CLI wiring, the **10 audit bugs fixed**
+(M11–M19, M22 — keptExternalIds, rejection-reason plumbing, hybrid
+upload-merge, `skipDiscoveryGate`, `papersApproved.corpusItemIds`,
+hybrid cross-source dedup, screener idempotency, CorpusItem
+per-project uniqueness, `SEARCH_DISABLED` fail-fast, V2 status enum
+values), the live e2e suite (23 tests: public-surface, MCP transport,
+authenticated walkthroughs, full agent-pipeline runs including a
+COMPLETED happy-path), and Trigger.dev worker redeploys. Full
+shipping log in [`docs/superpowers/plans/thoth-v2-roadmap.md`](../plans/thoth-v2-roadmap.md).
 
 ---
 
@@ -425,14 +430,13 @@ pay per page on a tier above Free Experiment ($0.001/page batch)."
 
 ---
 
-## 17. Decision needed before any code
+## 17. Decisions (resolved)
 
-- [ ] Approve the milestone breakdown in §14
-- [ ] Pick the v2.0 cost-cap default (proposed 400k; alternatives: 350k tighter, 500k looser)
-- [ ] Confirm Exa is the right third provider (vs. Semantic Scholar)
-- [ ] Confirm `searchScope` defaults to `uploaded_only` for all existing projects
-- [ ] Confirm the §13 open questions don't have known answers I missed
+- [x] Milestone breakdown — shipped through M31.
+- [x] v2.0 cost-cap default — 400k tokens (vs V1's 250k; per §7).
+- [x] Third provider — Exa (semantic search; opt-in via `EXA_API_KEY`).
+- [x] `searchScope` default — `uploaded_only` for all existing projects
+      (migration default; verified by the V1-path graph test).
+- [x] §13 open questions — answered through M11-M19 + M22 audit cycle.
 
-Once these are settled, the plan moves to
-`docs/superpowers/plans/thoth-v2-roadmap.md` (mirroring the v1 plan doc)
-with per-milestone TDD breakdown.
+Plan + shipping log: [`docs/superpowers/plans/thoth-v2-roadmap.md`](../plans/thoth-v2-roadmap.md).

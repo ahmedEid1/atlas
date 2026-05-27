@@ -12,7 +12,7 @@
 [![Public evals](https://img.shields.io/badge/evals-public-C9A961?style=flat-square)](https://thoth-slr.vercel.app/evals)
 [![MCP Registry](https://img.shields.io/badge/MCP-registered-orange?style=flat-square)](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-463%20passing-success?style=flat-square)](#)
+[![Tests](https://img.shields.io/badge/tests-466%20passing-success?style=flat-square)](#)
 [![Status](https://img.shields.io/badge/status-v1.0.1-informational?style=flat-square)](#)
 [![Deploy cost](https://img.shields.io/badge/deploy-%240%2Fmo-brightgreen?style=flat-square)](#)
 
@@ -125,7 +125,7 @@ Power users can tick **Skip discovery approval** at project-create time to bypas
 
 ```bash
 pnpm verify                                                              # typecheck + lint + test — the pre-tag check (RELEASING.md)
-pnpm test                                                                # 410 unit/integration tests on their own
+pnpm test                                                                # 466 unit/integration tests on their own
 pnpm test:e2e:live       # 16 e2e against https://thoth-slr.vercel.app: 3 MCP-transport + 7 real-browser + 6 authenticated walkthroughs incl. PDF upload
 pnpm test:e2e:live:full  # 3 full agent-run pipeline tests (slow — exercises Mistral free-tier end-to-end including draft + cite_check)
 pnpm tsx scripts/verify-mcp-audit.ts                                     # spot-check the McpCall audit log
