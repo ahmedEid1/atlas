@@ -35,6 +35,14 @@ function planApprovalGate(state: AgentState): Partial<AgentState> {
  * `routeIntoDiscoveryGate` conditional below.
  */
 function discoveryApprovalGate(state: AgentState): Partial<AgentState> {
+  // Power-user opt-out — auto-approve without firing interrupt() so the
+  // graph flows straight through to the fetcher. Per spec §6: the project
+  // owner explicitly trusts the discoverer for this project. The fetcher +
+  // screener are still subject to the cost-cap, so this can't cause a
+  // runaway-cost incident on its own.
+  if (state.skipDiscoveryGate) {
+    return { discoveryApproved: { approved: true } };
+  }
   const decision = interrupt({
     kind: "APPROVE_DISCOVERY",
     queries: state.discoveryQueries,

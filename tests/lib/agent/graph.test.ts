@@ -55,6 +55,7 @@ const initialState = {
   searchScope: "uploaded_only" as const,
   searchProviders: [],
   searchMaxHits: null,
+  skipDiscoveryGate: false,
   discoveryQueries: [],
   discoveredPapers: [],
   discoveryApproved: null,
@@ -115,6 +116,7 @@ describe("agent graph", () => {
       searchScope: "uploaded_only" as const,
       searchProviders: [],
       searchMaxHits: null,
+      skipDiscoveryGate: false,
       discoveryQueries: [],
       discoveredPapers: [],
       discoveryApproved: null,
@@ -206,6 +208,7 @@ describe("agent graph", () => {
       searchScope: "outbound" as const,
       searchProviders: ["arxiv" as const],
       searchMaxHits: null,
+      skipDiscoveryGate: false,
     };
 
     await graph.invoke(outboundState, config);
@@ -221,6 +224,73 @@ describe("agent graph", () => {
     expect(mocks.fetcher).toHaveBeenCalledTimes(1);
     expect(mocks.screener).toHaveBeenCalledTimes(1);
     expect(mocks.assessor).toHaveBeenCalledTimes(1);
+  });
+
+  it("V2 outbound: skipDiscoveryGate=true auto-approves and flows straight to fetcher", async () => {
+    mocks.planner.mockResolvedValue({
+      plan: {
+        picoc: { population: "p", intervention: "i", comparison: "c", outcome: "o", context: "ctx" },
+        subQuestions: [], inclusionCriteria: [], exclusionCriteria: [],
+      },
+    });
+    mocks.discoverer.mockResolvedValue({
+      discoveryQueries: ["q"],
+      discoveredPapers: [{
+        id: "dp1", provider: "arxiv", externalId: "arxiv:1", title: "T",
+        abstract: "A", oaUrl: "https://x", accessStatus: "open", corpusItemId: null,
+      }],
+    });
+    mocks.fetcher.mockResolvedValue({
+      discoveredPapers: [{
+        id: "dp1", provider: "arxiv", externalId: "arxiv:1", title: "T",
+        abstract: "A", oaUrl: "https://x", accessStatus: "open", corpusItemId: "ci_dp1",
+      }],
+    });
+    mocks.screener.mockResolvedValue({
+      includedPapers: [{ corpusItemId: "ci_dp1", relevanceScore: 0.9, inclusionReason: "r" }],
+      screeningDecisions: [{ discoveredPaperId: "dp1", include: true, relevanceScore: 0.9, reason: "r" }],
+    });
+    mocks.assessor.mockResolvedValue({ claims: [] });
+    mocks.drafter.mockResolvedValue({ draft: "X" });
+    mocks.critic.mockResolvedValue({
+      critique: {
+        decision: "approve", overallScore: 4,
+        rubric: { faithfulness: 4, completeness: 4, citationQuality: 4, clarity: 4 },
+        actionableFeedback: "ok",
+      },
+      critiqueIterations: 1,
+    });
+    mocks.citeCheck.mockResolvedValue({});
+
+    const { buildGraph } = await import("@/lib/agent/graph");
+    const { Command } = await import("@langchain/langgraph");
+    const graph = await buildGraph();
+    const config = { configurable: { thread_id: "r_v2_skip" } };
+
+    await graph.invoke(
+      {
+        ...initialState, runId: "r_v2_skip",
+        searchScope: "outbound" as const,
+        searchProviders: ["arxiv" as const],
+        searchMaxHits: null,
+        skipDiscoveryGate: true,
+      },
+      config,
+    );
+    // plan_gate still interrupts (skipDiscoveryGate only affects discovery_gate).
+    await graph.invoke(new Command({ resume: { approved: true } }), config);
+    // papers_gate then interrupts (discovery_gate auto-approved, fetcher + screener
+    // ran without a pause for HITL). Asserts that discovery_gate did NOT fire an
+    // interrupt — only ONE resume call between plan_gate and papers_gate.
+    await graph.invoke(new Command({ resume: { approved: true } }), config);
+
+    expect(mocks.discoverer).toHaveBeenCalledTimes(1);
+    expect(mocks.fetcher).toHaveBeenCalledTimes(1);
+    expect(mocks.screener).toHaveBeenCalledTimes(1);
+    // Final state.draft = "X" proves the run flowed all the way to drafter+critic
+    // without ever pausing at discovery_gate.
+    const final = await graph.getState(config);
+    expect(final.values.draft).toBe("X");
   });
 
   it("V2 outbound: rejecting discovery_gate routes to END (no fetcher / screener / assessor)", async () => {
@@ -301,6 +371,7 @@ describe("routeAfterCritic", () => {
       searchScope: "uploaded_only" as const,
       searchProviders: [],
       searchMaxHits: null,
+      skipDiscoveryGate: false,
       discoveryQueries: [],
       discoveredPapers: [],
       discoveryApproved: null,
@@ -322,6 +393,7 @@ describe("routeAfterCritic", () => {
       searchScope: "uploaded_only" as const,
       searchProviders: [],
       searchMaxHits: null,
+      skipDiscoveryGate: false,
       discoveryQueries: [],
       discoveredPapers: [],
       discoveryApproved: null,
@@ -345,6 +417,7 @@ describe("routeAfterCritic", () => {
       searchScope: "uploaded_only" as const,
       searchProviders: [],
       searchMaxHits: null,
+      skipDiscoveryGate: false,
       discoveryQueries: [],
       discoveredPapers: [],
       discoveryApproved: null,
@@ -368,6 +441,7 @@ describe("routeAfterCritic", () => {
       searchScope: "uploaded_only" as const,
       searchProviders: [],
       searchMaxHits: null,
+      skipDiscoveryGate: false,
       discoveryQueries: [],
       discoveredPapers: [],
       discoveryApproved: null,

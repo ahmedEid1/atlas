@@ -20,6 +20,9 @@ const createSchema = z.object({
   // knob's ceiling (see lib/env.ts MAX_DISCOVERED_PAPERS_PER_RUN) so a
   // project can never ask for more than the operator configured.
   searchMaxHits: z.number().int().min(1).max(100).optional(),
+  // V2 power-user opt-out — auto-approves the discovery_gate so the agent
+  // doesn't pause for HITL after the discoverer. Cost-cap still applies.
+  skipDiscoveryGate: z.boolean().optional(),
 }).refine(
   (data) =>
     !data.searchYearStart ||

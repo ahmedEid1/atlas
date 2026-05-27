@@ -144,6 +144,16 @@ export const AgentStateAnnotation = Annotation.Root({
     reducer: (_old, neu) => neu,
     default: () => null,
   }),
+  // V2 power-user opt-out: when true, the discovery_gate node auto-approves
+  // (discoveryApproved={approved:true}) without firing interrupt(). Skips
+  // the HITL pause between discoverer and fetcher; useful for trusted
+  // researchers + the eval CI path where blocking on human input would
+  // deadlock the harness. Sourced from Project.skipDiscoveryGate (default
+  // false). Has no effect on uploaded_only projects (gate doesn't run).
+  skipDiscoveryGate: Annotation<boolean>({
+    reducer: (_old, neu) => neu,
+    default: () => false,
+  }),
   discoveryQueries: Annotation<string[]>({
     reducer: (_old, neu) => neu,
     default: () => [],

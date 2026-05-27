@@ -74,6 +74,7 @@ export const runReviewTask = schemaTask({
           searchScope: true,
           searchProviders: true,
           searchMaxHits: true,
+          skipDiscoveryGate: true,
         },
       });
       if (!project) throw new Error(`Project for run ${runId} not found`);
@@ -109,6 +110,7 @@ export const runReviewTask = schemaTask({
             p === "openalex" || p === "arxiv" || p === "exa",
         ),
         searchMaxHits: project.searchMaxHits,
+        skipDiscoveryGate: project.skipDiscoveryGate,
         discoveryQueries: [],
         discoveredPapers: [],
         discoveryApproved: null,

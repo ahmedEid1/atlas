@@ -72,6 +72,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 </dd>
               </div>
             )}
+            {project.skipDiscoveryGate && (
+              <div className="col-span-2 sm:col-span-3">
+                <dt className="text-muted-foreground">HITL gate</dt>
+                <dd className="italic">Discovery approval skipped (auto-approve)</dd>
+              </div>
+            )}
           </dl>
         </section>
       )}

@@ -125,6 +125,40 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M14 — Wire Project.skipDiscoveryGate (was declared, never honored)
+
+**Goal:** Fourth v2 audit bug. `Project.skipDiscoveryGate` has existed
+as a column since the M0 migration (defaulted false, called out in the
+spec as a power-user opt-out from the HITL gate) but no code consumed
+it. Every outbound run paused at discovery_gate regardless of the
+column's value — the field was pure dead schema.
+
+**What shipped:**
+
+- `AgentState.skipDiscoveryGate` channel added (boolean, default
+  false, "neu wins" reducer like the other v2 channels).
+- `trigger/run-review.ts` hydrates it from `Project.skipDiscoveryGate`
+  alongside the other v2 fields.
+- `lib/agent/graph.ts` discoveryApprovalGate short-circuits when
+  `state.skipDiscoveryGate=true`: returns `{ approved: true }`
+  directly without calling `interrupt()`, so the graph flows
+  straight from discoverer → fetcher with no HITL pause. The
+  fetcher + screener + cost-cap chain still applies, so this can't
+  cause a runaway-cost incident on its own.
+- `app/api/projects/route.ts` create schema accepts the new
+  optional `skipDiscoveryGate` field.
+- `NewProjectDialog` "Search tuning" fieldset gains a "Skip
+  discovery approval" checkbox with explainer copy.
+- Project detail page surfaces the setting in the Discovery
+  configuration panel ("HITL gate: Discovery approval skipped").
+- `tests/lib/agent/graph.test.ts` gets a new end-to-end case
+  ("V2 outbound: skipDiscoveryGate=true auto-approves and flows
+  straight to fetcher") that drives a full outbound run with only
+  two Command.resume calls (plan_gate + papers_gate, none for
+  discovery_gate) and asserts the draft is produced.
+
+**Key files:** `lib/agent/state.ts`, `lib/agent/graph.ts`, `trigger/run-review.ts`, `app/api/projects/route.ts`, `components/projects/new-project-dialog.tsx`, `app/projects/[id]/page.tsx`, `tests/lib/agent/graph.test.ts`
+
 ## V2-M13 — Hybrid mode actually merges uploaded PDFs (bug fix)
 
 **Goal:** Hybrid projects (`searchScope='hybrid'`) required ≥1 PARSED
