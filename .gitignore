@@ -16,7 +16,6 @@ AGENTS.md
 CLAUDE.md
 tsconfig.tsbuildinfo
 
-/lib/generated/prisma
 /app/generated/
 
 eval-results.json
