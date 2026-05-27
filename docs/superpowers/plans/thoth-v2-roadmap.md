@@ -125,6 +125,28 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M22 — segmentStatus is V2-aware (DISCOVERING/FETCHING were dead enums)
+
+**Goal:** Tenth audit fix. The Run.status enum declared
+`DISCOVERING`, `FETCHING`, `SCREENING` (added in the v2 migration)
+but the trigger task's `segmentStatus()` always returned the V1
+chain (PLANNING/RETRIEVING/ASSESSING/DRAFTING). Outbound runs
+displayed `RETRIEVING` while the discoverer / fetcher / screener
+were actually running — misleading on the dashboard status pill
+and on `list_reviews` MCP output.
+
+**What shipped:**
+
+- `segmentStatus(segment, searchScope)` now takes the project's
+  searchScope. uploaded_only keeps the V1 chain. outbound + hybrid
+  return PLANNING → DISCOVERING → FETCHING → ASSESSING → DRAFTING.
+- Trigger task call site passes `project.searchScope` through.
+- New test asserts an outbound run's setRunStatus call sequence
+  contains DISCOVERING + FETCHING + ASSESSING and crucially does
+  NOT contain V1's RETRIEVING.
+
+**Key files:** `trigger/run-review.ts`, `tests/trigger/run-review.test.ts`
+
 ## V2-M21 — Dispatcher all-providers-fail coverage + README v2 quickstart
 
 **Goal:** Two small finishes.

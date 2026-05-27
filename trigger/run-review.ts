@@ -124,7 +124,10 @@ export const runReviewTask = schemaTask({
 
       // Bound the loop — at most 6 segments (defensive vs infinite resume).
       for (let segment = 0; segment < 6; segment++) {
-        await setRunStatus({ runId, status: segmentStatus(segment) });
+        await setRunStatus({
+          runId,
+          status: segmentStatus(segment, project.searchScope),
+        });
         lastState = (await graph.invoke(payload as never, config)) as GraphResult;
 
         const interrupts = lastState.__interrupt__;
@@ -237,17 +240,56 @@ export const runReviewTask = schemaTask({
   },
 });
 
+type RunPhaseStatus =
+  | "PLANNING"
+  | "RETRIEVING"
+  | "ASSESSING"
+  | "DRAFTING"
+  | "DISCOVERING"
+  | "FETCHING";
+
+/**
+ * Map a graph-segment index to the user-facing Run.status that best describes
+ * the work that segment is about to do. V2 outbound/hybrid runs go through a
+ * different node chain than V1 uploaded_only runs, so the mapping branches
+ * on searchScope. Without this branch, outbound runs displayed
+ * Run.status="RETRIEVING" while the discoverer / fetcher / screener were
+ * actually running — misleading on the dashboard + the run-detail status pill.
+ *
+ * Segment ordering (with `setRunStatus` happening BEFORE the invoke):
+ *   uploaded_only — 0:planner  1:retriever  2:assessor+drafter+critic+cite_check
+ *   outbound      — 0:planner  1:discoverer  2:fetcher+screener  3:assessor+...
+ *   hybrid        — same as outbound (graph routes hybrid through V2 chain)
+ */
 function segmentStatus(
   segment: number,
-): "PLANNING" | "RETRIEVING" | "ASSESSING" | "DRAFTING" {
+  searchScope: "uploaded_only" | "outbound" | "hybrid",
+): RunPhaseStatus {
+  if (searchScope === "uploaded_only") {
+    switch (segment) {
+      case 0:
+        return "PLANNING";
+      case 1:
+        return "RETRIEVING";
+      case 2:
+        return "ASSESSING";
+      case 3:
+        return "DRAFTING";
+      default:
+        return "DRAFTING";
+    }
+  }
+  // outbound + hybrid take the V2 chain
   switch (segment) {
     case 0:
       return "PLANNING";
     case 1:
-      return "RETRIEVING";
+      return "DISCOVERING";
     case 2:
-      return "ASSESSING";
+      return "FETCHING";
     case 3:
+      return "ASSESSING";
+    case 4:
       return "DRAFTING";
     default:
       return "DRAFTING";

@@ -131,6 +131,63 @@ describe("run-review task", () => {
     );
   });
 
+  // V2 segmentStatus: outbound runs must show DISCOVERING / FETCHING /
+  // ASSESSING / DRAFTING in sequence, not the V1 RETRIEVING that was
+  // wrongly used through M21. Asserts the status transitions seen by the
+  // dashboard during an outbound run.
+  it("V2 — uses V2 status enum values during outbound segments", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      question: "Q?",
+      searchScope: "outbound",
+      searchProviders: ["openalex"],
+    } as never);
+
+    mocks.graphInvoke
+      .mockResolvedValueOnce({
+        __interrupt__: [{ value: { kind: "APPROVE_PLAN", plan: { picoc: {} } } }],
+      })
+      .mockResolvedValueOnce({
+        __interrupt__: [{
+          value: { kind: "APPROVE_DISCOVERY", queries: ["q"], discoveredPapers: [] },
+        }],
+      })
+      .mockResolvedValueOnce({
+        __interrupt__: [{
+          value: { kind: "APPROVE_PAPERS", includedPapers: [] },
+        }],
+      })
+      .mockResolvedValueOnce({
+        draft: "# Review",
+        includedPapers: [],
+        claims: [],
+      });
+
+    mocks.waitForToken
+      .mockReturnValueOnce({ unwrap: () => Promise.resolve({ approved: true }) })
+      .mockReturnValueOnce({ unwrap: () => Promise.resolve({ approved: true }) })
+      .mockReturnValueOnce({ unwrap: () => Promise.resolve({ approved: true, corpusItemIds: [] }) });
+
+    const mod = await import("@/trigger/run-review");
+    const task = mod.runReviewTask as unknown as {
+      run: (p: { runId: string }) => Promise<unknown>;
+    };
+    await task.run({ runId: "r1" });
+
+    // Extract the sequence of setRunStatus *phase* statuses (filter out the
+    // AWAITING_* ones written from the interrupt branch).
+    const phaseStatuses = vi.mocked(runs.setRunStatus).mock.calls
+      .map((c) => (c[0] as { status: string }).status)
+      .filter((s) => !s.startsWith("AWAITING_") && s !== "COMPLETED" && s !== "FAILED");
+
+    // Outbound chain: PLANNING → DISCOVERING → FETCHING → ASSESSING.
+    expect(phaseStatuses).toContain("PLANNING");
+    expect(phaseStatuses).toContain("DISCOVERING");
+    expect(phaseStatuses).toContain("FETCHING");
+    expect(phaseStatuses).toContain("ASSESSING");
+    // V1 RETRIEVING must NEVER appear on an outbound run.
+    expect(phaseStatuses).not.toContain("RETRIEVING");
+  });
+
   it("V2 — marks the run REJECTED when the discovery gate is rejected", async () => {
     mocks.graphInvoke
       .mockResolvedValueOnce({
