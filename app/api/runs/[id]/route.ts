@@ -50,6 +50,15 @@ export async function GET(
         },
       },
       includedPapers: true,
+      // V2 — outbound/hybrid runs accumulate DiscoveredPaper rows + per-row
+      // ScreeningDecision. Including both in the API response so the
+      // run-detail page (server component) and external clients (MCP tools,
+      // live e2e) can render the V2 surface without a separate fetch.
+      // Uploaded_only runs have empty arrays here.
+      discoveredPapers: {
+        orderBy: { initialScore: "desc" },
+        include: { screening: true },
+      },
     },
   });
   if (!run || run.project.ownerId !== user.id) {
