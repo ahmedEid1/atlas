@@ -33,12 +33,20 @@ export async function GET(req: Request) {
     headerToken.length > 0 &&
     headerToken === detailToken;
 
+  // Surface the deploy identifier so ops can correlate a health response
+  // with a specific Vercel deployment. Vercel sets VERCEL_GIT_COMMIT_SHA on
+  // every prod / preview build; locally it's undefined and the field is
+  // omitted rather than emitted as null. This is the same pattern the
+  // /evals page uses to render the "X of Y goldens at this commit" badge.
+  const commitSha = process.env.VERCEL_GIT_COMMIT_SHA;
+
   return NextResponse.json(
     {
       ok,
       service: "thoth",
       dbReachable,
       ...(dbError && detailAllowed ? { dbError } : {}),
+      ...(commitSha ? { commitSha: commitSha.slice(0, 7) } : {}),
       timestamp: new Date().toISOString(),
     },
     { status: ok ? 200 : 503 },

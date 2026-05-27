@@ -22,6 +22,7 @@ type HealthBody = {
   service: string;
   dbReachable: boolean;
   dbError?: string;
+  commitSha?: string;
   timestamp: string;
 };
 
@@ -101,5 +102,28 @@ describe("GET /api/health", () => {
     expect(res.status).toBe(503);
     const body = (await res.json()) as HealthBody;
     expect(body.dbError).toBeUndefined();
+  });
+
+  it("INCLUDES short commitSha when VERCEL_GIT_COMMIT_SHA is set", async () => {
+    process.env.VERCEL_GIT_COMMIT_SHA = "abc1234deadbeef5678";
+    vi.mocked(db.$queryRaw).mockResolvedValue([{ "?column?": 1 }] as never);
+
+    const { GET } = await import("@/app/api/health/route");
+    const res = await GET(new Request("http://localhost/api/health"));
+
+    const body = (await res.json()) as HealthBody;
+    expect(body.commitSha).toBe("abc1234"); // first 7 chars
+    delete process.env.VERCEL_GIT_COMMIT_SHA;
+  });
+
+  it("OMITS commitSha when VERCEL_GIT_COMMIT_SHA is unset", async () => {
+    delete process.env.VERCEL_GIT_COMMIT_SHA;
+    vi.mocked(db.$queryRaw).mockResolvedValue([{ "?column?": 1 }] as never);
+
+    const { GET } = await import("@/app/api/health/route");
+    const res = await GET(new Request("http://localhost/api/health"));
+
+    const body = (await res.json()) as HealthBody;
+    expect("commitSha" in body).toBe(false);
   });
 });

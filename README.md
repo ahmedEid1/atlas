@@ -12,7 +12,7 @@
 [![Public evals](https://img.shields.io/badge/evals-public-C9A961?style=flat-square)](https://thoth-slr.vercel.app/evals)
 [![MCP Registry](https://img.shields.io/badge/MCP-registered-orange?style=flat-square)](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-328%20passing-success?style=flat-square)](#)
+[![Tests](https://img.shields.io/badge/tests-330%20passing-success?style=flat-square)](#)
 [![Status](https://img.shields.io/badge/status-v1.0.1-informational?style=flat-square)](#)
 [![Deploy cost](https://img.shields.io/badge/deploy-%240%2Fmo-brightgreen?style=flat-square)](#)
 
@@ -35,7 +35,7 @@ Thoth turns a research question and a corpus of PDFs into an evidence-grounded l
 | **Live app** | [thoth-slr.vercel.app](https://thoth-slr.vercel.app) (Clerk sign-in) |
 | **Public eval dashboard** | [`/evals`](https://thoth-slr.vercel.app/evals) — recall/precision/faithfulness/coverage over a 17-question versioned golden set (14 real-paper SLR questions across LLM/ML/SE + 3 synthetic seeds), refreshed weekly via CI |
 | **Official MCP Registry entry** | [`io.github.ahmedEid1/thoth`](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) — `status: active` |
-| **Tests** | 328 unit/integration + 3 live e2e MCP smoke checks, all green; tsc + lint clean |
+| **Tests** | 330 unit/integration + 3 live e2e MCP smoke checks, all green; tsc + lint clean |
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
 | **Deploy cost** | $0 / month (Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers) |
 | **Self-host fallback** | One-VM deploy on Oracle Cloud Always Free (4 ARM cores, 24 GB RAM) — [`docs/self-host/`](docs/self-host/oracle-cloud-quickstart.md) |
@@ -106,7 +106,7 @@ See [`.env.example`](.env.example) for the full env-var list. Non-obvious ones: 
 ## Tests
 
 ```bash
-pnpm test                                                                # 328 unit/integration tests
+pnpm test                                                                # 330 unit/integration tests
 PLAYWRIGHT_BASE_URL=https://thoth-slr.vercel.app pnpm playwright test tests/e2e/mcp-smoke.spec.ts  # 3 live e2e
 pnpm tsx scripts/verify-mcp-audit.ts                                     # spot-check the McpCall audit log
 ```
