@@ -121,7 +121,10 @@ export default async function EvalsPage() {
         {lastRunDate && lastRun && (
           <p className="mt-4 text-sm text-[var(--thoth-stone)] flex flex-wrap items-center gap-2">
             <span>Last run</span>
-            <time className="text-[var(--thoth-blue-ink)] tabular-nums">
+            <time
+              dateTime={new Date(lastRun.createdAt).toISOString()}
+              className="text-[var(--thoth-blue-ink)] tabular-nums"
+            >
               {lastRunDate}
             </time>
             <span aria-hidden="true">·</span>

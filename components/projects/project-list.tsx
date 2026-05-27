@@ -40,7 +40,10 @@ export function ProjectList({ projects }: { projects: Project[] }) {
             <div className="flex-1 min-w-0">
               <p className="eyebrow mb-2">
                 Updated{" "}
-                <time className="text-[var(--thoth-blue-ink)] tabular-nums">
+                <time
+                  dateTime={new Date(p.updatedAt).toISOString()}
+                  className="text-[var(--thoth-blue-ink)] tabular-nums"
+                >
                   {new Date(p.updatedAt).toLocaleDateString("en-GB", {
                     year: "numeric",
                     month: "short",
