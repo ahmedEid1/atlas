@@ -14,20 +14,41 @@ export function NewProjectDialog() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [question, setQuestion] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   function submit() {
+    setError(null);
     startTransition(async () => {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, question }),
-      });
-      if (!res.ok) return;
-      const project = (await res.json()) as { id: string };
-      setOpen(false);
-      router.push(`/projects/${project.id}`);
+      try {
+        const res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, question }),
+        });
+        if (res.ok) {
+          const project = (await res.json()) as { id: string };
+          setOpen(false);
+          router.push(`/projects/${project.id}`);
+          return;
+        }
+        // Map known statuses; the API returns a zod-flatten on 400 — fall
+        // through to a generic line rather than dump field-level structure
+        // at the user.
+        switch (res.status) {
+          case 401:
+            setError("Your session expired. Please sign in again.");
+            break;
+          case 400:
+            setError("Title and question are required, and title can't exceed 120 chars / question 2000 chars.");
+            break;
+          default:
+            setError(`Could not create the project (HTTP ${res.status}).`);
+        }
+      } catch {
+        setError("Could not reach the server. Check your connection.");
+      }
     });
   }
 
@@ -46,6 +67,11 @@ export function NewProjectDialog() {
             <Textarea id="question" value={question} onChange={(e) => setQuestion(e.target.value)} rows={4} />
           </div>
         </div>
+        {error && (
+          <p role="alert" aria-live="polite" className="text-destructive text-xs leading-snug">
+            {error}
+          </p>
+        )}
         <DialogFooter>
           <Button onClick={submit} disabled={isPending || !title || !question}>
             {isPending ? "Creating…" : "Create"}
