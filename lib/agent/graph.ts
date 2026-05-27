@@ -46,12 +46,22 @@ export function routeAfterCritic(state: AgentState): "drafter" | "cite_check" {
 /**
  * Build and compile the SLR agent graph:
  *
- *   START → planner → plan_gate ─(approved)→ retriever → papers_gate ─(approved)→ assessor → drafter → END
- *                                  └─(rejected)→ END                  └─(rejected)→ END
+ *   START → planner → plan_gate ──(approved)→ retriever → papers_gate ──(approved)→ assessor → drafter
+ *                       └─(rejected)→ END                    └─(rejected)→ END                    │
+ *                                                                                                 ▼
+ *                                                                              ┌──── (revise) ── critic
+ *                                                                              ▼                  │
+ *                                                                           drafter        (approve)
+ *                                                                                                 ▼
+ *                                                                                            cite_check → END
  *
  * The two `*_gate` nodes use {@link interrupt} for human-in-the-loop approval.
  * Resuming with `Command({ resume: { approved, ... } })` writes the decision
  * into state, and a conditional edge routes accordingly.
+ *
+ * The drafter ↔ critic loop is capped at 2 critic iterations (`routeAfterCritic`
+ * forces `cite_check` once `state.critiqueIterations >= 2`), so the graph always
+ * terminates in cite_check → END regardless of the critic's verdict.
  */
 export async function buildGraph() {
   const checkpointer = await getCheckpointer();
