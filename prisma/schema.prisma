@@ -11,21 +11,29 @@ model User {
   id        String   @id @default(cuid())
   clerkId   String   @unique
   email     String   @unique
-  isGuest   Boolean  @default(false)   // true for anonymous sample-data sessions; subject to nightly cleanup
+  isGuest   Boolean  @default(false) // true for anonymous sample-data sessions; subject to nightly cleanup
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects  Project[]
-  mcpCalls  McpCall[]
+  projects Project[]
+  mcpCalls McpCall[]
 
   @@index([clerkId])
-  @@index([isGuest, createdAt])         // for the cleanup cron's "guests older than 24h" query
+  @@index([isGuest, createdAt]) // for the cleanup cron's "guests older than 24h" query
 }
 
 enum CorpusItemKind {
   PDF
   URL
   NOTE
+}
+
+/// V2 (outbound search) — how the retriever / discoverer sources papers.
+/// uploaded_only is the V1 default and remains the default for all existing rows.
+enum SearchScope {
+  uploaded_only
+  outbound
+  hybrid
 }
 
 enum CorpusItemStatus {
@@ -66,16 +74,26 @@ enum ClaimCheckVerdict {
 }
 
 model Project {
-  id          String   @id @default(cuid())
-  ownerId     String
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  title       String
-  question    String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title     String
+  question  String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  corpus      CorpusItem[]
-  runs        Run[]
+  // V2 — outbound search configuration. Defaults match V1 behavior: every
+  // existing project + every newly-created project ignores outbound providers
+  // unless the user opts in. See docs/superpowers/specs/thoth-v2-design.md §3.
+  searchScope       SearchScope @default(uploaded_only)
+  searchProviders   String[]    @default([]) // e.g. ["openalex","arxiv","exa"]
+  searchYearStart   Int?
+  searchYearEnd     Int?
+  searchMaxHits     Int         @default(50) // hard cap on discoverer output
+  skipDiscoveryGate Boolean     @default(false) // power-user: auto-approve discovery_gate
+
+  corpus CorpusItem[]
+  runs   Run[]
 
   @@index([ownerId])
 }
@@ -86,77 +104,91 @@ model CorpusItem {
   project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   kind            CorpusItemKind
   status          CorpusItemStatus @default(PENDING)
-  source          String           // blob key for PDF, URL for URL, "" for NOTE
+  // For uploads: R2 blob key (`corpus/<projectId>/<uuid>.pdf`).
+  // For V2 discovered papers: `<provider>:<externalId>` (e.g. `openalex:W123...`,
+  //   `arxiv:2310.06770`). Lets the fetcher look up the original record without
+  //   joining DiscoveredPaper for the common-case lookup.
+  source          String
   rawText         String?          @db.Text
   parsedMarkdown  String?          @db.Text
   failureReason   String?
-  summary           Json?
-  summaryTraceUrl   String?
-  summarisedAt      DateTime?
+  summary         Json?
+  summaryTraceUrl String?
+  summarisedAt    DateTime?
+  // V2 — cross-reference back to the originating record so the assessor + UI
+  // can render provenance ("OpenAlex W123…", "arXiv 2310.06770") without a join.
+  // Both nullable: uploads have neither; arXiv-only preprints may have just an arxiv id.
+  externalDoi     String?          @unique
+  externalArxivId String?          @unique
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  includedIn  IncludedPaper[]
+  includedIn   IncludedPaper[]
+  discoveredAs DiscoveredPaper?
 
   @@index([projectId])
   @@index([status])
 }
 
 model Run {
-  id              String     @id @default(cuid())
-  projectId       String
-  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  status          RunStatus  @default(PENDING)
-  question        String     @db.Text
-  plan            Json?
-  draft           String?    @db.Text
-  failureReason   String?
-  faithfulnessScore Float?     // 0.0-1.0 = supported / total citations after cite_check
-  critiqueScore     Float?     // 1.0-5.0 weighted rubric average from final critique
-  triggerRunId    String?    @unique
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  completedAt     DateTime?
+  id                String    @id @default(cuid())
+  projectId         String
+  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status            RunStatus @default(PENDING)
+  question          String    @db.Text
+  plan              Json?
+  draft             String?   @db.Text
+  failureReason     String?
+  faithfulnessScore Float? // 0.0-1.0 = supported / total citations after cite_check
+  critiqueScore     Float? // 1.0-5.0 weighted rubric average from final critique
+  triggerRunId      String?   @unique
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  completedAt       DateTime?
 
-  steps           RunStep[]
-  checkpoints     HumanCheckpoint[]
-  includedPapers  IncludedPaper[]
-  claims          ExtractedClaim[]
-  claimChecks     ClaimCheck[]
+  steps              RunStep[]
+  checkpoints        HumanCheckpoint[]
+  includedPapers     IncludedPaper[]
+  claims             ExtractedClaim[]
+  claimChecks        ClaimCheck[]
+  // V2 (outbound search). Empty on uploaded_only runs; populated by the
+  // discoverer + screener nodes when the project's searchScope is outbound/hybrid.
+  discoveredPapers   DiscoveredPaper[]
+  screeningDecisions ScreeningDecision[]
 
   @@index([projectId])
   @@index([status])
 }
 
 model RunStep {
-  id          String   @id @default(cuid())
-  runId       String
-  run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
-  nodeName    String
-  startedAt   DateTime @default(now())
-  endedAt     DateTime?
-  traceUrl    String?
-  inputTokens Int      @default(0)
-  outputTokens Int     @default(0)
-  cacheReadInputTokens Int @default(0)
-  failureReason String?
+  id                   String    @id @default(cuid())
+  runId                String
+  run                  Run       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  nodeName             String
+  startedAt            DateTime  @default(now())
+  endedAt              DateTime?
+  traceUrl             String?
+  inputTokens          Int       @default(0)
+  outputTokens         Int       @default(0)
+  cacheReadInputTokens Int       @default(0)
+  failureReason        String?
 
   @@index([runId])
 }
 
 model HumanCheckpoint {
-  id          String           @id @default(cuid())
-  runId       String
-  run         Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
-  kind        CheckpointKind
-  status      CheckpointStatus @default(PENDING)
-  proposal    Json
-  decisionPayload Json?
-  rejectionReason String?
-  waitToken   String?          @unique
-  createdAt   DateTime         @default(now())
-  decidedAt   DateTime?
-  attemptCount          Int       @default(0)
+  id                    String           @id @default(cuid())
+  runId                 String
+  run                   Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
+  kind                  CheckpointKind
+  status                CheckpointStatus @default(PENDING)
+  proposal              Json
+  decisionPayload       Json?
+  rejectionReason       String?
+  waitToken             String?          @unique
+  createdAt             DateTime         @default(now())
+  decidedAt             DateTime?
+  attemptCount          Int              @default(0)
   lastDeliveryAttemptAt DateTime?
   terminalError         String?
 
@@ -166,56 +198,104 @@ model HumanCheckpoint {
 }
 
 model IncludedPaper {
-  id           String     @id @default(cuid())
-  runId        String
-  run          Run        @relation(fields: [runId], references: [id], onDelete: Cascade)
-  corpusItemId String
-  corpusItem   CorpusItem @relation(fields: [corpusItemId], references: [id], onDelete: Cascade)
-  relevanceScore Float
-  inclusionReason String  @db.Text
-  createdAt    DateTime   @default(now())
+  id              String     @id @default(cuid())
+  runId           String
+  run             Run        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  corpusItemId    String
+  corpusItem      CorpusItem @relation(fields: [corpusItemId], references: [id], onDelete: Cascade)
+  relevanceScore  Float
+  inclusionReason String     @db.Text
+  createdAt       DateTime   @default(now())
 
-  claims       ExtractedClaim[]
+  claims ExtractedClaim[]
 
   @@unique([runId, corpusItemId])
   @@index([runId])
 }
 
 model ExtractedClaim {
-  id              String         @id @default(cuid())
+  id              String        @id @default(cuid())
   runId           String
-  run             Run            @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run             Run           @relation(fields: [runId], references: [id], onDelete: Cascade)
   includedPaperId String
-  includedPaper   IncludedPaper  @relation(fields: [includedPaperId], references: [id], onDelete: Cascade)
-  text            String         @db.Text
+  includedPaper   IncludedPaper @relation(fields: [includedPaperId], references: [id], onDelete: Cascade)
+  text            String        @db.Text
   category        String
-  createdAt       DateTime       @default(now())
+  createdAt       DateTime      @default(now())
 
   @@index([runId])
   @@index([includedPaperId])
 }
 
 model ClaimCheck {
-  id            String              @id @default(cuid())
-  runId         String
-  run           Run                 @relation(fields: [runId], references: [id], onDelete: Cascade)
-  paperId       String              // the [paper_id] referenced in the draft (matches IncludedPaper.corpusItemId)
-  claim         String              @db.Text
-  verdict       ClaimCheckVerdict
-  reason        String              @db.Text
-  paperExcerpt  String?             @db.Text
-  createdAt     DateTime            @default(now())
+  id           String            @id @default(cuid())
+  runId        String
+  run          Run               @relation(fields: [runId], references: [id], onDelete: Cascade)
+  paperId      String // the [paper_id] referenced in the draft (matches IncludedPaper.corpusItemId)
+  claim        String            @db.Text
+  verdict      ClaimCheckVerdict
+  reason       String            @db.Text
+  paperExcerpt String?           @db.Text
+  createdAt    DateTime          @default(now())
+
+  @@index([runId])
+}
+
+/// V2 — a paper surfaced by the outbound discoverer from one search provider.
+/// Created BEFORE any inclusion decision; the screener writes a sibling
+/// ScreeningDecision row. The optional corpusItemId is populated by the
+/// fetcher node once it successfully downloads + OCRs the PDF.
+model DiscoveredPaper {
+  id              String      @id @default(cuid())
+  runId           String
+  run             Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  provider        String // "openalex" | "arxiv" | "exa" | ...
+  externalId      String // DOI / arXiv id / OpenAlex W-id
+  title           String
+  authors         String[]
+  abstract        String?     @db.Text
+  publicationYear Int?
+  venue           String?
+  citationCount   Int?
+  oaUrl           String? // openly-accessible PDF URL when known
+  accessStatus    String // "open" | "paywalled" | "unknown"
+  initialScore    Float // discoverer's relevance heuristic
+  corpusItemId    String?     @unique // set by fetcher after successful OCR
+  corpusItem      CorpusItem? @relation(fields: [corpusItemId], references: [id], onDelete: SetNull)
+  createdAt       DateTime    @default(now())
+
+  screening ScreeningDecision?
+
+  @@unique([runId, externalId])
+  @@index([runId])
+  @@index([runId, provider])
+}
+
+/// V2 — per-paper inclusion decision by the screener node. Replaces V1's
+/// retriever-emitted IncludedPaper for outbound runs (uploaded runs still
+/// use retriever → IncludedPaper). A separate table so the screener's
+/// reasoning + score are queryable independently of the assessor's later work.
+model ScreeningDecision {
+  id                String          @id @default(cuid())
+  runId             String
+  run               Run             @relation(fields: [runId], references: [id], onDelete: Cascade)
+  discoveredPaperId String          @unique
+  discoveredPaper   DiscoveredPaper @relation(fields: [discoveredPaperId], references: [id], onDelete: Cascade)
+  include           Boolean
+  reason            String          @db.Text
+  relevanceScore    Float // 0.0-1.0
+  createdAt         DateTime        @default(now())
 
   @@index([runId])
 }
 
 model EvalRun {
   id        String   @id @default(cuid())
-  goldenId  String   // e.g., "000-cbt-back-pain"
-  metric    String   // "citation_recall" | "citation_precision" | "claim_faithfulness" | "expected_claim_coverage"
-  score     Float    // 0.0-1.0
-  runId     String?  // optional FK-ish link to the underlying Thoth Run (not enforced; eval runs may delete the Run row afterwards)
-  commitSha String   // git commit at time of run
+  goldenId  String // e.g., "000-cbt-back-pain"
+  metric    String // "citation_recall" | "citation_precision" | "claim_faithfulness" | "expected_claim_coverage"
+  score     Float // 0.0-1.0
+  runId     String? // optional FK-ish link to the underlying Thoth Run (not enforced; eval runs may delete the Run row afterwards)
+  commitSha String // git commit at time of run
   createdAt DateTime @default(now())
 
   @@index([goldenId, createdAt])
@@ -223,16 +303,16 @@ model EvalRun {
 }
 
 model McpCall {
-  id          String        @id @default(cuid())
-  userId      String                          // Thoth User.id (NOT Clerk id)
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  toolName    String
-  inputHash   String                          // SHA-256(canonical-JSON(input))
-  reviewId    String?                         // copied from input when present
-  status      McpCallStatus
-  errorCode   String?
-  latencyMs   Int
-  createdAt   DateTime      @default(now())
+  id        String        @id @default(cuid())
+  userId    String // Thoth User.id (NOT Clerk id)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolName  String
+  inputHash String // SHA-256(canonical-JSON(input))
+  reviewId  String? // copied from input when present
+  status    McpCallStatus
+  errorCode String?
+  latencyMs Int
+  createdAt DateTime      @default(now())
 
   @@index([userId, createdAt])
   @@index([userId, toolName, createdAt])

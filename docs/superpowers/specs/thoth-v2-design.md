@@ -1,0 +1,438 @@
+# Thoth v2 — Design (DRAFT)
+
+**Status:** Proposal, not yet approved. V1 design is at [`thoth-design.md`](./thoth-design.md).
+**Owner:** Ahmed Hobeishy
+
+---
+
+## 1. Why v2
+
+V1's retriever scores papers from the **project's uploaded corpus only**. The
+out-of-scope list explicitly defers outbound search (`Exa, OpenAlex, web search
+— deferred`) and the design doc closes that decision tightly for the GDPR
+story.
+
+The v2 thesis: **make Thoth find its own papers.** The user gives a research
+question; the agent discovers candidate papers across academic indices,
+acquires their full text where openly available, screens them against the
+plan's inclusion criteria, and only then drops into V1's existing
+assessor → drafter → critic → cite_check pipeline. The uploaded-PDF surface
+stays — V1 users keep working. V2 is additive.
+
+This is the biggest single capability expansion since M5 (the MCP server).
+Done right, it turns Thoth from "a workspace for a corpus you've already
+collected" into "a tool you point at a research question and walk away from
+for 30 minutes."
+
+### Non-goals (still)
+
+- Real-time multi-user collaboration on a single run.
+- Quantitative meta-analysis (effect-size extraction, forest plots). Tracked
+  for v2.x, **not** the v2.0 thesis.
+- Multi-tenant org workspaces. Each project still belongs to one `User`.
+- Writing assistance during the human-approval pause — the user reviews,
+  doesn't co-author the draft.
+
+---
+
+## 2. Architecture changes
+
+New nodes between `planner` and `retriever`. The V1 flow stays from
+`assessor` onward.
+
+```
+START
+  ↓
+planner ─────────────→ plan_gate ──(approve)──→ discoverer
+                            └─(reject)→ END         ↓
+                                                    ▼
+                                          discovery_gate (NEW HITL: edit query set?)
+                                                    │
+                                       ┌────────────┘
+                                       ▼
+                                    fetcher  (acquire PDFs for open-access hits)
+                                       │
+                                       ▼
+                                    screener (per-paper inclusion check)
+                                       │
+                                       ▼
+                                  papers_gate ──(approve)──→ assessor
+                                       └─(reject)→ END
+                                                                ↓
+                                                             drafter ← ── ┐
+                                                                ↓        │
+                                                             critic ─revise (<2)
+                                                                ↓ approve
+                                                            cite_check
+                                                                ↓
+                                                              END
+```
+
+Concretely:
+
+- **`discoverer`** (NEW, smart tier): takes the PICOC + sub-questions and emits
+  N search queries per provider (4-8 queries total). Calls each provider in
+  parallel, deduplicates by DOI / canonical-id, returns a `DiscoveredPaper[]`
+  ranked by initial relevance heuristics (title-question similarity + venue
+  prior + citation count).
+- **`discovery_gate`** (NEW HITL): shows the user the generated queries and
+  the deduplicated hit list (top 50 by initial rank). They can drop a query
+  ("too broad"), add one, or approve. Same `interrupt()` + Trigger.dev
+  `wait.forToken` pattern V1 uses for plan_gate.
+- **`fetcher`** (NEW, no LLM): for each approved hit, resolves its
+  open-access URL (OpenAlex `oa_url`, arXiv PDF link, Crossref `link[]` array
+  filtered to OA), downloads the PDF to R2, runs Mistral OCR. Skips closed
+  access (records `accessStatus: "paywalled"`). Bounded concurrency (8) so
+  one slow source doesn't stall the run.
+- **`screener`** (NEW, fast tier): per-paper inclusion decision against the
+  plan's criteria. Replaces V1's retriever in spirit, but operates on
+  fetcher-produced corpus items rather than user-uploaded ones. Records
+  decision + reason + relevance score to `ScreeningDecision`.
+- **`papers_gate`**: existing HITL gate, unchanged in shape. The list it
+  proposes is now screener output rather than retriever output.
+
+Everything from `assessor` onward is V1 code, unchanged. Drafter, critic, and
+cite_check don't care how the included papers got there.
+
+---
+
+## 3. Data model
+
+New tables + columns. All migrations additive; existing v1 projects keep
+working (they default to `searchScope: "uploaded_only"`).
+
+```prisma
+enum SearchScope {
+  uploaded_only   // V1 behaviour. Default for existing rows.
+  outbound        // V2: agent searches indices itself.
+  hybrid          // both — uploaded PDFs counted alongside discovered ones.
+}
+
+model Project {
+  // ... existing fields ...
+  searchScope        SearchScope  @default(uploaded_only)
+  searchProviders    String[]                              // ["openalex","arxiv","exa"], etc.
+  searchYearStart    Int?                                  // 1999..2026 or null
+  searchYearEnd      Int?
+  searchMaxHits      Int          @default(50)             // hard cap on discoverer output
+}
+
+model DiscoveredPaper {
+  id              String   @id @default(cuid())
+  runId           String
+  run             Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  provider        String                                   // "openalex" | "arxiv" | "exa" | ...
+  externalId      String                                   // DOI / arXiv id / OpenAlex W-id
+  title           String
+  authors         String[]
+  abstract        String?       @db.Text
+  publicationYear Int?
+  venue           String?
+  citationCount   Int?
+  oaUrl           String?                                  // openly-accessible PDF URL when known
+  accessStatus    String                                   // "open" | "paywalled" | "unknown"
+  initialScore    Float                                    // discoverer's relevance heuristic
+  corpusItemId    String?                                  // populated after fetcher downloads
+  createdAt       DateTime @default(now())
+
+  @@unique([runId, externalId])
+  @@index([runId])
+}
+
+model ScreeningDecision {
+  id              String   @id @default(cuid())
+  runId           String
+  run             Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  discoveredPaperId String
+  discoveredPaper DiscoveredPaper @relation(fields: [discoveredPaperId], references: [id], onDelete: Cascade)
+  include         Boolean
+  reason          String   @db.Text
+  relevanceScore  Float
+  createdAt       DateTime @default(now())
+
+  @@index([runId])
+}
+```
+
+The existing `CorpusItem` gains optional cross-reference columns so an
+acquired paper can be looked up by external id without an extra join:
+
+```prisma
+model CorpusItem {
+  // ... existing ...
+  source       String       // "upload" | "openalex:W..." | "arxiv:2310.06770" | ...
+  externalDoi  String?      @unique
+  externalArxivId String?   @unique
+}
+```
+
+---
+
+## 4. Search providers — v2.0 scope
+
+Three providers in v2.0; more in v2.x.
+
+| Provider | Why | Free-tier limit | Used for |
+|---|---|---|---|
+| **OpenAlex** | 250M+ works, comprehensive, no API key, well-structured | 100k/day per IP (anonymous), no auth needed for read | primary metadata + OA URL resolution |
+| **arXiv** | Pre-prints, full-text PDFs always OA, machine-readable | Polite 3-second between calls (no daily cap) | physics/CS preprints + PDF acquisition |
+| **Exa** | Semantic search (embeddings, not keywords) | 1000 searches/mo free | tightening recall on niche / phrasing-sensitive queries |
+
+**Deferred to v2.1+:**
+
+- Semantic Scholar (S2) — useful citation graph but needs key + rate limit signoff.
+- PubMed — biomedical only; deferring until first biomedical eval golden lands.
+- Crossref — primarily DOI resolution; integrate when OpenAlex's resolution misses.
+- Google Scholar — no public API; scraping is fragile + ToS-risky.
+
+Each provider gets a thin adapter at `lib/search/providers/<name>.ts`
+matching the LLM-provider pattern from `lib/llm/providers/`. The dispatcher
+is `lib/search/dispatch.ts`. Provider failure is **per-provider tolerable**
+— a 5xx from one provider records the error to `DiscoveredPaper` (no rows)
+and the run continues with the other providers.
+
+---
+
+## 5. PDF acquisition
+
+The fetcher node downloads PDFs for OA hits. Pipeline:
+
+1. For each `DiscoveredPaper` where `accessStatus === "open"` and `oaUrl !== null`:
+   - HEAD the URL, check `Content-Type: application/pdf` and `Content-Length < 50MB`.
+   - GET, stream to R2 at `corpus/<projectId>/discovered/<discoveredPaperId>.pdf`.
+   - Call `parsePdfWithMistral` (V1 path, no change).
+   - Create `CorpusItem` row with `source: "openalex:W..."` and the new
+     `externalDoi` / `externalArxivId` columns.
+   - Link back via `DiscoveredPaper.corpusItemId`.
+2. Bounded concurrency at 8 (constant in `lib/agent/nodes/fetcher.ts`). Slow
+   provider doesn't stall the run.
+3. On HEAD failure / non-PDF / 4xx / timeout (30s): record
+   `accessStatus: "paywalled"` and skip. Screener handles the abstract-only
+   case by scoring against title + abstract instead of full text.
+4. Cost-cap participates: each Mistral OCR call sums into the run's token
+   budget per the existing cost-cap rules (Mistral OCR isn't an LLM call but
+   we estimate ~50 tokens/page for budget accounting).
+
+---
+
+## 6. HITL gates
+
+Two HITL gates in V2 (V1 had two also):
+
+- **`plan_gate`** — unchanged.
+- **`discovery_gate`** (NEW) — shows queries + top hits, user can edit/drop queries.
+- **`papers_gate`** — unchanged in shape; now operates on screener output.
+
+The discovery_gate is **opt-out at the project level**: a power user who
+trusts the discoverer can set `Project.skipDiscoveryGate = true` and the
+graph routes around it. Same pattern V0.7.1 considered for plan_gate but
+didn't ship — v2 is the right time.
+
+---
+
+## 7. Cost-cap implications
+
+The 250k-token default cap (`MAX_TOKENS_PER_RUN`) was sized for V1's
+workload. V2 adds:
+
+- Discoverer (1 LLM call, ~2k output tokens for 8 queries).
+- Screener (1 LLM call per discovered paper — up to 50).
+- Mistral OCR (paid by page, NOT token; accounted at ~50 tokens/page heuristic).
+
+Worst case: 50 papers × (5-page abstract OCR + screener call) ≈ 50 × (250 OCR
++ 1500 LLM in/out) ≈ 87.5k tokens for the discovery/screening phase alone,
+on top of V1's ~150k for assessor/drafter/critic/cite_check.
+
+**Default bump**: `MAX_TOKENS_PER_RUN` default goes 250k → 400k. Per-env
+override still works. The v2 docs explicitly call out the higher steady-state
+cost.
+
+A new `MAX_DISCOVERED_PAPERS_PER_RUN` knob (default 50, hard ceiling 100)
+gates the fetcher loop so a runaway query doesn't blow OCR cost. Mirrors
+V1's `MAX_TOKENS_PER_RUN` pattern.
+
+---
+
+## 8. UI changes
+
+- **Project creation**: new "Discovery scope" config block — radio
+  (uploaded-only / outbound / hybrid), provider checkboxes, year-range, max-hits.
+  Existing projects default to `uploaded_only`; the upgrade is opt-in per project.
+- **Run page**: new "Discovery" section between Steps and Approval Cards.
+  Lists the generated queries + top-N hits live as the discoverer runs.
+- **Discovery approval card**: renders queries as editable text rows + hit
+  list with checkboxes. Per-row "drop" + global "approve all" + global
+  "regenerate queries".
+- **Corpus list**: PARSED items from discovery render with a small provider
+  badge (`openalex` / `arxiv` / `exa`) + the original OA URL.
+
+---
+
+## 9. Eval implications
+
+Two new metrics layer onto V1's four:
+
+| Metric | What it measures |
+|---|---|
+| `discovery_recall` | did the discoverer find the expected papers? (existing `expectedPapers` field; matched by DOI rather than uploaded id) |
+| `screening_precision` | of the discoverer's hits, what fraction passed screening AND were expected? |
+
+V1's metrics stay applicable post-screening — `citation_recall` etc. now
+measure the assessor → drafter pipeline given a screening output.
+
+The golden YAML schema gains optional `expectedDois: string[]` and
+`expectedOaUrl: string[]` so a v2 golden can specify "agent should find
+these via search" vs. v1 goldens that specify "agent should include these
+from the uploaded corpus."
+
+CI eval workflow: a new `EVAL_MODE=outbound` env path runs v2 goldens;
+default stays `uploaded_only` so existing v1 goldens keep working.
+
+---
+
+## 10. Security & privacy
+
+The big new privacy concern: **outbound API calls leak the research question
+to third parties** (Exa, OpenAlex, arXiv). V1's tightest selling point —
+"your corpus stays on your infra" — needs to be re-stated for v2:
+
+- Outbound mode is **opt-in per project**, not global default.
+- `docs/security-and-privacy.md` §2 gains an entry per provider listing
+  their data-residency + retention policy (Exa US; OpenAlex EU; arXiv US).
+- The discoverer node logs the exact query strings to a new `SearchQuery`
+  audit table so a worried researcher can re-derive what was sent to whom.
+- A new env-gated `SEARCH_DISABLED` operator kill switch (mirrors
+  `DEMO_DISABLED` from v1.0.0) — flip it to force every project back to
+  uploaded-only mode without a deploy.
+
+The self-host story is unchanged: outbound providers still need to be
+reachable from the self-host VM, but the search-API keys (Exa) live in
+`.env.prod` and never travel to Trigger.dev Cloud (the v1 sync allowlist
+in `trigger.config.ts` will gain `EXA_API_KEY` only if outbound is enabled).
+
+---
+
+## 11. MCP surface
+
+V2.0 keeps the 3 read-only tools. The agent runs server-side; MCP just
+exposes results.
+
+Additions deferred to v2.1+:
+
+- `list_discovered_papers(reviewId)` — returns the DiscoveredPaper rows so a
+  Claude conversation can ask "what did Thoth find but exclude, and why?"
+- `get_search_queries(reviewId)` — what the discoverer actually asked. Useful
+  for a researcher who wants to re-run the same query manually on Scopus.
+
+Both are read-only and tenant-scoped, fitting the existing pattern.
+
+---
+
+## 12. Backward compatibility
+
+Every v1 project keeps working unchanged:
+
+- `searchScope` defaults to `uploaded_only` on existing rows (Prisma
+  migration sets the default).
+- The graph routes around the new nodes when `searchScope === "uploaded_only"`.
+- The HITL gate shape is identical — existing run pages keep rendering.
+
+A user opting into outbound on an existing project:
+- Old corpus items stay (kept alongside discovered ones in `hybrid` mode).
+- A new Run with `searchScope === "outbound"` ignores uploaded items entirely;
+  `hybrid` includes both.
+
+---
+
+## 13. Open questions
+
+Things I'd want answered before cutting M2-v2 plan tickets:
+
+1. **Query generation prompt** — the discoverer's LLM call is the most
+   sensitive prompt in the pipeline. Each provider has its own query syntax
+   (OpenAlex's `filter:`, arXiv's `cat:`, Exa's natural language). Do we
+   build 3 separate prompts, or one universal prompt and translate per-
+   provider in the adapter? Leaning: universal prompt + adapter translation.
+2. **Hit deduplication** — DOI is the natural key, but ~15% of arXiv preprints
+   have no DOI. Fall back to title-similarity matching? Currently propose:
+   strict DOI dedup; warn the user in the UI when arXiv has a near-duplicate
+   title to an OpenAlex hit so they can manually skip.
+3. **Re-screening on a re-run** — if the user re-runs after a planning edit,
+   should the discoverer re-query (cost) or re-use the prior `DiscoveredPaper`
+   rows (stale)? Leaning: cache by `(projectId, plan-hash)` for 24h.
+4. **Free-tier exhaustion handling** — when Exa hits its 1000/mo cap mid-month,
+   does the discoverer fail or degrade to OpenAlex+arXiv only? Leaning:
+   degrade silently, log to the run's failureReason as a non-fatal warning.
+5. **PDF acquisition rate** — empirically, what fraction of OpenAlex hits
+   are openly accessible? Anecdotally 30-50% depending on field. Need a real
+   measurement before sizing the screener's expected work.
+
+---
+
+## 14. Milestone breakdown (proposed)
+
+| Milestone | Scope | Tag |
+|---|---|---|
+| **v2-M0** | Spec sign-off (this doc), schema migration, adapter scaffolding, no agent integration | `v2.0.0-m0` |
+| **v2-M1** | Discoverer + fetcher + screener nodes wired in. OpenAlex + arXiv adapters. Discovery HITL gate. **uploaded-only mode still the default**. | `v2.0.0-m1` |
+| **v2-M2** | Exa adapter, query-edit UI, discovery audit table, `SEARCH_DISABLED` kill switch | `v2.0.0-m2` |
+| **v2-M3** | 5-question v2 eval golden set with `expectedDois`. CI workflow update | `v2.0.0-m3` |
+| **v2-M4** | Default project setup nudges toward outbound. Backward-compat tested end-to-end with a v1 project | `v2.0.0` |
+
+Rough estimate: M0-M2 is ~10 days of focused work, M3 needs real-data
+calibration (1-2 weeks), M4 is polish + docs. **Total: ~4 weeks** assuming
+no major rework of any milestone.
+
+Each M ships behind a feature flag (`OUTBOUND_SEARCH_ENABLED=1`) until M4
+flips the default — same pattern as `DEMO_DISABLED` in v1.
+
+---
+
+## 15. Risks / trade-offs
+
+- **The discoverer LLM call is the new fragility surface.** If it generates
+  bad queries, the whole run is biased. Eval recall metric is the canary.
+- **PDF acquisition is dependent on third-party uptime.** A bad arXiv day
+  drops the corpus quality for any biomedical / physics project that day.
+  Cron-tracked alerts in v2.1 if needed.
+- **Cost-cap defaults need re-calibration.** 400k token default is a guess;
+  real-world runs will surface whether it's too tight.
+- **GDPR positioning shifts.** "Your corpus stays on your infra" only holds
+  in `uploaded_only` mode. The marketing surface needs an honest disclaimer.
+- **MCP value-prop shifts.** V1's MCP demo was about *cite_check catching
+  fabrications*. V2 enables a richer demo: "ask Claude to discover and
+  draft a review on X." But the new demo needs new content.
+
+---
+
+## 16. Cost estimate (free-tier baseline)
+
+A typical v2 run on the default `MAX_DISCOVERED_PAPERS_PER_RUN=50` budget:
+
+| Component | Calls | Cost on Mistral free tier |
+|---|---|---|
+| Discoverer | 1 | $0 |
+| Screener | up to 50 | $0 (~50× 1500 in+out tokens, well under daily quota) |
+| Fetcher OCR | up to 50 PDFs × 5 pages avg | $0 on Free Experiment tier (250 page-calls/mo) — TIGHT |
+| Assessor | up to 20 (screener-included) | $0 |
+| Drafter / critic / cite_check | unchanged from v1 | $0 |
+| Outbound search | OpenAlex + arXiv free; Exa ~33 searches/run × 1000/mo cap = 30 runs/mo | $0 |
+
+**The OCR page budget is the binding constraint.** A user running v2 more
+than ~5×/month on full 50-paper sets will hit Mistral's free OCR cap. The
+docs need to be honest about this — v2 is "$0 for the first few runs, then
+pay per page on a tier above Free Experiment ($0.001/page batch)."
+
+---
+
+## 17. Decision needed before any code
+
+- [ ] Approve the milestone breakdown in §14
+- [ ] Pick the v2.0 cost-cap default (proposed 400k; alternatives: 350k tighter, 500k looser)
+- [ ] Confirm Exa is the right third provider (vs. Semantic Scholar)
+- [ ] Confirm `searchScope` defaults to `uploaded_only` for all existing projects
+- [ ] Confirm the §13 open questions don't have known answers I missed
+
+Once these are settled, the plan moves to
+`docs/superpowers/plans/thoth-v2-roadmap.md` (mirroring the v1 plan doc)
+with per-milestone TDD breakdown.
