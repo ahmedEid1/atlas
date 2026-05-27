@@ -5,11 +5,13 @@ import { useState } from "react";
 /**
  * The primary CTA on the home page for unauthenticated visitors.
  *
- * Click → POST /api/demo/start → server creates a guest Clerk user,
- * deep-clones the sample review into their account, mints a sign-in
- * ticket → we redirect to the Clerk ticket URL, which auto-signs in
- * and bounces to /dashboard. End-to-end takes ~2–4 seconds, mostly
- * the Prisma clone transaction.
+ * Click → POST /api/demo/start → server creates a guest Clerk user
+ * (isGuest=true, 24h cleanup cron), mirrors a local User row, and
+ * mints a Clerk sign-in ticket → we redirect to the ticket URL, which
+ * auto-signs in and bounces to /dashboard. The dashboard lands empty
+ * — earlier iterations deep-cloned a sample review, but that was
+ * intentionally removed so guests experience the real flow (upload
+ * PDFs, run the agent, see cite_check fire). End-to-end ~1-2 seconds.
  */
 export function DemoCtaButton() {
   const [busy, setBusy] = useState(false);
