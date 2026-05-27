@@ -125,6 +125,35 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M11 — Honor keptExternalIds in fetcher (bug fix)
+
+**Goal:** Make the DiscoveryApprovalCard's per-row checkbox actually
+do something. Before this fix, the fetcher and screener looped over
+every discovered paper regardless of which ones the user dropped
+at the discovery_gate — quietly negating the user's intent and
+costing OCR + screener-LLM calls on rejected papers.
+
+**What shipped:**
+
+- `lib/agent/nodes/fetcher.ts` reads `state.discoveryApproved.
+  keptExternalIds` and filters discoveredPapers to that list (when
+  provided) before the open-access / OCR / persistence loop. When
+  the user clicked "Approve N" without dropping anything, the field
+  is undefined and the original "fetch all" behaviour stands.
+- The returned state's `discoveredPapers` shrinks to the kept set
+  so the downstream screener (which iterates state.discoveredPapers)
+  never bills LLM calls on dropped papers either.
+- The underlying `DiscoveredPaper` DB rows are NOT deleted — they
+  still appear in `list_discovered_papers` (MCP tool) and the
+  DiscoverySummary panel, so users + auditors can see "the
+  discoverer found 50, you kept 30, the screener admitted 12."
+- Two new fetcher tests cover the keptExternalIds path (only kept
+  papers fetched + only kept papers in returned state) and the
+  approved-as-is path (keptExternalIds undefined → every paper
+  fetched).
+
+**Key files:** `lib/agent/nodes/fetcher.ts`, `tests/lib/agent/nodes/fetcher.test.ts`
+
 ## V2-M10 — Eval CLI + dashboard wire V2 metrics
 
 **Goal:** Make the public `/evals` dashboard ready for V2 outbound
