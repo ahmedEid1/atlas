@@ -51,6 +51,24 @@ describe("GoldenQuestionSchema", () => {
     expect(r.success).toBe(false);
   });
 
+  it("rejects duplicate paper ids within a question", () => {
+    // Without this guard, seed-corpus.ts's paperIdMap silently drops the
+    // first paper when two share an id, biasing the corpus passed to the
+    // headless eval runner.
+    const dup = {
+      ...validGolden,
+      papers: [
+        validGolden.papers[0]!,
+        { ...validGolden.papers[0]!, title: "Second paper, same id" },
+      ],
+    };
+    const r = GoldenQuestionSchema.safeParse(dup);
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues.some((i) => /unique/.test(i.message))).toBe(true);
+    }
+  });
+
   it("accepts difficulty as easy/medium/hard", () => {
     for (const d of ["easy", "medium", "hard"] as const) {
       const r = GoldenQuestionSchema.safeParse({

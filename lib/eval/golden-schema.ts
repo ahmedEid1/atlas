@@ -30,6 +30,15 @@ export const GoldenQuestionSchema = z
     expectedClaims: z.array(z.string().min(1)).min(1),
     metadata: MetadataSchema,
   })
+  // `papers[].id` must be unique within the question — `lib/eval/seed-corpus.ts`
+  // builds a Map<paper.id, corpusItem.id> and a duplicate paper id would
+  // silently overwrite the earlier entry, dropping a paper from the seeded
+  // corpus. None of the existing 17 goldens have duplicates today; the
+  // refine keeps that invariant intact going forward.
+  .refine(
+    (g) => new Set(g.papers.map((p) => p.id)).size === g.papers.length,
+    { message: "papers[].id must be unique within the question" },
+  )
   .refine(
     (g) => {
       const paperIds = new Set(g.papers.map((p) => p.id));
