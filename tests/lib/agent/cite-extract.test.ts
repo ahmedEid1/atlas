@@ -13,11 +13,22 @@ describe("extractCitations", () => {
     ]);
   });
 
-  it("extracts multiple citations, deduplicating same paperId+sentence pairs", () => {
+  it("extracts multiple distinct (paperId, sentence) pairs from across the draft", () => {
     const draft = "Two findings agree [c1] [c2]. A separate sentence cites [c1] too.";
     const result = extractCitations(draft);
     expect(result).toHaveLength(3);
     expect(result.map((r) => r.paperId).sort()).toEqual(["c1", "c1", "c2"]);
+  });
+
+  it("deduplicates identical (paperId, sentence) pairs within one sentence", () => {
+    // The drafter LLM sometimes restates the same citation later in the same
+    // sentence ("Smith found X [c1] and Jones reported Y [c1]"). Both mentions
+    // produce the same cite_check prompt; we coalesce them to avoid burning a
+    // paid LLM call on an identical verdict.
+    const draft = "Smith found X [c1] and Jones reported Y [c1].";
+    const result = extractCitations(draft);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.paperId).toBe("c1");
   });
 
   it("treats markdown formatting around citations correctly (lists, headings)", () => {
