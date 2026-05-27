@@ -117,6 +117,41 @@ describe("runHeadless", () => {
     expect(result.draft).toBe("Done.");
   });
 
+  // V2 — outbound headless eval: callers can pass searchScope='outbound'
+  // and an empty corpusItemIds array; the discoverer fills the corpus.
+  // This test verifies the seed payload reflects the override and the
+  // corpus lookup is skipped.
+  it("V2 outbound: skips the corpus lookup and passes searchScope through", async () => {
+    mocks.invoke.mockResolvedValueOnce({
+      runId: "r1", projectId: "p1", question: "Q",
+      candidateCorpusItems: [], plan: null, planApproved: null,
+      includedPapers: [], papersApproved: null, claims: [],
+      draft: "Outbound draft.", critique: null, critiqueIterations: 0,
+      searchScope: "outbound" as const,
+      searchProviders: ["openalex"],
+      discoveryQueries: ["foo"], discoveredPapers: [],
+      discoveryApproved: null, screeningDecisions: [],
+    });
+
+    const { runHeadless } = await import("@/lib/eval/headless-runner");
+    const result = await runHeadless({
+      runId: "r1", projectId: "p1", question: "Q",
+      corpusItemIds: [],
+      searchScope: "outbound",
+      searchProviders: ["openalex"],
+    });
+
+    expect(mocks.corpusFindMany).not.toHaveBeenCalled();
+    expect(mocks.invoke).toHaveBeenCalledTimes(1);
+    const seedPayload = mocks.invoke.mock.calls[0]![0];
+    expect(seedPayload).toMatchObject({
+      searchScope: "outbound",
+      searchProviders: ["openalex"],
+      candidateCorpusItems: [],
+    });
+    expect(result.draft).toBe("Outbound draft.");
+  });
+
   it("throws after maxSegments to prevent infinite loops on a buggy graph", async () => {
     mocks.invoke.mockResolvedValue({
       runId: "r1", projectId: "p1", question: "Q",
