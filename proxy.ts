@@ -21,6 +21,14 @@ const isPublicRoute = createRouteMatcher([
   // Liveness probe for self-host docker healthcheck + external monitors.
   // Must be reachable without auth so unhealthy containers are detected.
   "/api/health",
+  // Next.js Metadata Files conventions — OG / Twitter cards / icons are
+  // served from these routes and must be public so Slack / Twitter / X /
+  // LinkedIn crawlers can fetch them. Without the explicit allow, Clerk's
+  // middleware redirects them to /sign-in and the previews stay blank.
+  "/opengraph-image(.*)",
+  "/twitter-image(.*)",
+  "/icon(.*)",
+  "/apple-icon(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
