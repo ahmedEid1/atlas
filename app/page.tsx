@@ -169,7 +169,10 @@ export default function Home() {
           <Proof
             href="https://github.com/ahmedEid1/thoth"
             external
-            label="199 tests · tsc · lint · all green"
+            // Keep this count in sync with the README's badge and the
+            // "Verified engineering proofs" table — search for the
+            // string literal on bumps so this surface doesn't drift.
+            label="327 tests · tsc · lint · all green"
           />
           <Proof label="SHA-256 audit log on every MCP call · no raw input stored" />
           <Proof label="$0 / month deploy on free tiers" />
