@@ -13,14 +13,15 @@ export async function assessorNode(state: AgentState): Promise<Partial<AgentStat
     for (const inc of state.includedPapers) {
       const markdown = await findCorpusMarkdown(inc.corpusItemId);
       if (!markdown) {
-        // The screener only includes papers with a corpusItemId, but the
-        // fetcher can create a PARSED CorpusItem with empty/null markdown when
-        // OCR yields no text (image-only / corrupt PDF). Such a paper has
-        // nothing to extract claims from, so skipping is correct — but record
-        // it as a finished RunStep with a failureReason so an operator can see
-        // WHY a user-approved paper produced zero claims, instead of it
-        // silently vanishing from the synthesis. tokens=0; graceful (the rest
-        // of the corpus is still assessed).
+        // The screener only includes papers with a corpusItemId, yet
+        // findCorpusMarkdown can still return null here — when OCR yielded
+        // empty/null markdown (image-only / corrupt PDF) so the fetcher created
+        // a content-less PARSED CorpusItem, OR when the CorpusItem is no longer
+        // in a PARSED state. Either way there's nothing to extract claims from,
+        // so skipping is correct — but record it as a finished RunStep with a
+        // failureReason so an operator can see WHY a user-approved paper
+        // produced zero claims, instead of it silently vanishing from the
+        // synthesis. tokens=0; graceful (the rest of the corpus is still assessed).
         const skipStep = await addStep({ runId: state.runId, nodeName: "assessor_paper" });
         await finishStep({
           stepId: skipStep.id,
