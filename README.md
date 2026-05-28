@@ -55,6 +55,12 @@ server your AI assistant can call directly.
 <img src="docs/assets/media/02-showcase.png" alt="A completed Thoth review: critic 4.2/5, citation faithfulness 75%, 8/8 citations checked with 2 unsupported" width="760" />
 </div>
 
+**Evaluated in public** — [`/evals`](https://thoth-slr.vercel.app/evals) tracks recall / precision / faithfulness / coverage over a versioned golden set, refreshed weekly by CI, so a regression is a public signal:
+
+<div align="center">
+<img src="docs/assets/media/03-evals.png" alt="Thoth's public eval dashboard — citation recall, precision, faithfulness, and coverage per golden question" width="760" />
+</div>
+
 ## Key features
 
 - **🔎 `cite_check` — verifiable citations.** Every `[paper_id]` in the draft is
@@ -100,6 +106,11 @@ https://thoth-slr.vercel.app/api/mcp/mcp
 
 Full reference: [`docs/mcp/tools.md`](docs/mcp/tools.md) · auth + audit model: [`docs/mcp/security.md`](docs/mcp/security.md)
 </details>
+
+<div align="center">
+<img src="docs/assets/m5-mcp-setup.gif" alt="Adding Thoth as a custom MCP connector in claude.ai — paste the URL, OAuth via Clerk + Dynamic Client Registration" width="760" />
+<br/><em>Adding Thoth as a custom connector in claude.ai — OAuth runs in your browser (Clerk + DCR), no token to copy.</em>
+</div>
 
 **Run it locally:**
 
