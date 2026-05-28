@@ -11,6 +11,8 @@ vi.mock("@/lib/db", () => ({
       create: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      updateMany: vi.fn(),
       deleteMany: vi.fn(),
     },
   },
@@ -171,6 +173,134 @@ describe("GET /api/projects/[id]", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string };
     expect(body.id).toBe("p1");
+  });
+});
+
+describe("PATCH /api/projects/[id]", () => {
+  it("updates the owned project + returns the fresh row", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.updateMany).mockResolvedValue({ count: 1 } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "p1", title: "Updated", searchScope: "outbound",
+    } as never);
+
+    const { PATCH } = await import("@/app/api/projects/[id]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/api/projects/p1", {
+        method: "PATCH",
+        body: JSON.stringify({ title: "Updated", searchMaxHits: 30 }),
+      }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.project.updateMany).toHaveBeenCalledWith({
+      where: { id: "p1", ownerId: "u1" },
+      data: { title: "Updated", searchMaxHits: 30 },
+    });
+    const body = (await res.json()) as { id: string; title: string };
+    expect(body.title).toBe("Updated");
+  });
+
+  it("returns 404 when not owned or missing (existence-probe defense)", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.updateMany).mockResolvedValue({ count: 0 } as never);
+
+    const { PATCH } = await import("@/app/api/projects/[id]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/api/projects/p_other", {
+        method: "PATCH",
+        body: JSON.stringify({ title: "x" }),
+      }),
+      { params: Promise.resolve({ id: "p_other" }) },
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 when validation fails (e.g. yearStart > yearEnd)", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+
+    const { PATCH } = await import("@/app/api/projects/[id]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/api/projects/p1", {
+        method: "PATCH",
+        body: JSON.stringify({ searchYearStart: 2025, searchYearEnd: 2020 }),
+      }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(res.status).toBe(400);
+    expect(db.project.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("auto-defaults providers when flipping searchScope outbound + provider list empty", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.findFirst).mockResolvedValue({
+      searchProviders: [],
+    } as never);
+    vi.mocked(db.project.updateMany).mockResolvedValue({ count: 1 } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "p1", searchScope: "outbound", searchProviders: ["openalex", "arxiv"],
+    } as never);
+
+    const { PATCH } = await import("@/app/api/projects/[id]/route");
+    await PATCH(
+      new NextRequest("http://localhost/api/projects/p1", {
+        method: "PATCH",
+        body: JSON.stringify({ searchScope: "outbound" }),
+      }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(db.project.updateMany).toHaveBeenCalledWith({
+      where: { id: "p1", ownerId: "u1" },
+      data: expect.objectContaining({
+        searchScope: "outbound",
+        searchProviders: ["openalex", "arxiv"],
+      }),
+    });
+  });
+
+  it("does NOT default providers when the caller passes an explicit list (even empty)", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1" } as never);
+    vi.mocked(db.project.updateMany).mockResolvedValue({ count: 1 } as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({} as never);
+
+    const { PATCH } = await import("@/app/api/projects/[id]/route");
+    await PATCH(
+      new NextRequest("http://localhost/api/projects/p1", {
+        method: "PATCH",
+        body: JSON.stringify({
+          searchScope: "outbound",
+          searchProviders: ["arxiv"],
+        }),
+      }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+
+    expect(db.project.updateMany).toHaveBeenCalledWith({
+      where: { id: "p1", ownerId: "u1" },
+      data: expect.objectContaining({
+        searchProviders: ["arxiv"],
+      }),
+    });
+    // Did NOT consult findFirst for the existing-empty-providers branch.
+    expect(db.project.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    vi.mocked(requireUser).mockRejectedValue(new Error("unauth"));
+
+    const { PATCH } = await import("@/app/api/projects/[id]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/api/projects/p1", {
+        method: "PATCH",
+        body: JSON.stringify({ title: "x" }),
+      }),
+      { params: Promise.resolve({ id: "p1" }) },
+    );
+    expect(res.status).toBe(401);
   });
 });
 
