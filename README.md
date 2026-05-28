@@ -129,6 +129,8 @@ pnpm verify                                                              # typec
 pnpm test                                                                # 481 unit/integration tests on their own
 pnpm test:e2e:live       # 16 e2e against https://thoth-slr.vercel.app: 3 MCP-transport + 7 real-browser + 6 authenticated walkthroughs incl. PDF upload
 pnpm test:e2e:live:full  # 6 full agent-run pipeline tests (slow — exercises Mistral free-tier end-to-end including draft + cite_check + hybrid mode)
+#                          ^ authenticated specs need E2E_EMAIL + CLERK_SECRET_KEY in .env / .env.test;
+#                            they auto-skip cleanly when absent.
 pnpm tsx scripts/verify-mcp-audit.ts                                     # spot-check the McpCall audit log
 ```
 
