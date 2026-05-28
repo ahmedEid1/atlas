@@ -19,6 +19,20 @@ export async function POST(
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // Mirror approve/route.ts: a terminated run (most commonly a 24h HITL
+  // timeout that failRun'd the run while the checkpoint stayed PENDING) can't
+  // be actioned — reject with a clear signal rather than reporting a
+  // success the dead graph will never honor.
+  if (cp.run.status === "FAILED" || cp.run.status === "COMPLETED" || cp.run.status === "REJECTED") {
+    return NextResponse.json(
+      {
+        error: "run_not_awaiting",
+        message: "This run has already ended (it may have timed out after 24h) — the checkpoint can no longer be rejected.",
+      },
+      { status: 409 },
+    );
+  }
+
   const body = (await req.json().catch(() => ({}))) as { reason?: string };
   // Cap the user-supplied rejection reason. Without this, a malicious or
   // confused client could ship an unbounded blob that would (a) bloat the

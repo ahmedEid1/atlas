@@ -19,6 +19,21 @@ export async function POST(
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // The checkpoint can only be actioned while the run is still waiting on it.
+  // If the run already terminated — most commonly because the 24h HITL wait
+  // token timed out and the worker failRun'd the run while the checkpoint row
+  // stayed PENDING — committing the decision here would report success while
+  // the (dead) graph never resumes. Reject with a clear signal instead.
+  if (cp.run.status === "FAILED" || cp.run.status === "COMPLETED" || cp.run.status === "REJECTED") {
+    return NextResponse.json(
+      {
+        error: "run_not_awaiting",
+        message: "This run has already ended (it may have timed out after 24h) — the checkpoint can no longer be approved.",
+      },
+      { status: 409 },
+    );
+  }
+
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const decisionPayload = { approved: true, ...body };
 

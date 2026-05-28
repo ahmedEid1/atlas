@@ -252,6 +252,28 @@ describe("run-review task", () => {
     );
   });
 
+  it("fails the run with a clear reason when a HITL checkpoint times out (M124)", async () => {
+    mocks.graphInvoke.mockResolvedValueOnce({
+      __interrupt__: [{ value: { kind: "APPROVE_PLAN", plan: { picoc: {} } } }],
+    });
+    // forToken().unwrap() rejects — simulates the 24h wait-token timeout.
+    mocks.waitForToken.mockReturnValueOnce({
+      unwrap: () => Promise.reject(new Error("Waitpoint timed out")),
+    });
+
+    const mod = await import("@/trigger/run-review");
+    const task = mod.runReviewTask as unknown as { run: (p: { runId: string }) => Promise<unknown> };
+
+    await expect(task.run({ runId: "r1" })).rejects.toThrow(/not answered within 24h/);
+    // The run is failed with an actionable reason, not a raw SDK string.
+    expect(runs.failRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: "r1",
+        reason: expect.stringContaining("not answered within 24h"),
+      }),
+    );
+  });
+
   it("V2 — hydrates the project's year range into the initial agent state (M115)", async () => {
     vi.mocked(db.project.findUnique).mockResolvedValue({
       question: "Q?",

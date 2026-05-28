@@ -125,6 +125,45 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M124 — Harden the 24h HITL-checkpoint timeout path
+
+**Goal:** Fix two genuine issues in the HITL delivery flow found by an
+independent silent-failure review (the 2-phase commit + advisory-lock core was
+confirmed sound). Both bite when a human doesn't answer a gate within the 24h
+wait-token window — a real scenario for a research tool.
+
+**#1 — Opaque timeout failure.** When `wait.forToken().unwrap()` times out, it
+threw a raw SDK error that the outer catch turned into the run's
+`failureReason` verbatim. An operator saw a generically FAILED run with an
+un-actionable string. Fixed: `trigger/run-review.ts` now wraps the `forToken`
+call and re-throws a clear, actionable message
+(`HITL <kind> was not answered within 24h … — run halted`), so the failure is
+legible on the dashboard.
+
+**#2 — False-success on a late approve.** After a timeout the worker `failRun`s
+the run, but the `HumanCheckpoint` row stays `PENDING` (there's no EXPIRED
+status). A user returning >24h later and clicking approve would commit the
+decision (phase 1 flips PENDING→APPROVED) and get `{ok:true}` — while the dead
+graph never resumes. Fixed: the approve + reject routes now reject with `409
+run_not_awaiting` when the run is in a terminal status (FAILED/COMPLETED/
+REJECTED) before committing anything, so the user gets an honest "this run has
+ended (it may have timed out)" instead of a silent no-op success.
+
+**Deliberately not changed:** the reviewer also flagged (a) an opaque 500 if
+Trigger 5xxs during phase-2 delivery — but the decision is already committed
+and the recovery outbox re-delivers it, so it's a cosmetic UX wrinkle, not data
+loss; and (b) the `attemptCount` increment sitting outside the advisory lock —
+that placement is the deliberate "count failed attempts even when the tx
+rolls back" design, and the double-count only matters in a rare concurrent
+deliver near MAX_ATTEMPTS. Both left as-is.
+
+**Tests:** trigger fails the run with a "not answered within 24h" reason on a
+forToken rejection; approve + reject both return 409 `run_not_awaiting` for a
+terminal run (no transaction, no delivery). 650 unit/integ green.
+
+**Key files:** `trigger/run-review.ts`,
+`app/api/runs/[id]/checkpoints/[cpId]/{approve,reject}/route.ts`
+
 ## V2-M123 — Trace the assessor's silent skip of an empty-markdown paper
 
 **Goal:** Close a silent-failure observability gap found by an independent

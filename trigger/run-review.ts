@@ -183,15 +183,34 @@ export const runReviewTask = schemaTask({
         // Without unwrap(), `decision` is { ok: boolean, output: T } and resuming
         // with that breaks the gate's expected shape — state.planApproved.approved
         // becomes undefined, routeAfterPlanGate returns END, graph skips retriever.
-        const decision = await wait
-          .forToken<{
-            approved: boolean;
-            rejectionReason?: string;
-            editedPlan?: unknown;
-            corpusItemIds?: string[];
-            editedQueries?: string[];
-          }>(token)
-          .unwrap();
+        let decision: {
+          approved: boolean;
+          rejectionReason?: string;
+          editedPlan?: unknown;
+          corpusItemIds?: string[];
+          editedQueries?: string[];
+        };
+        try {
+          decision = await wait
+            .forToken<{
+              approved: boolean;
+              rejectionReason?: string;
+              editedPlan?: unknown;
+              corpusItemIds?: string[];
+              editedQueries?: string[];
+            }>(token)
+            .unwrap();
+        } catch (waitErr) {
+          // forToken throws on the 24h timeout (the human never answered) or a
+          // Trigger infra failure. Re-throw with a clear, actionable message so
+          // the run's failureReason isn't an opaque SDK string — an operator
+          // can immediately see the gate timed out rather than the agent
+          // crashing. (The outer catch turns this into failRun.)
+          const orig = waitErr instanceof Error ? waitErr.message : String(waitErr);
+          throw new Error(
+            `HITL ${intr.kind} was not answered within 24h (or token delivery failed) — run halted. [${orig}]`,
+          );
+        }
 
         payload = new Command({ resume: decision });
         // Derive the next segment's status from the decision we just made.

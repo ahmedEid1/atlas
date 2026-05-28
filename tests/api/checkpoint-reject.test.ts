@@ -200,6 +200,24 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/reject", () => {
     expect(deliverCheckpoint).not.toHaveBeenCalled();
   });
 
+  it("returns 409 when the run already ended (e.g. 24h timeout left the checkpoint PENDING)", async () => {
+    vi.mocked(requireUser).mockResolvedValue({ id: "u1", isGuest: false } as never);
+    vi.mocked(db.humanCheckpoint.findUnique).mockResolvedValue({
+      id: "cp1",
+      status: "PENDING",
+      run: { id: "r1", status: "FAILED", project: { ownerId: "u1" } },
+    } as never);
+
+    const { POST } = await import("@/app/api/runs/[id]/checkpoints/[cpId]/reject/route");
+    const res = await POST(buildReq({ reason: "x" }), {
+      params: Promise.resolve({ id: "r1", cpId: "cp1" }),
+    });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("run_not_awaiting");
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(deliverCheckpoint).not.toHaveBeenCalled();
+  });
+
   it("returns 409 when a prior caller fully resolved (waitToken null)", async () => {
     vi.mocked(requireUser).mockResolvedValue({ id: "u1", isGuest: false } as never);
     vi.mocked(db.humanCheckpoint.findUnique).mockResolvedValue({
