@@ -112,7 +112,13 @@ There is no self-serve "export my data" endpoint yet. That's the most commonly-r
 - **No CAPTCHA.** Clerk handles bot signups on its end; the demo flow is rate-limited at the API layer.
 - **No data-sharing with the LLM providers beyond the prompts themselves.** Mistral / Anthropic / OpenAI / Groq each have their own terms; check them for the provider you choose. Mistral's free Experiment tier (our default) is explicitly EU-jurisdiction.
 - **No outbound search by default.** The `Project.searchScope` column defaults to `"uploaded_only"` — every project Thoth has ever created (and every future one whose creator doesn't tick the outbound box) stays on the v1 uploaded-PDF-only path with no calls to OpenAlex / arXiv / Exa. Outbound search is opt-in per project, opt-in per provider, and globally killable via `SEARCH_DISABLED=1`.
-- **No SSRF surface in the v2 fetcher.** The fetcher (`lib/agent/nodes/fetcher.ts`) downloads PDFs from URLs returned by the search providers. Before calling `fetch()`, the URL passes through `isSafeExternalUrl()` which rejects: non-HTTP(S) schemes (`file://`, `ftp://`, `gopher://`, `javascript:`), `localhost` / `127.0.0.0/8` loopback, `169.254.0.0/16` link-local (AWS/GCP metadata service — IAM-credential leak risk), RFC 1918 private subnets (10/8, 172.16-31/12, 192.168/16), the `0.0.0.0` wildcard, and malformed URLs. This is defence-in-depth on top of Vercel's network isolation; the obvious malicious-URL injection cases never even leave the runtime.
+- **SSRF defence in the v2 fetcher.** The fetcher (`lib/agent/nodes/fetcher.ts`) downloads PDFs from URLs returned by the search providers. Every URL — the initial one *and every redirect hop* — passes through `isSafeExternalUrl()` before `fetch()`. It rejects:
+  - non-HTTP(S) schemes (`file://`, `ftp://`, `gopher://`, `javascript:`) and malformed URLs;
+  - `localhost` / `127.0.0.0/8` loopback, `169.254.0.0/16` link-local (AWS/GCP metadata service — IAM-credential leak risk), RFC 1918 private subnets (10/8, 172.16-31/12, 192.168/16), the `0.0.0.0` wildcard;
+  - **IPv6** loopback (`::1`), unspecified (`::`), link-local (`fe80::/10`), unique-local (`fc00::/7`), and **IPv4-mapped IPv6** to any of the above (`::ffff:169.254.169.254`, including Node's normalized hex-group form);
+  - **alternate IPv4 encodings** — bare-decimal (`2130706433`), hex (`0x7f000001`), octal-octet (`0177.0.0.1`) — that resolve to internal addresses.
+
+  Crucially, redirects are followed **manually** (`safeFetch`, capped at 5 hops) so a *safe* publisher URL that 30x-redirects to an internal target is re-gated and blocked — `redirect: "follow"` would have bypassed the up-front check. Downloads are **streamed with a hard 25 MB cap** (aborting mid-stream) rather than buffered-then-checked, so a server omitting `Content-Length` can't exhaust worker memory. Defence-in-depth on top of Vercel's / Trigger.dev's network isolation; covered by 36 unit tests (`fetcher-ssrf.test.ts` + `fetcher-download.test.ts`).
 
 ---
 
@@ -126,6 +132,7 @@ These are real gaps. Documenting them honestly is the point of this page.
 - **No DPA template** with the deployer-provided providers (Vercel / Neon / Cloudflare / Clerk / Trigger.dev) is published in this repo. Each provider has their own — the operator deploying Thoth needs to manage those agreements with their own users.
 - **Per-lambda rate-limit memory.** Vercel lambda recycling resets the rate-limiter state; the effective per-IP cap is "5 per hour PER LAMBDA INSTANCE." Acceptable for the current scale; an attacker would need to defeat Vercel's lambda routing to bypass it. A Redis-backed limiter is the upgrade path if usage grows.
 - **The showcase user is a fixture, not a guarantee.** `/showcase` returns 404 if the seed hasn't run on this database. Running `pnpm seed:showcase` after a DB rebuild is on the deployer.
+- **DNS rebinding is out of scope for the fetcher SSRF defence.** `isSafeExternalUrl()` checks the URL's *host literal*, not what it resolves to at fetch time — a public hostname that DNS-resolves to a private IP would pass. Closing this needs a resolve-then-pin-the-IP check on every connection (Node's `fetch` doesn't expose a resolution hook cleanly). Mitigated in practice by the host infra's egress controls (Vercel / Trigger.dev network isolation); the literal-based checks above stop every static-URL injection.
 
 ---
 

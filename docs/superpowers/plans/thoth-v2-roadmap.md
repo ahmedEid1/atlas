@@ -146,6 +146,43 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M112 — Security doc reflects the hardened SSRF defence
+
+**Goal:** `docs/security-and-privacy.md` (the project's
+security/GDPR evidence page) claimed "No SSRF surface in
+the v2 fetcher" but described the **pre-M110** defence —
+listing only the dotted-IPv4 + localhost cases. After
+M110/M111 closed real bypasses, the doc was *overstating*
+a control that had actually been bypassable: a security
+evidence page asserting a stronger guarantee than the
+code delivered.
+
+**What shipped:**
+
+- The "SSRF defence" bullet rewritten to accurately list
+  the full M110/M111 coverage: IPv6 (loopback /
+  unspecified / link-local / unique-local), IPv4-mapped
+  IPv6 (incl. Node's hex-group normalization), alt IPv4
+  encodings (decimal / hex / octal), the **manual
+  redirect re-validation** (the headline M111 fix), and
+  the **streamed 25 MB download cap**. Cites the 36
+  covering tests.
+- Renamed the bullet from "No SSRF surface" to "SSRF
+  defence" — honest framing (defence-in-depth, not an
+  absolute guarantee).
+- Added a **"Known limits"** entry documenting that DNS
+  rebinding is out of scope (literal-host check, not
+  resolution-time), with the mitigation (egress
+  controls) — matches the in-code doc comment.
+
+**Why this matters:** for a security-conscious project,
+an evidence page that overstates a defence is worse than
+one that's accurate-but-modest. M110/M111 fixed the code;
+M112 makes the documented guarantee match reality
+(including the honest limit).
+
+**Key files:** `docs/security-and-privacy.md`
+
 ## V2-M111 — SSRF-via-redirect + unbounded-download fixes
 
 **Goal:** Continuing the M110 depth-review of the
