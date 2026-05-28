@@ -125,6 +125,47 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M47 — Corpus list shows real paper titles
+
+**Goal:** The corpus list rows showed only `item.source`
+— `corpus/<projectId>/<uuid>.pdf` for uploads,
+`openalex:W4234567` / `arxiv:2310.06770` for V2 discoveries.
+Functional but opaque; you couldn't tell what paper a row
+was at a glance.
+
+**What shipped:**
+
+- New `corpusItemLabel(item)` helper. Priority:
+    1. First H1/H2 heading line of `parsedMarkdown`
+       (Mistral OCR consistently emits the paper title as
+       `# Title`). Works for both uploads AND V2 fetched
+       papers once OCR'd.
+    2. Humanised `source` fallback for items that haven't
+       been OCR'd yet (PENDING / PARSING / FAILED): R2 key
+       → filename only; `openalex:W123` → "OpenAlex W123";
+       `arxiv:2310.06770` → "arXiv 2310.06770"; `exa:url`
+       → "Exa url". Unknown prefixes pass through (forward
+       compat for new providers).
+    3. Long titles >140 chars get truncated with an
+       ellipsis so a long DOI/long thesis title doesn't
+       blow the layout.
+- ItemCard now renders `corpusItemLabel(item)` as the
+  primary title (medium-weight) with the raw `source`
+  underneath as a small mono caption. Hover-tooltip on
+  the title shows the raw source.
+- 9 unit tests cover the matrix (5 markdown extraction
+  cases, 4 source-fallback cases including unknown
+  prefixes).
+
+**Why not also join `discoveredAs.title` from the
+DiscoveredPaper table:** the parsedMarkdown heading is the
+canonical title once OCR succeeds, and items that haven't
+been OCR'd yet still need a fallback anyway. Adding the
+DiscoveredPaper join would only catch a brief window after
+fetch + before OCR — not worth the query cost.
+
+**Key files:** `components/corpus/corpus-item-list.tsx`, `tests/components/corpus-item-label.test.ts`
+
 ## V2-M46 — Dashboard project counts at a glance
 
 **Goal:** The dashboard project list showed title +

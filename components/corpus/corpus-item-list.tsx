@@ -18,6 +18,52 @@ type Item = {
   summarisedAt: Date | string | null;
 };
 
+/**
+ * Compute a friendly display label for a corpus item.
+ *
+ * Priority:
+ *   1. First H1/H2 heading line of `parsedMarkdown` (Mistral OCR puts
+ *      the paper title here for almost every PDF — works for uploads
+ *      AND for V2 discovered papers once the fetcher has OCR'd them).
+ *   2. Humanised `source` fallback:
+ *      - uploads (R2 keys: `corpus/<projectId>/<uuid>.pdf`) → just
+ *        the filename, no project-path leak.
+ *      - `openalex:W123` → "OpenAlex W123"
+ *      - `arxiv:2310.06770` → "arXiv 2310.06770"
+ *      - `exa:<url>` → "Exa <url>"
+ *      - everything else → the source unchanged.
+ *
+ * Exported for unit testing.
+ */
+export function corpusItemLabel(item: { source: string; parsedMarkdown: string | null }): string {
+  if (item.parsedMarkdown) {
+    // First non-empty `# Heading` or `## Heading` line. Trim the `#`s
+    // + whitespace; collapse common LaTeX-ish artifacts that Mistral
+    // occasionally emits ($\mathrm{...}$ etc) by just taking the raw
+    // text and capping length.
+    const lines = item.parsedMarkdown.split(/\r?\n/);
+    for (const line of lines) {
+      const match = line.match(/^#{1,2}\s+(.+)$/);
+      const heading = match?.[1]?.trim();
+      if (heading && heading.length > 0) {
+        return heading.length > 140 ? heading.slice(0, 137) + "…" : heading;
+      }
+    }
+  }
+  const s = item.source;
+  if (s.startsWith("corpus/")) {
+    // R2 key: `corpus/<projectId>/<uuid>.pdf` — last path segment is
+    // the safest user-facing handle (project IDs aren't secret per se,
+    // but the filename alone reads cleaner in the list).
+    const parts = s.split("/");
+    return parts[parts.length - 1] || s;
+  }
+  if (s.startsWith("openalex:")) return `OpenAlex ${s.slice("openalex:".length)}`;
+  if (s.startsWith("arxiv:")) return `arXiv ${s.slice("arxiv:".length)}`;
+  if (s.startsWith("exa:")) return `Exa ${s.slice("exa:".length)}`;
+  return s;
+}
+
 const STATUS_VARIANT: Record<Item["status"], "default" | "secondary" | "destructive" | "outline"> = {
   PENDING: "outline",
   PARSING: "secondary",
@@ -158,7 +204,12 @@ function ItemCard({ item }: { item: Item }) {
     <Card className="p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-xs truncate">{item.source}</p>
+          <p className="font-medium text-sm truncate" title={item.source}>
+            {corpusItemLabel(item)}
+          </p>
+          <p className="font-mono text-[10px] text-muted-foreground truncate mt-0.5">
+            {item.source}
+          </p>
           {item.failureReason && (
             <p className="text-destructive text-xs mt-1">{item.failureReason}</p>
           )}
