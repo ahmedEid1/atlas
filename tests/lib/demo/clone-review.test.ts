@@ -259,8 +259,8 @@ describe("cloneReviewTemplate", () => {
 
   it("throws when the draft contains an unmapped citation-shaped token", async () => {
     // A 10+-char [a-zA-Z0-9_-] run in prose is overwhelmingly likely a
-    // real citation pointing at a deleted/foreign corpus row. Codex
-    // pushback: silently leaving the token would let the guest see a
+    // real citation pointing at a deleted/foreign corpus row —
+    // silently leaving the token would let the guest see a
     // draft that references a non-existent paper.
     const tmpl = structuredClone(baseTemplate) as typeof baseTemplate;
     tmpl.runs[0]!.draft = "This [t_corpus_1] is fine but [unmapped_token_12345] is not.";

@@ -125,17 +125,14 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
-## V2-M128–M129 — Node-fragility hardening from a parallel sub-agent audit
+## V2-M128–M129 — Node-fragility hardening (audit + fixes)
 
 **Goal:** After M126's screener/runLLM fix, sweep the REST of the V2 nodes for
 the same failure class (one transient LLM/IO error killing a whole run; silent
 skips that bias the corpus; unbounded smart-tier fan-out) and fix what's found.
 
-**How:** A `silent-failure-hunter` sub-agent audited every V2 node in parallel
-while a `code-reviewer` sub-agent reviewed M126; their findings drove the fixes
-below. (Two more implementation sub-agents then did P1/P2 and P3 concurrently on
-disjoint files — note the verification bottleneck stays serial: one test suite,
-one Mistral live run.)
+**How:** a systematic audit of every V2 node for the M126 failure class, plus a
+review of the M126 change, drove the fixes below.
 
 **What shipped:**
 - **P1 — assessor per-paper soft-fail** (`assessor.ts`) [m129]: the claim-
@@ -236,10 +233,10 @@ discoverer/fetcher/search path works end-to-end.
 "calibrated" `expectedDois` (`discovery_recall` 0.2 → 0.0). The discoverer's
 queries are LLM-generated and vary per run, so a fixed-DOI baseline doesn't
 reproduce; the full 50-paper screen also rate-limits out on the free tier before
-completing. Decision (with the maintainer): rather than chase a recall@pool
+completing. Decision: rather than chase a recall@pool
 metric, **017 was reframed as an outbound pipeline-smoke golden** — its assertion
 is that the outbound path executes and persists the SearchQuery (M114) +
-DiscoveredPaper (M118/M119) audit rows (all verified live on prod here);
+DiscoveredPaper (M118/M119) audit rows (all verified live on prod);
 `discovery_recall` is kept INFORMATIONAL (not a gate), and 017 stays out of the
 cron smoke set (manual `workflow_dispatch: goldens=all` only).
 
@@ -1090,7 +1087,7 @@ named citations.
       titles (M101).
 
 **Also verified (no code change needed):** audited the
-live e2e specs against this session's UI changes.
+live e2e specs against the UI changes.
 Playwright's `getByRole` converts the name op from `=`
 to `*=` (substring) for internal role selectors when
 `exact` is unset (confirmed in

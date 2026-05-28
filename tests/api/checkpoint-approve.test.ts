@@ -303,7 +303,7 @@ describe("POST /api/runs/[id]/checkpoints/[cpId]/approve", () => {
   });
 
   it("REGRESSION: audit log cannot diverge from agent payload when Phase 2 partially fails", async () => {
-    // Scenario from Codex round 4 (now enforced via the shared helper):
+    // Edge case (now enforced via the shared helper):
     // the first call (APPROVE with body A) commits Phase 1 then calls
     // Trigger successfully via deliverCheckpoint, but the waitToken
     // null-out throws and the helper's tx rolls back — so waitToken is

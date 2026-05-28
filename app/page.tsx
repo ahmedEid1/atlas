@@ -201,7 +201,7 @@ export default function Home() {
           >
             plans
           </a>
-          {" → TDD subagents → reviewed → shipped. v2.0 live (outbound search across OpenAlex + arXiv + Exa)."}
+          {" → TDD → reviewed → shipped. v2.0 live (outbound search across OpenAlex + arXiv + Exa)."}
         </p>
       </section>
     </main>
