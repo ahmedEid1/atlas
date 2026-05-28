@@ -59,7 +59,13 @@ export function ProjectList({ projects, nowMs }: { projects: Project[]; nowMs?: 
 
   return (
     <ul className="divide-y divide-[var(--thoth-rule)] border-y border-[var(--thoth-rule)]">
-      {projects.map((p) => (
+      {projects.map((p) => {
+        // Construct the Date once per row instead of 3-4 times in JSX.
+        // Tiny perf, but mostly a readability win — the JSX below reads
+        // cleaner with `updatedAt.toISOString()` than four separate
+        // `new Date(p.updatedAt).whatever()` calls.
+        const updatedAt = new Date(p.updatedAt);
+        return (
         <li key={p.id} className="group relative">
           <Link
             href={`/projects/${p.id}`}
@@ -69,8 +75,8 @@ export function ProjectList({ projects, nowMs }: { projects: Project[]; nowMs?: 
               <p className="eyebrow mb-2">
                 Updated{" "}
                 <time
-                  dateTime={new Date(p.updatedAt).toISOString()}
-                  title={new Date(p.updatedAt).toLocaleString("en-GB", {
+                  dateTime={updatedAt.toISOString()}
+                  title={updatedAt.toLocaleString("en-GB", {
                     year: "numeric",
                     month: "short",
                     day: "numeric",
@@ -80,8 +86,8 @@ export function ProjectList({ projects, nowMs }: { projects: Project[]; nowMs?: 
                   className="text-[var(--thoth-blue-ink)] tabular-nums"
                 >
                   {nowMs !== undefined
-                    ? relativeTime(new Date(p.updatedAt).getTime(), nowMs)
-                    : new Date(p.updatedAt).toLocaleDateString("en-GB", {
+                    ? relativeTime(updatedAt.getTime(), nowMs)
+                    : updatedAt.toLocaleDateString("en-GB", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
@@ -144,7 +150,8 @@ export function ProjectList({ projects, nowMs }: { projects: Project[]; nowMs?: 
             <DeleteProjectButton projectId={p.id} projectTitle={p.title} />
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

@@ -146,6 +146,34 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M93 — Hoist `new Date(p.updatedAt)` out of project-list JSX
+
+**Goal:** The project-list row JSX called
+`new Date(p.updatedAt)` four times — once for the
+`dateTime` attribute, once for the `title` tooltip,
+once for the relative-time computation, once for the
+fallback absolute-date copy. Tiny perf footnote
+(Date constructor is cheap); mostly a readability +
+maintainability problem.
+
+**What shipped:**
+
+- Switched the `.map((p) => (...JSX...))` to
+  `.map((p) => { const updatedAt = new Date(p.updatedAt);
+  return (...JSX referring to updatedAt...); })`.
+- All four JSX references read `updatedAt.X()` instead
+  of `new Date(p.updatedAt).X()`. The expression of
+  intent is clearer — there's exactly one timestamp per
+  row.
+- Closing `; })` replaces `))` to match the new IIFE
+  arrow-function-with-body shape.
+
+**Why not also `runs[0].createdAt`:** that's only
+read once on the row (for the latest-run pill's status
+text), so hoisting wouldn't simplify anything.
+
+**Key files:** `components/projects/project-list.tsx`
+
 ## V2-M92 — Sweep locale-default toLocaleString calls
 
 **Goal:** M91 fixed `compactCount`. Four more
