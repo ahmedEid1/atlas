@@ -22,6 +22,8 @@ describe("GET /api/runs/[id]/audit.json", () => {
       draft: "# Review\n\nClaim [paper_001].",
       faithfulnessScore: 0.83,
       createdAt: new Date("2026-05-28T14:00:00Z"),
+      completedAt: new Date("2026-05-28T14:15:30Z"),
+      question: "How does archaeal hibernation work?",
       project: { ownerId: "u1", title: "GAT Review" },
     } as never);
     vi.mocked(db.claimCheck.findMany).mockResolvedValue([
@@ -46,6 +48,11 @@ describe("GET /api/runs/[id]/audit.json", () => {
 
     const body = JSON.parse(await res.text()) as {
       reviewId: string;
+      projectTitle: string;
+      reviewQuestion: string;
+      runStartedAt: string;
+      runCompletedAt: string | null;
+      auditGeneratedAt: string;
       faithfulnessScore: number;
       totalClaims: number;
       supportedCount: number;
@@ -54,6 +61,15 @@ describe("GET /api/runs/[id]/audit.json", () => {
       claims: Array<{ claimText: string; verdict: string }>;
     };
     expect(body.reviewId).toBe("r1");
+    // M75: audit JSON stamps with project + question + run timestamps
+    // so a researcher saving the file can trace it back later.
+    expect(body.projectTitle).toBe("GAT Review");
+    expect(body.reviewQuestion).toBe("How does archaeal hibernation work?");
+    expect(body.runStartedAt).toBe("2026-05-28T14:00:00.000Z");
+    expect(body.runCompletedAt).toBe("2026-05-28T14:15:30.000Z");
+    // auditGeneratedAt is "now" — just verify it's a parseable ISO string,
+    // not the exact value (clock-dependent).
+    expect(Number.isFinite(Date.parse(body.auditGeneratedAt))).toBe(true);
     expect(body.faithfulnessScore).toBe(0.83);
     expect(body.totalClaims).toBe(3);
     expect(body.supportedCount).toBe(1);
@@ -113,6 +129,8 @@ describe("GET /api/runs/[id]/audit.json", () => {
     vi.mocked(db.run.findUnique).mockResolvedValue({
       id: "r1", draft: "Review without citations.", faithfulnessScore: null,
       createdAt: new Date("2026-05-28T14:00:00Z"),
+      completedAt: null,
+      question: "Empty review test",
       project: { ownerId: "u1", title: "Empty Review" },
     } as never);
     vi.mocked(db.claimCheck.findMany).mockResolvedValue([] as never);

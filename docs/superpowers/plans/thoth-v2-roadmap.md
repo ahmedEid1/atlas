@@ -146,6 +146,42 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M75 — Audit JSON stamped with project + run metadata
+
+**Goal:** The downloadable audit JSON (M35, refined in
+M66) carried just the cite_check verdicts + counts. A
+researcher who saved the audit and revisited it weeks
+later had to look up the run id to know which review the
+audit was for. Stamp the payload with enough metadata to
+make the file self-describing.
+
+**What shipped:**
+
+- `audit.json` payload gains:
+    - `projectTitle` — humanised project title.
+    - `reviewQuestion` — the research question this
+      audit measured against.
+    - `runStartedAt` (ISO) — when the agent kicked off.
+    - `runCompletedAt` (ISO or null) — when the draft
+      landed.
+    - `auditGeneratedAt` (ISO) — when the JSON file was
+      produced. Lets a downstream tool tell two saved
+      copies apart if cite_check was re-run.
+- The run query selects `completedAt` + `question` in
+  addition to the existing fields.
+- Existing test fixtures extended with `completedAt` +
+  `question` + `project.title`; new assertions on the
+  metadata fields, plus a parseable-ISO check on
+  `auditGeneratedAt` (the value is clock-dependent so we
+  can't assert an exact string).
+
+**Why no MCP shape change:** the `get_citation_audit`
+MCP tool's response shape predates this — adding fields
+is backwards-compatible, so the MCP tool could mirror
+this enrichment in a follow-up if needed.
+
+**Key files:** `app/api/runs/[id]/audit.json/route.ts`, `tests/api/runs-audit-json.test.ts`
+
 ## V2-M74 — Scope badge on project detail header
 
 **Goal:** The dashboard project list (M54-era) shows a

@@ -32,6 +32,8 @@ export async function GET(
       draft: true,
       faithfulnessScore: true,
       createdAt: true,
+      completedAt: true,
+      question: true,
       project: { select: { ownerId: true, title: true } },
     },
   });
@@ -61,6 +63,15 @@ export async function GET(
 
   const audit = {
     reviewId: run.id,
+    // Metadata: stamping the audit with project context + timestamps so
+    // a researcher who saves the JSON can come back later and know
+    // what the audit was about without looking up the run id. Matches
+    // the MCP `get_citation_audit` shape — both share this surface.
+    projectTitle: run.project.title,
+    reviewQuestion: run.question,
+    runStartedAt: run.createdAt.toISOString(),
+    runCompletedAt: run.completedAt ? run.completedAt.toISOString() : null,
+    auditGeneratedAt: new Date().toISOString(),
     faithfulnessScore: run.faithfulnessScore,
     totalClaims: claims.length,
     supportedCount: claims.filter((c) => c.verdict === "supported").length,
