@@ -92,7 +92,45 @@ function ItemCard({ item }: { item: Item }) {
   const [summaryOpen, setSummaryOpen] = useState(Boolean(item.summary));
   const [isPending, startTransition] = useTransition();
   const [summariseError, setSummariseError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const router = useRouter();
+
+  async function deleteItem() {
+    // The cascade is consequential: any IncludedPaper / ExtractedClaim /
+    // ClaimCheck rows that reference this corpus item will be deleted
+    // alongside it. Spell that out in the confirm() so the user can't
+    // delete a paper that's cited in a completed review without knowing.
+    if (
+      !window.confirm(
+        `Delete "${item.source}"?\n\nIf any review run included this paper, its included-paper + extracted-claim rows will be deleted with it. The review draft itself is preserved.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/corpus/${item.id}`, { method: "DELETE" });
+      if (res.status === 204) {
+        router.refresh();
+        return;
+      }
+      if (res.status === 404) {
+        setDeleteError("Item not found.");
+        return;
+      }
+      if (res.status === 401) {
+        setDeleteError("Sign in to delete.");
+        return;
+      }
+      setDeleteError(`Delete failed (${res.status})`);
+    } catch {
+      setDeleteError("Network error.");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   function summarise() {
     setSummariseError(null);
@@ -127,6 +165,9 @@ function ItemCard({ item }: { item: Item }) {
           {summariseError && (
             <p className="text-destructive text-xs mt-1">{summariseError}</p>
           )}
+          {deleteError && (
+            <p className="text-destructive text-xs mt-1">{deleteError}</p>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Badge variant={STATUS_VARIANT[item.status]}>{item.status.toLowerCase()}</Badge>
@@ -155,6 +196,15 @@ function ItemCard({ item }: { item: Item }) {
               )}
             </>
           )}
+          <button
+            type="button"
+            onClick={deleteItem}
+            disabled={deleting}
+            className="text-xs text-muted-foreground hover:text-destructive disabled:opacity-50"
+            aria-label={`Delete corpus item ${item.source}`}
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
         </div>
       </div>
 

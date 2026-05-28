@@ -125,6 +125,39 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M45 — Corpus-item delete affordance
+
+**Goal:** Users could upload PDFs but couldn't delete
+individual corpus items. To remove a wrong-PDF they had to
+delete the whole project. Closing this CRUD gap.
+
+**What shipped:**
+
+- New `DELETE /api/corpus/[id]` route. Owner check via
+  project FK before delete; 404 (not 403) for not-yours to
+  match the existence-probing posture. Cascade behaviour
+  spelled out in the route doc:
+    - `IncludedPaper` rows cascade-delete (with their
+      `ExtractedClaim` + `ClaimCheck` children).
+    - `ScreeningDecision.corpusItemId` becomes null
+      (SetNull) — the decision row survives.
+- `CorpusItemList` ItemCard renders a small inline
+  "Delete" button next to the existing actions. Click →
+  confirm() spelling out the cascade ("If any review run
+  included this paper, its included-paper + extracted-claim
+  rows will be deleted with it. The review draft itself
+  is preserved.") → DELETE → `router.refresh()`.
+- 4 unit tests cover the endpoint (happy / 404 missing /
+  404 not-yours / 401 unauthenticated).
+
+**Why allow delete on items used in completed runs:** the
+alternative would be to block, forcing the user to
+"discard the run, then delete the item" — high friction
+for a low-stakes operation in a single-user app. The
+confirm() copy spells out the impact instead.
+
+**Key files:** `app/api/corpus/[id]/route.ts`, `components/corpus/corpus-item-list.tsx`, `tests/api/corpus-delete.test.ts`
+
 ## V2-M44 — Humanised node-name labels in step timeline
 
 **Goal:** The step list showed raw nodeName values
