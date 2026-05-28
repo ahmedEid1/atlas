@@ -125,6 +125,35 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M57 — Delete-project button on project detail page
+
+**Goal:** Deletion was reachable only via the dashboard
+list (M41) — once a user was *on* the project detail page,
+they had to navigate back to the dashboard, find the row,
+hover-reveal the Delete affordance, and click. Add a Delete
+button directly to the project header next to Edit.
+
+**What shipped:**
+
+- `DeleteProjectButton` extended with a `variant` prop:
+    - `"list"` (default) — existing dashboard styling
+      (hover-revealed link) + `router.refresh()` on
+      success.
+    - `"page"` — always-visible button with a subtle
+      destructive-on-hover border, suitable for header
+      bars + navigates to `/dashboard` on success
+      (otherwise the user is left on a page that 404s).
+- Project page header now renders `<EditProjectDialog />`
+  + `<DeleteProjectButton variant="page" />` side by side.
+
+**Why two variants in one component:** the API + state
+machine + confirm-copy + error handling are identical;
+only the navigation target + visual styling differ. A
+boolean / variant prop is right-sized vs. extracting a
+hook + re-implementing the markup twice.
+
+**Key files:** `components/projects/delete-project-button.tsx`, `app/projects/[id]/page.tsx`
+
 ## V2-M56 — Relative-time on project page runs list
 
 **Goal:** Same change as M55 but applied to the project

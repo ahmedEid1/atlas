@@ -31,6 +31,7 @@ import { StartReviewButton } from "@/components/runs/start-review-button";
 import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { DeleteRunButton } from "@/components/runs/delete-run-button";
+import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { RefreshTickList } from "@/components/runs/refresh-tick";
 import { RunsBreakdown } from "@/components/runs/runs-breakdown";
 import { relativeTime } from "@/lib/relative-time";
@@ -68,19 +69,26 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <h1 className="text-2xl font-semibold">{project.title}</h1>
             <p className="text-muted-foreground mt-1">{project.question}</p>
           </div>
-          <EditProjectDialog
-            project={{
-              id: project.id,
-              title: project.title,
-              question: project.question,
-              searchScope: scope,
-              searchProviders: project.searchProviders,
-              searchYearStart: project.searchYearStart,
-              searchYearEnd: project.searchYearEnd,
-              searchMaxHits: project.searchMaxHits,
-              skipDiscoveryGate: project.skipDiscoveryGate,
-            }}
-          />
+          <div className="flex items-center gap-2 shrink-0">
+            <EditProjectDialog
+              project={{
+                id: project.id,
+                title: project.title,
+                question: project.question,
+                searchScope: scope,
+                searchProviders: project.searchProviders,
+                searchYearStart: project.searchYearStart,
+                searchYearEnd: project.searchYearEnd,
+                searchMaxHits: project.searchMaxHits,
+                skipDiscoveryGate: project.skipDiscoveryGate,
+              }}
+            />
+            <DeleteProjectButton
+              projectId={project.id}
+              projectTitle={project.title}
+              variant="page"
+            />
+          </div>
         </div>
       </header>
 
