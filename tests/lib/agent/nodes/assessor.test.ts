@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
   finishStep: vi.fn(),
   findCorpusMarkdown: vi.fn(),
   assertWithinBudget: vi.fn(),
+  envMock: { MAX_INCLUDED_PAPERS: 30 } as { MAX_INCLUDED_PAPERS: number },
 }));
+const envMock = mocks.envMock;
 
 vi.mock("@/lib/llm", () => ({ runLLM: mocks.runLLM }));
 vi.mock("@/lib/agent/runs", () => ({
@@ -24,6 +26,9 @@ vi.mock("@/lib/agent/cost-cap", () => ({
   assertWithinBudget: mocks.assertWithinBudget,
   BudgetExceededError: FakeBudgetExceededError,
 }));
+// Mock the env proxy so the node's MAX_INCLUDED_PAPERS read doesn't trigger
+// a full schema parse against an unset process.env in the test runner.
+vi.mock("@/lib/env", () => ({ env: mocks.envMock }));
 
 beforeEach(() => {
   mocks.runLLM.mockReset();
@@ -39,6 +44,7 @@ beforeEach(() => {
   mocks.findCorpusMarkdown.mockReset();
   mocks.assertWithinBudget.mockReset();
   mocks.assertWithinBudget.mockResolvedValue({ tokensUsed: 0, limit: 250_000 });
+  envMock.MAX_INCLUDED_PAPERS = 30;
 });
 
 const baseState = {
@@ -189,5 +195,80 @@ describe("assessorNode", () => {
       .map((c) => c[0] as { stepId: string; failureReason?: string })
       .find((args) => args.stepId === "step_assessor_1");
     expect(outerFail?.failureReason).toMatch(/exceeded/);
+  });
+
+  it("soft-fails a single paper's runLLM rejection and still returns claims from the others", async () => {
+    mocks.findCorpusMarkdown.mockImplementation(async (id: string) => `# Paper ${id}`);
+    // c1's extraction blows up; c2 succeeds. The run must NOT abort — c2's
+    // claim still comes back, and c1 is recorded as a finished failed step.
+    mocks.runLLM
+      .mockRejectedValueOnce(new Error("LLM 503 for c1"))
+      .mockResolvedValueOnce({
+        output: { claims: [{ text: "Method 1", category: "methodology" }] },
+        traceUrl: "tu2",
+        usage: { inputTokens: 1, outputTokens: 1, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+      });
+
+    const { assessorNode } = await import("@/lib/agent/nodes/assessor");
+    const update = await assessorNode(baseState);
+
+    // Both papers were attempted; only c2's claim survives.
+    expect(mocks.runLLM).toHaveBeenCalledTimes(2);
+    expect(update.claims).toHaveLength(1);
+    expect(update.claims?.[0]?.includedPaperId).toBe("c2");
+    expect(update.claims?.[0]?.text).toBe("Method 1");
+
+    // The failed paper (c1) is recorded as a finished RunStep carrying the
+    // error message as failureReason, not silently dropped.
+    const failFinish = mocks.finishStep.mock.calls
+      .map((c) => c[0] as { failureReason?: string })
+      .find((a) => a.failureReason?.includes("LLM 503 for c1"));
+    expect(failFinish, "failed paper was not traced").toBeDefined();
+
+    // Outer assessor step finished cleanly (no failureReason) — the run survived.
+    const outerFinish = mocks.finishStep.mock.calls
+      .map((c) => c[0] as { stepId: string; failureReason?: string })
+      .find((args) => args.stepId === "step_assessor_1");
+    expect(outerFinish).toBeDefined();
+    expect(outerFinish?.failureReason).toBeUndefined();
+  });
+
+  it("re-throws a BudgetExceededError from a per-paper call instead of soft-failing", async () => {
+    mocks.findCorpusMarkdown.mockImplementation(async (id: string) => `# Paper ${id}`);
+    // A runaway budget surfaced via runLLM (not the pre-call gate) must still
+    // halt the whole run — it is the one error the soft-fail path must NOT eat.
+    mocks.runLLM.mockRejectedValueOnce(new FakeBudgetExceededError("run r1 exceeded token budget"));
+
+    const { assessorNode } = await import("@/lib/agent/nodes/assessor");
+    await expect(assessorNode(baseState)).rejects.toBeInstanceOf(FakeBudgetExceededError);
+
+    // The breach happens on the first paper; the loop never reaches the second.
+    expect(mocks.runLLM).toHaveBeenCalledTimes(1);
+  });
+
+  it("caps the included set at env.MAX_INCLUDED_PAPERS, keeping the highest-scored papers", async () => {
+    envMock.MAX_INCLUDED_PAPERS = 3;
+    // 6 included papers with ascending relevance scores; only the top 3
+    // (c5, c4, c3) should be assessed after the descending sort + cap.
+    const includedPapers = Array.from({ length: 6 }, (_, i) => ({
+      corpusItemId: `c${i}`,
+      relevanceScore: i / 10,
+      inclusionReason: "r",
+    }));
+    mocks.findCorpusMarkdown.mockImplementation(async (id: string) => `# Paper ${id}`);
+    mocks.runLLM.mockImplementation(async () => ({
+      output: { claims: [{ text: "Finding", category: "finding" }] },
+      traceUrl: "tu",
+      usage: { inputTokens: 1, outputTokens: 1, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+    }));
+
+    const { assessorNode } = await import("@/lib/agent/nodes/assessor");
+    const update = await assessorNode({ ...baseState, includedPapers });
+
+    // At most MAX_INCLUDED_PAPERS per-paper LLM calls / claims.
+    expect(mocks.runLLM).toHaveBeenCalledTimes(3);
+    expect(update.claims).toHaveLength(3);
+    const assessedIds = update.claims?.map((c) => c.includedPaperId).sort();
+    expect(assessedIds).toEqual(["c3", "c4", "c5"]);
   });
 });

@@ -125,6 +125,54 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M128–M129 — Node-fragility hardening from a parallel sub-agent audit
+
+**Goal:** After M126's screener/runLLM fix, sweep the REST of the V2 nodes for
+the same failure class (one transient LLM/IO error killing a whole run; silent
+skips that bias the corpus; unbounded smart-tier fan-out) and fix what's found.
+
+**How:** A `silent-failure-hunter` sub-agent audited every V2 node in parallel
+while a `code-reviewer` sub-agent reviewed M126; their findings drove the fixes
+below. (Two more implementation sub-agents then did P1/P2 and P3 concurrently on
+disjoint files — note the verification bottleneck stays serial: one test suite,
+one Mistral live run.)
+
+**What shipped:**
+- **P1 — assessor per-paper soft-fail** (`assessor.ts`) [m129]: the claim-
+  extraction loop rethrew on ANY per-paper error, discarding every claim already
+  extracted. Now a non-budget error finishes the `assessor_paper` RunStep with a
+  failureReason and CONTINUEs. `BudgetExceededError` still propagates (a runaway
+  budget halts the run, exactly like the screener).
+- **P2 — cap the included set** (`assessor.ts` + `env.ts`) [m129]: only
+  *discovered* papers were capped; a permissive papers_gate approval could feed
+  ~50 papers into the smart-tier assessor → drafter → cite_check chain. New
+  `MAX_INCLUDED_PAPERS` (default 30, mirrors `MAX_DISCOVERED_PAPERS_PER_RUN`):
+  the assessor assesses the top-K by relevanceScore and logs any truncation.
+  Added to `trigger.config.ts` `ALLOWED_PROD_KEYS` so the worker honours overrides.
+- **P3 — bounded OCR retry** (`pdf-parse.ts`) [m129]: `parsePdfWithMistral` had
+  no retry, so a transient 429/5xx/network blip threw and the fetcher SILENTLY
+  dropped the paper (corpus bias). Now retries transient errors (1+2) and fails
+  fast on permanent ones; the thrown message distinguishes the two so the
+  fetcher's recorded failureReason is auditable.
+- **P4 — discoverer audit log** (`discoverer.ts`) [m128]: the SearchQuery audit
+  catch now logs the runId + documents why the non-fatal swallow can't mask a DB
+  outage.
+- **Reviewer nit — runLLM detection** (`llm.ts`) [m128]: prefer the SDK's
+  `NoObjectGeneratedError.isInstance()` guard, with the `err.name` fallback for
+  the mocked-`ai` test path.
+
+**Audited-and-robust (no change):** discoverer provider fan-out, fetcher download
+path (SSRF/size/concurrency), cite-check (per-citation soft-fail — the reference
+pattern), drafter/critic (single call, 2-iteration cap), run-review orchestration
+(MAX_SEGMENTS, budget handling).
+
+**Tests:** assessor soft-fail + budget-propagation + cap (3); pdf-parse
+transient/permanent retry matrix (7); config-sync allowlist assertion; llm
+isInstance via an updated mock. 676 unit tests green.
+
+**Key files:** `lib/agent/nodes/assessor.ts`, `lib/env.ts`, `lib/pdf-parse.ts`,
+`lib/agent/nodes/discoverer.ts`, `lib/llm.ts`, `trigger.config.ts`
+
 ## V2-M127 — Make golden 017 completable on the free tier (cap + paid override)
 
 **Goal:** Let the 017 outbound pipeline-smoke golden actually COMPLETE (and so

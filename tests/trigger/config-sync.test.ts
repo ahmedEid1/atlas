@@ -107,6 +107,7 @@ describe("trigger.config loadSyncEnv", () => {
     expect(ALLOWED_PROD_KEYS).toContain("SEARCH_DISABLED");
     expect(ALLOWED_PROD_KEYS).toContain("MAX_TOKENS_PER_RUN");
     expect(ALLOWED_PROD_KEYS).toContain("MAX_DISCOVERED_PAPERS_PER_RUN");
+    expect(ALLOWED_PROD_KEYS).toContain("MAX_INCLUDED_PAPERS");
   });
 
   it("logs sync mode + key count on every invocation", async () => {

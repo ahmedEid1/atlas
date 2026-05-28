@@ -80,6 +80,7 @@ export const ALLOWED_PROD_KEYS: readonly string[] = [
   "SEARCH_DISABLED",
   "MAX_TOKENS_PER_RUN",
   "MAX_DISCOVERED_PAPERS_PER_RUN",
+  "MAX_INCLUDED_PAPERS",
 ] as const;
 
 export async function loadSyncEnv(): Promise<{ name: string; value: string }[]> {

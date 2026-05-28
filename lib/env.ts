@@ -110,6 +110,15 @@ const envSchema = z.object({
   // same ceiling at project-create time). Mirrors MAX_TOKENS_PER_RUN's safety
   // pattern: silent slice at the discoverer's persistence step, no error thrown.
   MAX_DISCOVERED_PAPERS_PER_RUN: z.coerce.number().int().min(1).max(100).default(50),
+
+  // Caps the size of the assessor's per-paper claim-extraction loop. Even after
+  // the screener + papers_gate HITL, a permissive review can carry dozens of
+  // included papers; one smart-tier runLLM call each can balloon the token
+  // budget. The assessor sorts includedPapers by relevanceScore descending and
+  // assesses only the top N, logging an audit note when it truncates. Default
+  // 30 — mirrors MAX_DISCOVERED_PAPERS_PER_RUN's safety pattern (positive int,
+  // silent slice rather than a thrown error).
+  MAX_INCLUDED_PAPERS: z.coerce.number().int().min(1).max(100).default(30),
 });
 
 export type Env = z.infer<typeof envSchema>;

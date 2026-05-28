@@ -2,6 +2,7 @@ import { runLLM } from "@/lib/llm";
 import { ClaimsSchema, buildExtractClaimsRequest } from "@/lib/prompts/extract-claims";
 import { addStep, finishStep, findCorpusMarkdown } from "@/lib/agent/runs";
 import { assertWithinBudget, BudgetExceededError } from "@/lib/agent/cost-cap";
+import { env } from "@/lib/env";
 import type { AgentState, ClaimSpec } from "@/lib/agent/state";
 
 export async function assessorNode(state: AgentState): Promise<Partial<AgentState>> {
@@ -10,7 +11,28 @@ export async function assessorNode(state: AgentState): Promise<Partial<AgentStat
   const claims: ClaimSpec[] = [];
 
   try {
-    for (const inc of state.includedPapers) {
+    // Cap the included set before the per-paper loop. Even after the screener +
+    // papers_gate HITL, a permissive review can carry dozens of approved papers,
+    // and one smart-tier runLLM call each can balloon the token budget. Sort by
+    // relevanceScore descending so the highest-signal papers survive the cut,
+    // then take the top MAX_INCLUDED_PAPERS. Mirrors the discoverer's safety
+    // cap: silent slice, but auditable — when truncation happens we log the
+    // drop with the runId so an operator can see WHY some approved papers
+    // produced no claims.
+    const sortedIncluded = [...state.includedPapers].sort(
+      (a, b) => b.relevanceScore - a.relevanceScore,
+    );
+    const includedPapers = sortedIncluded.slice(0, env.MAX_INCLUDED_PAPERS);
+    if (sortedIncluded.length > includedPapers.length) {
+      console.error(
+        `assessor: run ${state.runId} truncated includedPapers from ` +
+          `${sortedIncluded.length} to ${includedPapers.length} ` +
+          `(MAX_INCLUDED_PAPERS=${env.MAX_INCLUDED_PAPERS}); ` +
+          `lowest-scored papers will produce no claims`,
+      );
+    }
+
+    for (const inc of includedPapers) {
       const markdown = await findCorpusMarkdown(inc.corpusItemId);
       if (!markdown) {
         // The screener only includes papers with a corpusItemId, yet
@@ -73,11 +95,17 @@ export async function assessorNode(state: AgentState): Promise<Partial<AgentStat
       } catch (err) {
         const reason = err instanceof Error ? err.message : String(err);
         await finishStep({ stepId: innerStep.id, failureReason: reason.slice(0, 1000) });
-        // BudgetExceededError (and any other error) bubbles — assessor has no
-        // per-paper soft-fail story like cite-check; an extraction failure
-        // should fail the run so the user can investigate.
+        // BudgetExceededError MUST propagate — a runaway token budget should
+        // halt the whole run, exactly as the screener does. We re-throw it
+        // before the soft-fail path below can swallow it.
         if (err instanceof BudgetExceededError) throw err;
-        throw err;
+        // Per-paper soft-fail: any OTHER extraction error (LLM 5xx, schema
+        // validation, transient network) is recorded on the inner RunStep
+        // (above) and we CONTINUE to the next paper rather than aborting the
+        // whole run. Killing the run here would discard every claim already
+        // extracted from the other papers — the same "record + continue"
+        // posture used for empty-markdown papers above.
+        continue;
       }
     }
 
