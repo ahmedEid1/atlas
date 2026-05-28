@@ -154,7 +154,7 @@ S3-compatible storage, Mistral OCR, Langfuse tracing.
 - **[MCP tools](docs/mcp/tools.md)** · **[MCP security](docs/mcp/security.md)**
 - **[Security & privacy](docs/security-and-privacy.md)** — data inventory, jurisdictions, deletion paths
 - **[Self-host](docs/self-host/oracle-cloud-quickstart.md)** — one VM on Oracle Cloud Always Free
-- **[Changelog](CHANGELOG.md)** · **[Design spec & build log](docs/superpowers/)** · **[Releasing](RELEASING.md)**
+- **[Changelog](CHANGELOG.md)** · **[Releasing](RELEASING.md)**
 
 ## Credits
 

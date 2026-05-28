@@ -183,25 +183,7 @@ export default function Home() {
           <Proof label="$0 / month deploy on free tiers" />
         </div>
         <p className="text-xs text-[var(--thoth-stone)] max-w-2xl">
-          Spec-driven build:{" "}
-          <a
-            href="https://github.com/ahmedEid1/thoth/tree/master/docs/superpowers/specs"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[var(--thoth-blue)] hover:underline underline-offset-4"
-          >
-            specs
-          </a>
-          {" → "}
-          <a
-            href="https://github.com/ahmedEid1/thoth/tree/master/docs/superpowers/plans"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[var(--thoth-blue)] hover:underline underline-offset-4"
-          >
-            plans
-          </a>
-          {" → TDD → reviewed → shipped. v2.0 live (outbound search across OpenAlex + arXiv + Exa)."}
+          v2.0 — outbound search across OpenAlex, arXiv, and Exa. Spec-driven and fully tested.
         </p>
       </section>
     </main>

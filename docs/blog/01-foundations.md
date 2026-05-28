@@ -59,4 +59,4 @@ Week two: the first AI in the app. A `summarize_paper` tool, the single `runLLM`
 
 ---
 
-*The full design spec lives at [`docs/superpowers/specs/thoth-design.md`](../superpowers/specs/thoth-design.md). The per-milestone build order is at [`docs/superpowers/plans/thoth-roadmap.md`](../superpowers/plans/thoth-roadmap.md). Both are versioned alongside the code in [github.com/ahmedEid1/thoth](https://github.com/ahmedEid1/thoth). The work is built with a spec-driven approach, using Claude Code as the implementation collaborator.*
+*The full design spec lives at [`docs/superpowers/specs/thoth-design.md`](../superpowers/specs/thoth-design.md). The per-milestone build order is at [`docs/superpowers/plans/thoth-roadmap.md`](../superpowers/plans/thoth-roadmap.md). Both are versioned alongside the code in [github.com/ahmedEid1/thoth](https://github.com/ahmedEid1/thoth). The work follows a spec-driven approach.*
