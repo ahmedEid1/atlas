@@ -107,28 +107,9 @@ test.describe("live full agent-pipeline", () => {
     }
   });
 
-  /**
-   * Helper: poll a project's run status via GET /api/runs/<runId>/status
-   * (or via the project page's RefreshTick re-render — whichever is more
-   * stable). Returns when the status matches `wanted` OR throws on timeout.
-   */
-  async function waitForRunStatus(
-    apiCtx: APIRequestContext,
-    runId: string,
-    wanted: string,
-    timeoutMs = 90_000,
-  ): Promise<void> {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      const res = await apiCtx.get(`/api/runs/${runId}`);
-      if (res.ok()) {
-        const body = (await res.json()) as { status: string };
-        if (body.status === wanted) return;
-      }
-      await new Promise((r) => setTimeout(r, 3_000));
-    }
-    throw new Error(`run ${runId} did not reach status=${wanted} within ${timeoutMs}ms`);
-  }
+  // (An earlier iteration of this file defined a `waitForRunStatus` helper
+  // for polling /api/runs/<id>; the COMPLETED test ended up using
+  // `expect.poll` directly so the helper became dead code. Removed.)
 
   test("V2 outbound happy path: planner → discoverer (auto-approved) → fetcher → screener → papers_gate → assessor → drafter → critic → cite_check", async ({ page, context }) => {
     // Use OUTBOUND mode with skipDiscoveryGate=true and a small maxHits cap:

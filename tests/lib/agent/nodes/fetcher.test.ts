@@ -71,7 +71,7 @@ beforeEach(() => {
   mocks.assertWithinBudget.mockResolvedValue({ tokensUsed: 0, limit: 250000 });
   mocks.putObject.mockResolvedValue(undefined);
   mocks.parsePdfWithMistral.mockResolvedValue({ markdown: "# Paper", pageCount: 8, charCount: 1000 });
-  mocks.corpusItemCreate.mockImplementation(({ select: _s }) =>
+  mocks.corpusItemCreate.mockImplementation(() =>
     Promise.resolve({ id: "ci_" + Math.random().toString(36).slice(2, 8) }),
   );
   mocks.discoveredPaperUpdate.mockResolvedValue({});
