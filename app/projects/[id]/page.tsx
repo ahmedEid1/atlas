@@ -7,6 +7,7 @@ import { CorpusItemList } from "@/components/corpus/corpus-item-list";
 import { StartReviewButton } from "@/components/runs/start-review-button";
 import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
+import { DeleteRunButton } from "@/components/runs/delete-run-button";
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -130,14 +131,17 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         ) : (
           <ul className="space-y-2">
             {project.runs.map((r) => (
-              <li key={r.id}>
+              <li key={r.id} className="flex items-stretch gap-2">
                 <Link
                   href={`/projects/${project.id}/runs/${r.id}`}
-                  className="flex items-center justify-between rounded border bg-card p-3 hover:bg-accent"
+                  className="flex flex-1 items-center justify-between rounded border bg-card p-3 hover:bg-accent"
                 >
                   <span className="text-sm truncate">{new Date(r.createdAt).toLocaleString()}</span>
                   <RunStatusPill status={r.status as RunStatus} />
                 </Link>
+                <div className="flex items-center px-2">
+                  <DeleteRunButton runId={r.id} runLabel={new Date(r.createdAt).toLocaleString()} />
+                </div>
               </li>
             ))}
           </ul>

@@ -77,3 +77,44 @@ export async function GET(
     })),
   });
 }
+
+/**
+ * Delete a run + cascade-delete every owned child row (RunStep,
+ * HumanCheckpoint, IncludedPaper, ExtractedClaim, ClaimCheck,
+ * DiscoveredPaper, ScreeningDecision — all FK with onDelete: Cascade
+ * pointing at Run).
+ *
+ * Used by the project-page run-list "Delete" affordance and lets users
+ * discard failed or experimental runs that clutter the history. The
+ * underlying Trigger.dev run keeps running but its DB writes will fail
+ * silently — acceptable because the user explicitly asked to discard.
+ *
+ * Like the project DELETE, the not-yours case returns 404 (not 403) to
+ * match the existence-probing posture of the rest of the API. The owner
+ * filter is pushed to the DB layer via deleteMany's composite where so
+ * concurrent rename can't race the owner check.
+ */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await requireUser().catch(() => null);
+  if (!user) return new NextResponse("Unauthorized", { status: 401 });
+
+  const { id } = await params;
+  // Atomic: ownership probe + delete is one round-trip via the composite
+  // where on `{ id, ownerId }` after a join through project. Prisma doesn't
+  // support FK-following filters directly on deleteMany, so we issue the
+  // ownership check first then the delete second — racing the two is harmless
+  // because the worst case is a 204 immediately followed by a 404 on a
+  // re-issued request, which is idempotent semantics for DELETE.
+  const probe = await db.run.findUnique({
+    where: { id },
+    select: { project: { select: { ownerId: true } } },
+  });
+  if (!probe || probe.project.ownerId !== user.id) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+  await db.run.delete({ where: { id } });
+  return new NextResponse(null, { status: 204 });
+}

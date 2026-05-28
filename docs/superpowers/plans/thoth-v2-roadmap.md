@@ -125,6 +125,39 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M40 — Delete-run affordance
+
+**Goal:** Close the Run CRUD gap. POST /api/runs (start), GET
+/api/runs/[id] (read), but no DELETE — failed/test runs were
+stuck cluttering the project page forever. Add the missing
+endpoint + a small UI button per row.
+
+**What shipped:**
+
+- `DELETE /api/runs/[id]` route. Owner-check via project FK
+  before delete; 404 (not 403) for not-yours to match the
+  existence-probing posture; FK cascade handles the cleanup
+  (RunStep, HumanCheckpoint, IncludedPaper, ExtractedClaim,
+  ClaimCheck, DiscoveredPaper, ScreeningDecision — all
+  onDelete: Cascade pointing at Run).
+- `DeleteRunButton` client component (`components/runs/delete-run-button.tsx`)
+  — small inline "Delete" affordance with a `confirm()` guard.
+  Lives outside the runs-list `<Link>` to avoid nested
+  interactive elements.
+- Project page run-list layout updated to flex the link + the
+  delete button side-by-side. Click → confirm → 204 →
+  `router.refresh()` re-fetches the list from the server.
+- 4 unit tests cover the DELETE endpoint (happy path / 404
+  missing / 404 not-yours / 401 unauthenticated).
+
+**Why a `confirm()` and not a more elaborate confirm dialog:**
+the cascade is consequential (every step, checkpoint, included
+paper, claim, claim-check is dropped) but reversible only via
+restart-from-zero — there's no undo. A browser confirm() is
+adequate friction without a heavyweight dialog component.
+
+**Key files:** `app/api/runs/[id]/route.ts`, `components/runs/delete-run-button.tsx`, `app/projects/[id]/page.tsx`, `tests/api/runs-delete.test.ts`
+
 ## V2-M39 — Edit Project dialog UI
 
 **Goal:** Close the loop on M38. The PATCH endpoint exists; surface
