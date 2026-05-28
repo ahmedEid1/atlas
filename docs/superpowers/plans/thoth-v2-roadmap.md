@@ -146,6 +146,37 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M70 — NewProjectDialog resets on close
+
+**Goal:** The dialog kept React state across opens — so a
+user who created project #1 (title "GAT review", scope
+outbound) and then opened the dialog again to create
+project #2 saw "GAT review" pre-filled in the title
+field. Different projects mean different titles +
+questions; the leak made the dialog feel buggy and
+risked the user accidentally re-creating an old project.
+
+**What shipped:**
+
+- New `resetForm()` helper restoring every field to
+  its initial state (title "", question "", scope
+  `uploaded_only`, providers `{openalex, arxiv}`, year
+  range empty, max hits empty, skipDiscoveryGate false,
+  error null).
+- New `handleOpenChange(next)` wrapper for the
+  `Dialog`'s onOpenChange: forwards the flip, and on
+  close (cancel / outside-click / Esc) calls
+  `resetForm()`.
+- Reset is NOT triggered on open — preserves
+  re-attempt UX when the user closes accidentally then
+  reopens to fix a validation error.
+- Successful submit path is unchanged: it both closes
+  the dialog AND navigates away, so the unmount handles
+  the cleanup naturally. The new reset only runs on
+  close-without-submit.
+
+**Key files:** `components/projects/new-project-dialog.tsx`
+
 ## V2-M69 — Project page runs list: completed-at copy
 
 **Goal:** M56 rendered every row as "Started X ago". For
