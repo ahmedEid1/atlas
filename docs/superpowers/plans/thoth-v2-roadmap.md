@@ -125,6 +125,34 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M58 — Delete-run button on run detail page
+
+**Goal:** Mirroring M57 for runs. The list-row Delete
+(M40) handled the project-page case. From the run-detail
+page itself, the user had to navigate back to the project
+list to discard a run — extra friction for a routine op
+(testing a flaky run, cleaning up after a deliberate
+failure).
+
+**What shipped:**
+
+- `DeleteRunButton` extended with the same `variant`
+  +`redirectTo` props pattern from M57's
+  DeleteProjectButton:
+    - `"list"` (default) — existing project-page row
+      styling + `router.refresh()`.
+    - `"page"` — always-visible button with hover-
+      destructive border + navigates to `redirectTo`
+      after a successful delete.
+- Run-detail page header gains the button next to the
+  status pill, redirecting to the parent project page
+  on success.
+- Button label upgraded to "Delete run" (was just
+  "Delete") so the affordance reads correctly when it
+  sits next to other run-page chrome.
+
+**Key files:** `components/runs/delete-run-button.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`
+
 ## V2-M57 — Delete-project button on project detail page
 
 **Goal:** Deletion was reachable only via the dashboard

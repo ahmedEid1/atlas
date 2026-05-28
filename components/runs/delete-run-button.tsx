@@ -4,18 +4,31 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * Small destructive affordance on the project page's run list.
+ * Small destructive affordance to delete a Run.
  *
- * Click → confirm dialog → DELETE /api/runs/<id> → router.refresh().
- * The page is a server component, so router.refresh() re-fetches the run
- * list without a full reload.
+ * `variant`:
+ *   - `"list"` (default) — used in the project page's runs list;
+ *     `router.refresh()` on success (the row disappears).
+ *   - `"page"` — used on the run-detail page; navigates to the
+ *     project page on success (otherwise the user is left on a
+ *     page that 404s) + larger, always-visible styling.
  *
- * SECURITY: the inner `confirm()` is UX friction, not a security boundary
- * — the API enforces ownership server-side. Without confirm, the
- * destructive op is too easy to fire by accident (it cascades to every
- * step/checkpoint/includedPaper/etc).
+ * SECURITY: the inner `confirm()` is UX friction, not a security
+ * boundary — the API enforces ownership server-side. Without
+ * confirm, the destructive op is too easy to fire by accident
+ * (it cascades to every step / checkpoint / includedPaper / etc).
  */
-export function DeleteRunButton({ runId, runLabel }: { runId: string; runLabel: string }) {
+export function DeleteRunButton({
+  runId,
+  runLabel,
+  variant = "list",
+  redirectTo,
+}: {
+  runId: string;
+  runLabel: string;
+  variant?: "list" | "page";
+  redirectTo?: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +42,11 @@ export function DeleteRunButton({ runId, runLabel }: { runId: string; runLabel: 
     try {
       const res = await fetch(`/api/runs/${runId}`, { method: "DELETE" });
       if (res.status === 204) {
-        router.refresh();
+        if (variant === "page" && redirectTo) {
+          router.push(redirectTo);
+        } else {
+          router.refresh();
+        }
         return;
       }
       if (res.status === 404) {
@@ -48,6 +65,11 @@ export function DeleteRunButton({ runId, runLabel }: { runId: string; runLabel: 
     }
   }
 
+  const buttonClass =
+    variant === "list"
+      ? "text-xs text-muted-foreground hover:text-destructive disabled:opacity-50"
+      : "text-sm text-muted-foreground hover:text-destructive disabled:opacity-50 px-3 py-1.5 rounded border border-input hover:border-destructive transition-colors";
+
   return (
     <span className="inline-flex items-center gap-2">
       {error && <span className="text-xs text-destructive">{error}</span>}
@@ -55,10 +77,10 @@ export function DeleteRunButton({ runId, runLabel }: { runId: string; runLabel: 
         type="button"
         onClick={handleClick}
         disabled={busy}
-        className="text-xs text-muted-foreground hover:text-destructive disabled:opacity-50"
+        className={buttonClass}
         aria-label={`Delete run from ${runLabel}`}
       >
-        {busy ? "Deleting…" : "Delete"}
+        {busy ? "Deleting…" : "Delete run"}
       </button>
     </span>
   );

@@ -29,6 +29,7 @@ export async function generateMetadata({
 }
 import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill";
 import { RunStepList, nodeLabel } from "@/components/runs/run-step-list";
+import { DeleteRunButton } from "@/components/runs/delete-run-button";
 import { PlanApprovalCard } from "@/components/runs/plan-approval-card";
 import { PapersApprovalCard } from "@/components/runs/papers-approval-card";
 import { DiscoveryApprovalCard } from "@/components/runs/discovery-approval-card";
@@ -147,6 +148,12 @@ export default async function RunPage({
               <TokenSpendBadge steps={run.steps} budget={env.MAX_TOKENS_PER_RUN} />
             )}
             <RunStatusPill status={run.status as RunStatus} />
+            <DeleteRunButton
+              runId={runId}
+              runLabel={new Date(run.createdAt).toLocaleString()}
+              variant="page"
+              redirectTo={`/projects/${projectId}`}
+            />
           </div>
         </div>
         {run.failureReason && (
