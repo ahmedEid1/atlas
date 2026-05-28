@@ -43,6 +43,21 @@ export type RunLLMResult<T> = {
  * experimental_telemetry so the Langfuse OTel exporter captures the span,
  * and returns a uniform RunLLMResult regardless of provider.
  */
+
+// The AI SDK's `maxRetries` (set on generateObject below) retries transport
+// failures — network errors, 429s, 5xx — but NOT `NoObjectGeneratedError`
+// ("response did not match schema"), thrown after a successful HTTP call when
+// the model's output can't be parsed/validated. On Mistral's free tier that
+// miss is transient and usually clears on a re-prompt, yet a single one would
+// otherwise fail an entire outbound run (the screener screens ~50 papers
+// one-by-one and fails honestly if any call fails). Detect it by the SDK's
+// stable error name and retry the same provider a bounded number of times.
+const SCHEMA_RETRY_ATTEMPTS = 2; // 1 initial attempt + 2 retries = 3 total
+
+function isSchemaMismatchError(err: unknown): boolean {
+  return err instanceof Error && err.name === "AI_NoObjectGeneratedError";
+}
+
 export async function runLLM<T>(args: RunLLMArgs<T>): Promise<RunLLMResult<T>> {
   if (env.LLM_PROVIDER === "claude-agent") {
     const { callClaudeAgent } = await import("@/lib/llm/providers/claude-agent");
@@ -134,6 +149,22 @@ export async function runLLM<T>(args: RunLLMArgs<T>): Promise<RunLLMResult<T>> {
     });
   };
 
+  // Retry the SAME provider on a transient schema mismatch before giving up on
+  // it. Non-schema errors bubble straight out so the provider-fallback below
+  // handles them exactly as before.
+  const callWithSchemaRetry = async (provider: ProviderName) => {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= SCHEMA_RETRY_ATTEMPTS; attempt++) {
+      try {
+        return await callProvider(provider);
+      } catch (err) {
+        if (!isSchemaMismatchError(err)) throw err;
+        lastErr = err;
+      }
+    }
+    throw lastErr;
+  };
+
   // Try the primary provider. On failure, fall back ONCE to
   // env.LLM_FALLBACK_PROVIDER if it's set, distinct, and not
   // "claude-agent" (which has its own code path above and isn't a
@@ -143,7 +174,7 @@ export async function runLLM<T>(args: RunLLMArgs<T>): Promise<RunLLMResult<T>> {
   let object: Awaited<ReturnType<typeof callProvider>>["object"];
   let usage: Awaited<ReturnType<typeof callProvider>>["usage"];
   try {
-    ({ object, usage } = await callProvider(primaryProvider));
+    ({ object, usage } = await callWithSchemaRetry(primaryProvider));
   } catch (err) {
     const canFallback =
       fallbackProvider !== undefined &&
@@ -154,7 +185,7 @@ export async function runLLM<T>(args: RunLLMArgs<T>): Promise<RunLLMResult<T>> {
       `[runLLM] primary provider "${primaryProvider}" failed for "${args.name}"; ` +
         `falling back to "${fallbackProvider}". Reason: ${err instanceof Error ? err.message : String(err)}`,
     );
-    ({ object, usage } = await callProvider(fallbackProvider));
+    ({ object, usage } = await callWithSchemaRetry(fallbackProvider));
   }
 
   return {

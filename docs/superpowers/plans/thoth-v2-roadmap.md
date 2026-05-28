@@ -125,6 +125,45 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M126 — Retry transient schema-mismatch in runLLM (outbound-run robustness)
+
+**Goal:** Stop a single transient Mistral structured-output miss from failing
+an entire outbound run.
+
+**Root cause:** `runLLM` sets `maxRetries: 4` on the AI SDK's `generateObject`,
+but that only covers transport failures (network, 429, 5xx). A
+`NoObjectGeneratedError` ("response did not match schema") is thrown AFTER a
+successful HTTP call when the model's output can't be parsed/validated — the
+SDK does NOT retry it. The screener screens every discovered paper one-by-one
+and (by deliberate design, `screener.ts:172`) fails honestly if any call fails.
+So on Mistral's free tier, one schema-miss among ~50 sequential screener calls
+killed the whole run. Surfaced live: golden 017 reached `status=SCREENING` then
+threw `No object generated` → the eval wrote 0 rows.
+
+**What shipped:** `runLLM` now retries the SAME provider on a
+`NoObjectGeneratedError` (detected by the SDK's stable `AI_NoObjectGeneratedError`
+error name) a bounded number of times (1 initial + 2 retries) before falling
+back / surfacing. Transport errors are unchanged — they bubble straight to the
+existing provider-fallback. Benefits every LLM node (screener, assessor,
+drafter, critic, cite_check), not just outbound.
+
+**Verified live (prod DB) while diagnosing:** M114 SearchQuery persistence (16
+rows, all `ok=true`, real LLM-generated queries) + M118/M119 discovered-paper
+titles (50 fresh + 105 prior rows, 0 empty titles) — the outbound
+discoverer/fetcher/search path works end-to-end.
+
+**Follow-up (M125 correction):** the live re-run surfaced only 1 of 017's 5
+"calibrated" `expectedDois` (RAGTruth) → `discovery_recall` 0.2. The discoverer's
+queries are LLM-generated and vary per run, so the one-throwaway-run calibration
+didn't reproduce. 017's `expectedDois` are being re-calibrated from a clean
+completed run.
+
+**Tests:** `tests/lib/llm.test.ts` — retries same provider on schema mismatch +
+recovers; gives up after bounded retries (no infinite loop); does NOT retry
+non-schema/transport errors.
+
+**Key files:** `lib/llm.ts`, `tests/lib/llm.test.ts`
+
 ## V2-M125 — First v2 outbound eval golden + EVAL_MODE=outbound wiring (last deferred item)
 
 **Goal:** Ship the final open V2-spec item — real v2-mode goldens + the

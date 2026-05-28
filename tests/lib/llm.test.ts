@@ -210,6 +210,78 @@ describe("runLLM — provider fallback", () => {
   });
 });
 
+// NoObjectGeneratedError ("response did not match schema") is NOT covered by
+// the AI SDK's maxRetries (that only retries transport/rate-limit failures).
+// On Mistral's free tier a transient schema-miss on one of ~50 sequential
+// screener calls would otherwise fail the whole outbound run. runLLM retries
+// the SAME provider a bounded number of times on this specific error before
+// falling back / rethrowing.
+describe("runLLM — schema-mismatch (NoObjectGenerated) retry", () => {
+  const schemaErr = () =>
+    Object.assign(new Error("No object generated: response did not match schema."), {
+      name: "AI_NoObjectGeneratedError",
+    });
+
+  it("retries the same provider on a schema mismatch and returns the recovered object (no fallback set)", async () => {
+    mocks.generateObject
+      .mockRejectedValueOnce(schemaErr())
+      .mockResolvedValueOnce({
+        object: { answer: "recovered" },
+        usage: { inputTokens: 3, outputTokens: 2, totalTokens: 5 },
+      });
+
+    const { runLLM } = await import("@/lib/llm");
+    const result = await runLLM({
+      name: "x",
+      tier: "smart",
+      maxTokens: 100,
+      system: "s",
+      messages: [{ role: "user", content: "u" }],
+      schema: z.object({ answer: z.string() }),
+    });
+
+    expect(result.output).toEqual({ answer: "recovered" });
+    // 1 failed attempt + 1 successful retry, both on the primary provider.
+    expect(mocks.generateObject).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up (and rethrows) after bounded retries when the schema mismatch persists", async () => {
+    mocks.generateObject.mockRejectedValue(schemaErr());
+
+    const { runLLM } = await import("@/lib/llm");
+    await expect(
+      runLLM({
+        name: "x",
+        tier: "smart",
+        maxTokens: 100,
+        system: "s",
+        messages: [{ role: "user", content: "u" }],
+        schema: z.object({ answer: z.string() }),
+      }),
+    ).rejects.toThrow(/did not match schema/);
+    // 1 initial + 2 retries = 3 attempts, then surfaces — not an infinite loop.
+    expect(mocks.generateObject).toHaveBeenCalledTimes(3);
+  });
+
+  it("does NOT retry a non-schema (transport) error on the same provider", async () => {
+    mocks.generateObject.mockRejectedValue(new Error("502 bad gateway"));
+
+    const { runLLM } = await import("@/lib/llm");
+    await expect(
+      runLLM({
+        name: "x",
+        tier: "smart",
+        maxTokens: 100,
+        system: "s",
+        messages: [{ role: "user", content: "u" }],
+        schema: z.object({ answer: z.string() }),
+      }),
+    ).rejects.toThrow(/502 bad gateway/);
+    // No same-provider retry for non-schema errors → exactly one attempt.
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+  });
+});
+
 // claude-agent has no per-call usage metric (CLI session). The cost-cap
 // blind-spot fix estimates tokens from string lengths so the per-run
 // budget cap in `lib/agent/cost-cap.ts` engages even on this provider.
