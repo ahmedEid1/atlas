@@ -523,13 +523,16 @@ test.describe("live full agent-pipeline", () => {
     await expect(page.getByRole("heading", { name: /approve included papers/i }))
       .toBeVisible({ timeout: 4 * 60 * 1000 });
 
-    // The papers_gate shows N included papers — at least 1 should be
-    // the uploaded fixture (M13 verification). We can't easily inspect
-    // which corpusItemId is which without API access, but we CAN assert
-    // that the "Approve N" button is enabled (N >= 1, proving the
-    // screener admitted at least one paper from either source).
-    const approveBtn = page.getByRole("button", { name: /^approve \d+$/i });
-    await expect(approveBtn).toBeEnabled({ timeout: 5_000 });
+    // Deliberately NOT asserting the "Approve N" button is enabled (N >= 1).
+    // The screener votes per-paper on RELEVANCE, and the only guaranteed upload
+    // here is the image-only `short.pdf` fixture, whose OCR'd text doesn't match
+    // this run's question — so the screener legitimately excludes it, and the
+    // arXiv hits' inclusion is non-deterministic on the free tier. Reaching the
+    // gate (asserted above) already proves the full V2 chain ran; M13's real
+    // invariant is the synthetic "uploaded" DiscoveredPaper row, verified via
+    // the API below INDEPENDENT of the screener's include/exclude verdict.
+    // (Earlier this hard-asserted Approve>=1 and flaked to "Approve 0" whenever
+    // the screener excluded the off-topic image-only upload — see M126.)
 
     // Verify via the API that the run includes a paper sourced from
     // the upload (M13's synthetic DiscoveredPaper with provider="uploaded").
