@@ -146,6 +146,26 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M65 — Bulk selection helpers on PapersApprovalCard
+
+**Goal:** Symmetric with M64. The V1 papers-approval gate
+(the retriever's per-item inclusion verdict) had the same
+row-by-row checkbox curation problem.
+
+**What shipped:**
+
+- "Select all" / "Select none" inline buttons next to the
+  description copy. Same disabled-when-no-op posture as
+  M64. Hidden when there's a single paper (no point).
+
+**Why not also "Only above score X" filter:** the
+retriever already scores; the user's job at this gate is
+to decide based on the *inclusion reason* the retriever
+generated, not raw scores. Adding a score filter would
+muddle the mental model. Left as a deliberate omission.
+
+**Key files:** `components/runs/papers-approval-card.tsx`
+
 ## V2-M64 — Bulk selection helpers on DiscoveryApprovalCard
 
 **Goal:** The discovery HITL gate ships up to 50 hits at

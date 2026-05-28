@@ -93,6 +93,28 @@ export function PapersApprovalCard({
         </p>
       </div>
 
+      {proposed.length > 1 && (
+        <div className="flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setSelected(new Set(proposed.map((p) => p.corpusItemId)))}
+            disabled={isPending || selected.size === proposed.length}
+            className="text-[var(--thoth-blue)] hover:underline disabled:opacity-40 disabled:no-underline"
+          >
+            Select all
+          </button>
+          <span className="text-muted-foreground">·</span>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            disabled={isPending || selected.size === 0}
+            className="text-[var(--thoth-blue)] hover:underline disabled:opacity-40 disabled:no-underline"
+          >
+            Select none
+          </button>
+        </div>
+      )}
+
       <ul className="space-y-2 text-sm">
         {proposed.map((p) => (
           <li key={p.corpusItemId} className="flex items-start gap-3 rounded border p-3">
