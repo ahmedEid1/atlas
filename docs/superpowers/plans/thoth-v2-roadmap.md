@@ -125,6 +125,30 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M39 — Edit Project dialog UI
+
+**Goal:** Close the loop on M38. The PATCH endpoint exists; surface
+it via an Edit button on the project detail page header.
+
+**What shipped:**
+
+- New `EditProjectDialog` client component
+  (`components/projects/edit-project-dialog.tsx`). Mirrors
+  `NewProjectDialog`'s field set + UI conventions but:
+    - Pre-fills every field from the current project row.
+    - POSTs `PATCH /api/projects/<id>` instead of `POST /api/projects`.
+    - Submit button reads "Save" not "Create".
+    - On success, `router.refresh()` instead of `router.push(...)`
+      so the user stays on the project page.
+- Project page header gains a flex-row layout: title + question on
+  the left, Edit button on the right.
+- Why a sibling component instead of reusing NewProjectDialog with
+  a mode prop: the create + edit flows diverge in defaulting,
+  navigation, and button text; two clear siblings read better than
+  a two-mode super-component.
+
+**Key files:** `components/projects/edit-project-dialog.tsx`, `app/projects/[id]/page.tsx`
+
 ## V2-M38 — PATCH /api/projects/[id] for editing project settings
 
 **Goal:** A real CRUD gap. Users could create + read + delete
