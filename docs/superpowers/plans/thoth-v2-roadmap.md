@@ -125,6 +125,40 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M123 — Trace the assessor's silent skip of an empty-markdown paper
+
+**Goal:** Close a silent-failure observability gap found by an independent
+error-handling review of the V2 node chain. The assessor skips a paper with no
+parsed markdown (`assessor.ts: if (!markdown) continue`) — but that skip was
+**completely silent**: no RunStep, no failureReason, no trace.
+
+**Why it's reachable:** the fetcher creates a `PARSED` CorpusItem with
+`parsedMarkdown: markdown` and sets `corpusItemId` even when Mistral OCR yields
+empty text (image-only / corrupt PDF). The screener includes any paper with a
+`corpusItemId` (it doesn't re-check for non-null markdown). So a user-approved
+paper whose OCR produced no text reached the assessor, got silently skipped,
+produced zero claims, and **vanished from the synthesis with no signal** — the
+operator couldn't tell why paper N contributed nothing.
+
+**What shipped (`lib/agent/nodes/assessor.ts`):** the skip now opens + finishes
+a RunStep with a `failureReason` (`no parsed full text for corpusItem … —
+paper skipped (0 claims)`). Graceful by design — the rest of the corpus is
+still assessed (one text-less paper shouldn't fail the whole run), but the drop
+is now visible in the run's step list.
+
+**Not fixed (verified unreachable):** the reviewer also flagged
+`persistClaims` dropping claims with no matching IncludedPaper row. That can't
+happen in the normal flow — `persistIncludedPapers` persists the screener's
+full include-set (a superset) at the papers gate, while the assessor only emits
+claims for the pruned subset, so every claim's corpusItemId always has a row.
+The filter is defensive on an unreachable path; guarding it further would be
+speculative.
+
+**Tests:** the skip test now asserts the dropped paper is recorded as a
+finished step with the failureReason (not silently swallowed). 647 green.
+
+**Key files:** `lib/agent/nodes/assessor.ts`, `tests/lib/agent/nodes/assessor.test.ts`
+
 ## V2-M122 — Guard NaN publicationYear from provider date parsing
 
 **Goal:** Fix a real run-crashing fragility found auditing the search-provider

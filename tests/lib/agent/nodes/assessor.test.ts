@@ -120,9 +120,9 @@ describe("assessorNode", () => {
     expect(outerFinish?.outputTokens).toBeUndefined();
   });
 
-  it("skips a paper that has no parsed markdown but continues with others", async () => {
+  it("traces a paper with no parsed markdown as a skipped step + continues with others", async () => {
     mocks.findCorpusMarkdown
-      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null) // c1: corpusItemId set but OCR yielded no text
       .mockResolvedValueOnce("# Paper c2");
     mocks.runLLM.mockResolvedValue({
       output: { claims: [{ text: "ok", category: "finding" }] },
@@ -135,6 +135,14 @@ describe("assessorNode", () => {
 
     expect(mocks.runLLM).toHaveBeenCalledTimes(1);
     expect(update.claims?.[0]?.includedPaperId).toBe("c2");
+
+    // The skipped paper (c1) must NOT vanish silently — it's recorded as a
+    // finished RunStep with a failureReason so the drop is observable.
+    const skipFinish = mocks.finishStep.mock.calls
+      .map((c) => c[0] as { failureReason?: string })
+      .find((a) => a.failureReason?.includes("no parsed full text"));
+    expect(skipFinish, "skipped paper was not traced").toBeDefined();
+    expect(skipFinish?.failureReason).toContain("c1");
   });
 
   it("mid-loop budget breach stops further LLM calls", async () => {

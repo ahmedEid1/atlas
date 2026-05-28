@@ -12,7 +12,22 @@ export async function assessorNode(state: AgentState): Promise<Partial<AgentStat
   try {
     for (const inc of state.includedPapers) {
       const markdown = await findCorpusMarkdown(inc.corpusItemId);
-      if (!markdown) continue;
+      if (!markdown) {
+        // The screener only includes papers with a corpusItemId, but the
+        // fetcher can create a PARSED CorpusItem with empty/null markdown when
+        // OCR yields no text (image-only / corrupt PDF). Such a paper has
+        // nothing to extract claims from, so skipping is correct — but record
+        // it as a finished RunStep with a failureReason so an operator can see
+        // WHY a user-approved paper produced zero claims, instead of it
+        // silently vanishing from the synthesis. tokens=0; graceful (the rest
+        // of the corpus is still assessed).
+        const skipStep = await addStep({ runId: state.runId, nodeName: "assessor_paper" });
+        await finishStep({
+          stepId: skipStep.id,
+          failureReason: `assessor: no parsed full text for corpusItem ${inc.corpusItemId} — paper skipped (0 claims)`,
+        });
+        continue;
+      }
 
       // Critical: gate inside the per-paper loop. A 50-paper review with
       // ~4k tokens each can otherwise blow the cap mid-loop before the next
