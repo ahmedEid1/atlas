@@ -146,6 +146,28 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M94 — Hoist `new Date(lastRun.createdAt)` on the evals page
+
+**Goal:** Same pattern as M93, applied to the public
+`/evals` page. The `lastRun.createdAt` was being
+re-constructed twice — once for the formatted display
+string, once for the `<time dateTime=...>` ISO
+attribute.
+
+**What shipped:**
+
+- `const lastRunAt = lastRun ? new Date(lastRun.createdAt) : null`
+  hoisted before the format branch.
+- The `lastRunDate` derivation reads from `lastRunAt`
+  instead of constructing a new Date.
+- The `<time>` element's `dateTime` reads
+  `lastRunAt.toISOString()` instead of
+  `new Date(lastRun.createdAt).toISOString()`.
+- Added `lastRunAt` to the conditional render guard so
+  TS narrows correctly to non-null inside the block.
+
+**Key files:** `app/evals/page.tsx`
+
 ## V2-M93 — Hoist `new Date(p.updatedAt)` out of project-list JSX
 
 **Goal:** The project-list row JSX called

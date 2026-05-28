@@ -96,8 +96,11 @@ export default async function EvalsPage() {
   }));
 
   const lastRun = rows[0];
-  const lastRunDate = lastRun
-    ? new Date(lastRun.createdAt).toLocaleString("en-GB", {
+  // Hoist the Date construction to one site — used by both the
+  // formatted display string AND the <time dateTime=...> ISO below.
+  const lastRunAt = lastRun ? new Date(lastRun.createdAt) : null;
+  const lastRunDate = lastRunAt
+    ? lastRunAt.toLocaleString("en-GB", {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -137,11 +140,11 @@ export default async function EvalsPage() {
           4 metrics, the latest commit-of-record run for each. Designed so a
           regression is a public signal — not a hidden one.
         </p>
-        {lastRunDate && lastRun && (
+        {lastRunDate && lastRun && lastRunAt && (
           <p className="mt-4 text-sm text-[var(--thoth-stone)] flex flex-wrap items-center gap-2">
             <span>Last run</span>
             <time
-              dateTime={new Date(lastRun.createdAt).toISOString()}
+              dateTime={lastRunAt.toISOString()}
               className="text-[var(--thoth-blue-ink)] tabular-nums"
             >
               {lastRunDate}
