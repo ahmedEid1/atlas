@@ -86,10 +86,15 @@ export const exaSearch: SearchProvider = async (q) => {
   return results
     .map((r): DiscoveredPaperSpec | null => {
       if (!r.title || !r.url) return null;
-      const year =
+      // Exa returns free-form crawled dates, not guaranteed ISO — a non-numeric
+      // prefix (e.g. "Spring 2023") makes parseInt return NaN. Guard it:
+      // NaN would flow to publicationYear and crash the discoverer's createMany
+      // (Prisma rejects NaN for the Int? column), failing the whole run.
+      const parsedYear =
         typeof r.publishedDate === "string" && r.publishedDate.length >= 4
           ? parseInt(r.publishedDate.slice(0, 4), 10)
           : null;
+      const year = parsedYear !== null && Number.isFinite(parsedYear) ? parsedYear : null;
       const authors =
         typeof r.author === "string" && r.author.length > 0
           ? r.author

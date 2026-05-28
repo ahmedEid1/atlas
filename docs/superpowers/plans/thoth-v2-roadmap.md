@@ -125,6 +125,34 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M122 — Guard NaN publicationYear from provider date parsing
+
+**Goal:** Fix a real run-crashing fragility found auditing the search-provider
+adapters. The Exa adapter derives the year with
+`parseInt(r.publishedDate.slice(0, 4), 10)`, but Exa returns **free-form
+crawled dates**, not guaranteed ISO — a non-numeric prefix (e.g. "Spring
+2023") makes `parseInt` return `NaN`. That `NaN` flows to `publicationYear`,
+and the discoverer's `createMany` writes it to the `DiscoveredPaper.publicationYear`
+`Int?` column — **Prisma rejects `NaN`, so a single malformed date crashes the
+whole discoverer node and fails the run.** The arXiv adapter has the same
+`parseInt`-from-date pattern (lower risk — Atom dates are ISO — but the same
+failure mode). OpenAlex is safe (numeric field, no parse).
+
+**What shipped:** both adapters now guard the parsed year with
+`Number.isFinite(...)` → `null` (`lib/search/providers/exa.ts`,
+`lib/search/providers/arxiv.ts`). A malformed date now yields a null year
+(stored fine) instead of crashing the run.
+
+**Tests:** Exa maps a "Spring 2023" / null date to `publicationYear: null`;
+arXiv maps a `<published>n/a</published>` entry to `null`. 647 unit/integ green.
+
+**Why this matters:** one bad date from an external API silently failing an
+entire (potentially long, token-spending) outbound run is exactly the
+fragility a robust pipeline can't have. Exa is opt-in, so this only bit
+Exa-enabled projects, but the blast radius was a whole-run failure.
+
+**Key files:** `lib/search/providers/exa.ts`, `lib/search/providers/arxiv.ts`
+
 ## V2-M121 — Fix heading hierarchy on run-detail + showcase (WCAG)
 
 **Goal:** Close a real accessibility defect found by inspecting the live

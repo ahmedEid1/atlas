@@ -106,6 +106,22 @@ describe("parseArxivAtom", () => {
     expect(hits[0]!.publicationYear).toBeNull();
   });
 
+  it("yields null publicationYear (not NaN) for a malformed <published> date", () => {
+    // Defensive: a non-numeric <published> prefix would make parseInt return
+    // NaN, which would crash the discoverer's createMany (Prisma rejects NaN
+    // for the Int? column).
+    const feed = `<feed>
+      <entry>
+        <id>http://arxiv.org/abs/2401.00002v1</id>
+        <title>Weird date paper</title>
+        <published>n/a</published>
+      </entry>
+    </feed>`;
+    const hits = parseArxivAtom(feed);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.publicationYear).toBeNull();
+  });
+
   it("returns empty array for a feed with no entries", () => {
     expect(parseArxivAtom(`<feed></feed>`)).toEqual([]);
   });

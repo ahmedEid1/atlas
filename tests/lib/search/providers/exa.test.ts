@@ -91,6 +91,21 @@ describe("exaSearch", () => {
     expect(hits[1]!.initialScore).toBe(0);
   });
 
+  it("yields null publicationYear (not NaN) for a non-ISO crawled date", async () => {
+    process.env.EXA_API_KEY = "test-key";
+    stubFetch({
+      results: [
+        { id: "x", url: "https://x.org/a.pdf", title: "X", score: 0.9, publishedDate: "Spring 2023" },
+        { id: "y", url: "https://x.org/b.pdf", title: "Y", score: 0.8, publishedDate: null },
+      ],
+    });
+    const hits = await exaSearch({ query: "x" });
+    // A NaN year would crash the discoverer's createMany (Prisma rejects NaN
+    // for the Int? column), failing the whole run.
+    expect(hits[0]!.publicationYear).toBeNull();
+    expect(hits[1]!.publicationYear).toBeNull();
+  });
+
   it("forwards yearStart/yearEnd as startPublishedDate / endPublishedDate", async () => {
     process.env.EXA_API_KEY = "test-key";
     const fetchMock = vi.fn(async () =>

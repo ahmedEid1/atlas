@@ -86,9 +86,12 @@ export function parseArxivAtom(
     const summary = pickFirst(entry, /<summary>([\s\S]*?)<\/summary>/)?.trim();
 
     const published = pickFirst(entry, /<published>([^<]+)<\/published>/);
-    const publicationYear = published
-      ? parseInt(published.slice(0, 4), 10)
-      : null;
+    const parsedYear = published ? parseInt(published.slice(0, 4), 10) : null;
+    // Guard NaN (a malformed <published> would otherwise flow to the Int?
+    // column and crash the discoverer's createMany). arXiv emits ISO dates so
+    // this is defensive, but it keeps the parse identical to the exa adapter.
+    const publicationYear =
+      parsedYear !== null && Number.isFinite(parsedYear) ? parsedYear : null;
     if (publicationYear !== null) {
       if (filters.yearStart !== undefined && publicationYear < filters.yearStart) continue;
       if (filters.yearEnd !== undefined && publicationYear > filters.yearEnd) continue;
