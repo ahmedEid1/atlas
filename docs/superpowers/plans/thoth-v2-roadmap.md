@@ -125,6 +125,36 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M44 — Humanised node-name labels in step timeline
+
+**Goal:** The step list showed raw nodeName values
+("planner", "retriever", "discoverer", "fetcher_paper",
+"cite_check_citation"). Recognisable to maintainers; opaque
+to new users.
+
+**What shipped:**
+
+- New `nodeLabel(nodeName)` helper mapping each agent node to
+  a verb-y, present-tense label:
+    - planner → "Planning the review"
+    - retriever → "Retrieving papers"
+    - discoverer → "Discovering outbound papers"
+    - fetcher → "Fetching paper metadata"
+    - screener → "Screening papers"
+    - assessor → "Assessing papers"
+    - drafter → "Drafting the review"
+    - critic → "Reviewing the draft"
+    - cite_check → "Verifying citations"
+- Inner per-item nodes (suffix `_paper` / `_citation`) get a
+  singular variant so a screen full of "Verifying citation"
+  rows reads naturally.
+- Forward-compat: unknown nodeNames fall through to the raw
+  string (new nodes won't render `undefined`).
+- 3 unit tests cover the outer mappings, the inner per-item
+  mappings, and the unknown-name fallback.
+
+**Key files:** `components/runs/run-step-list.tsx`, `tests/components/run-step-list.test.ts`
+
 ## V2-M43 — Per-step durations in run timeline
 
 **Goal:** A run takes 5-15 minutes end-to-end and can stall

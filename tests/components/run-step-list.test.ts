@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatStepDuration } from "@/components/runs/run-step-list";
+import { formatStepDuration, nodeLabel } from "@/components/runs/run-step-list";
 
 describe("formatStepDuration", () => {
   it("sub-second values render as a 1-decimal seconds string", () => {
@@ -31,5 +31,32 @@ describe("formatStepDuration", () => {
     expect(formatStepDuration(-5)).toBe("0s");
     expect(formatStepDuration(NaN)).toBe("0s");
     expect(formatStepDuration(Infinity)).toBe("0s");
+  });
+});
+
+describe("nodeLabel", () => {
+  it("maps known outer nodes to humanised verb-y labels", () => {
+    expect(nodeLabel("planner")).toBe("Planning the review");
+    expect(nodeLabel("retriever")).toBe("Retrieving papers");
+    expect(nodeLabel("discoverer")).toBe("Discovering outbound papers");
+    expect(nodeLabel("fetcher")).toBe("Fetching paper metadata");
+    expect(nodeLabel("screener")).toBe("Screening papers");
+    expect(nodeLabel("assessor")).toBe("Assessing papers");
+    expect(nodeLabel("drafter")).toBe("Drafting the review");
+    expect(nodeLabel("critic")).toBe("Reviewing the draft");
+    expect(nodeLabel("cite_check")).toBe("Verifying citations");
+  });
+
+  it("singularises inner per-item nodes", () => {
+    expect(nodeLabel("retriever_paper")).toBe("Reading paper");
+    expect(nodeLabel("fetcher_paper")).toBe("Fetching paper");
+    expect(nodeLabel("screener_paper")).toBe("Screening paper");
+    expect(nodeLabel("assessor_paper")).toBe("Assessing paper");
+    expect(nodeLabel("cite_check_citation")).toBe("Verifying citation");
+  });
+
+  it("falls through to the raw nodeName for unknown nodes — forward-compat", () => {
+    expect(nodeLabel("nascent_node")).toBe("nascent_node");
+    expect(nodeLabel("")).toBe("");
   });
 });
