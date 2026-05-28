@@ -38,14 +38,13 @@ type Item = {
 export function corpusItemLabel(item: { source: string; parsedMarkdown: string | null }): string {
   if (item.parsedMarkdown) {
     // First non-empty `# Heading` or `## Heading` line. Trim the `#`s
-    // + whitespace; collapse common LaTeX-ish artifacts that Mistral
-    // occasionally emits ($\mathrm{...}$ etc) by just taking the raw
-    // text and capping length.
+    // + whitespace; sanitise common Mistral-OCR artifacts (markdown
+    // emphasis, leftover LaTeX commands, surrounding quotes).
     const lines = item.parsedMarkdown.split(/\r?\n/);
     for (const line of lines) {
       const match = line.match(/^#{1,2}\s+(.+)$/);
-      const heading = match?.[1]?.trim();
-      if (heading && heading.length > 0) {
+      const heading = match?.[1] ? sanitiseTitle(match[1]) : "";
+      if (heading.length > 0) {
         return heading.length > 140 ? heading.slice(0, 137) + "…" : heading;
       }
     }
@@ -61,6 +60,41 @@ export function corpusItemLabel(item: { source: string; parsedMarkdown: string |
   if (s.startsWith("openalex:")) return `OpenAlex ${s.slice("openalex:".length)}`;
   if (s.startsWith("arxiv:")) return `arXiv ${s.slice("arxiv:".length)}`;
   if (s.startsWith("exa:")) return `Exa ${s.slice("exa:".length)}`;
+  return s;
+}
+
+/**
+ * Strip common Mistral-OCR title artefacts: markdown emphasis (`**bold**`,
+ * `*italic*`, `_emph_`), inline LaTeX commands (`$\mathrm{Foo}$` → `Foo`),
+ * stray backticks, surrounding quotes, and collapsed whitespace. Defensive
+ * — every transform handles the no-match case as a no-op so a clean title
+ * passes through unchanged. Exported for unit testing.
+ */
+export function sanitiseTitle(raw: string): string {
+  let s = raw.trim();
+  // LaTeX inline math wrappers: `$\mathrm{Foo}$`, `${Foo}$` → keep the
+  // argument. Iterate so nested wrappers unwrap. Cap iterations to avoid
+  // a pathological infinite-loop input.
+  for (let i = 0; i < 5; i++) {
+    const before = s;
+    s = s.replace(/\$\\?[a-zA-Z]+\{([^${}]*)\}\$/g, "$1");
+    s = s.replace(/\$\{([^${}]*)\}\$/g, "$1");
+    s = s.replace(/\$([^$]+)\$/g, "$1");
+    if (s === before) break;
+  }
+  // Markdown emphasis runs: **bold**, *italic*, __emph__, _emph_, `code`.
+  // Strip the marker chars but keep the wrapped text.
+  s = s
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/(?<!\w)_(.+?)_(?!\w)/g, "$1")
+    .replace(/`([^`]+)`/g, "$1");
+  // Strip surrounding quotes (straight + curly) that some Mistral OCR
+  // outputs wrap titles in.
+  s = s.replace(/^["“'‘](.*)["”'’]$/, "$1");
+  // Collapse internal whitespace runs.
+  s = s.replace(/\s+/g, " ").trim();
   return s;
 }
 

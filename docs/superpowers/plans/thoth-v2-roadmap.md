@@ -146,6 +146,49 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M68 — Sanitise OCR artifacts in corpus item titles
+
+**Goal:** M47's `corpusItemLabel` extracted the first
+markdown H1/H2 from the parsed PDF as the display title.
+Mistral OCR is good but emits artifacts the user
+shouldn't see:
+  - `**Bold Title**` (markdown emphasis)
+  - `$\mathrm{Foo}$` (leftover LaTeX commands from the
+    source PDF's typesetting)
+  - `"Quoted Title"` (some publishers wrap titles in
+    quotes in the PDF metadata)
+  - Internal whitespace runs (`Foo    Bar`)
+
+**What shipped:**
+
+- New `sanitiseTitle(raw)` helper alongside
+  `corpusItemLabel`:
+    - Unwraps inline LaTeX wrappers like `$\mathrm{Foo}$`,
+      `${Foo}$`, `$Foo$` — keeps the inner argument.
+      Iterates up to 5 passes for nested wrappers,
+      capped to defend against pathological input.
+    - Strips markdown emphasis (`**bold**`, `*italic*`,
+      `__emph__`, `_emph_`, `` `code` ``) — keeps the
+      wrapped text.
+    - Strips surrounding quotes (straight + curly).
+    - Collapses internal whitespace runs to a single
+      space.
+- `corpusItemLabel` calls the new sanitiser on each
+  candidate heading before length-checking — empty
+  post-sanitise strings fall through to the next line,
+  same as before.
+- 6 unit tests cover the emphasis matrix, LaTeX
+  wrappers, quote stripping, whitespace collapse,
+  clean-title passthrough, and compound input.
+
+**Why iterate the LaTeX unwrap:** real Mistral output
+occasionally produces nested patterns like
+`**$\textbf{Strong}$**` — a single pass would strip the
+LaTeX OR the emphasis but not both. Bounded iteration is
+the simplest fix.
+
+**Key files:** `components/corpus/corpus-item-list.tsx`, `tests/components/corpus-item-label.test.ts`
+
 ## V2-M67 — Client download links defer to the server filename
 
 **Goal:** M66 made the server emit

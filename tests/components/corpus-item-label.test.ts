@@ -1,5 +1,40 @@
 import { describe, it, expect } from "vitest";
-import { corpusItemLabel } from "@/components/corpus/corpus-item-list";
+import { corpusItemLabel, sanitiseTitle } from "@/components/corpus/corpus-item-list";
+
+describe("sanitiseTitle", () => {
+  it("strips markdown emphasis markers but keeps wrapped text", () => {
+    expect(sanitiseTitle("**Bold Title** Here")).toBe("Bold Title Here");
+    expect(sanitiseTitle("*Italic Title*")).toBe("Italic Title");
+    expect(sanitiseTitle("__Underline Title__")).toBe("Underline Title");
+    expect(sanitiseTitle("_emphasised_ word")).toBe("emphasised word");
+  });
+
+  it("strips inline LaTeX wrappers, keeping the argument", () => {
+    expect(sanitiseTitle("$\\mathrm{Foo}$ in physics")).toBe("Foo in physics");
+    expect(sanitiseTitle("${Bar}$")).toBe("Bar");
+    expect(sanitiseTitle("$baz$ qux")).toBe("baz qux");
+  });
+
+  it("strips surrounding quotes (straight + curly)", () => {
+    expect(sanitiseTitle('"A Quoted Title"')).toBe("A Quoted Title");
+    expect(sanitiseTitle("“Curly Quoted”")).toBe("Curly Quoted");
+    expect(sanitiseTitle("'Singled'")).toBe("Singled");
+  });
+
+  it("collapses internal whitespace runs", () => {
+    expect(sanitiseTitle("foo    bar\t\tbaz")).toBe("foo bar baz");
+  });
+
+  it("passes a clean title through unchanged", () => {
+    expect(sanitiseTitle("Archaeal Hibernation: A Systematic Review")).toBe(
+      "Archaeal Hibernation: A Systematic Review",
+    );
+  });
+
+  it("handles compound LaTeX + emphasis without infinite-looping", () => {
+    expect(sanitiseTitle("**$\\textbf{Strong}$** ideas")).toBe("Strong ideas");
+  });
+});
 
 describe("corpusItemLabel", () => {
   describe("from parsedMarkdown", () => {
