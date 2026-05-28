@@ -89,6 +89,23 @@ describe("parseArxivAtom", () => {
     expect(hits2[0]!.publicationYear).toBe(2022);
   });
 
+  it("keeps a paper with no <published> date even when a year filter is set", () => {
+    // A paper missing publication metadata must NOT be silently dropped by the
+    // year filter — the code guards `publicationYear !== null` before comparing,
+    // because `null < yearStart` would coerce (null→0) into a spurious drop.
+    // (Now load-bearing since M115 made the per-project year filter live.)
+    const feed = `<feed>
+      <entry>
+        <id>http://arxiv.org/abs/2401.00001v1</id>
+        <title>Undated preprint</title>
+        <summary>No published date in this entry.</summary>
+      </entry>
+    </feed>`;
+    const hits = parseArxivAtom(feed, { yearStart: 2023, yearEnd: 2024 });
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.publicationYear).toBeNull();
+  });
+
   it("returns empty array for a feed with no entries", () => {
     expect(parseArxivAtom(`<feed></feed>`)).toEqual([]);
   });
