@@ -151,7 +151,15 @@ export async function discovererNode(
       try {
         await db.searchQuery.createMany({ data: searchAuditRows });
       } catch (auditErr) {
-        console.error("discoverer: SearchQuery audit insert failed (non-fatal)", auditErr);
+        // Non-fatal + deliberately swallowed: the audit rows are not load-bearing.
+        // This can't hide a systemic DB outage — the discoveredPaper insert just
+        // below issues against the same connection and WOULD throw. No Sentry in
+        // this project, so console.error (with runId for traceability) is the
+        // surface.
+        console.error(
+          `discoverer: SearchQuery audit insert failed (non-fatal) for run ${state.runId}`,
+          auditErr,
+        );
       }
     }
 

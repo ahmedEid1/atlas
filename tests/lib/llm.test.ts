@@ -19,7 +19,18 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-vi.mock("ai", () => ({ generateObject: mocks.generateObject }));
+vi.mock("ai", () => ({
+  generateObject: mocks.generateObject,
+  // Mirror the SDK's NoObjectGeneratedError.isInstance guard so runLLM's
+  // isSchemaMismatchError exercises the isInstance path. The schema-mismatch
+  // tests fabricate errors with name="AI_NoObjectGeneratedError" (the SDK's
+  // real value), which this guard matches.
+  NoObjectGeneratedError: class {
+    static isInstance(e: unknown): boolean {
+      return e instanceof Error && e.name === "AI_NoObjectGeneratedError";
+    }
+  },
+}));
 
 vi.mock("@/lib/llm/providers/gemini", () => ({ geminiModel: mocks.geminiModel }));
 

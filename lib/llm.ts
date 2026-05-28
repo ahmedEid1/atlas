@@ -1,4 +1,4 @@
-import { generateObject, type ModelMessage } from "ai";
+import { generateObject, NoObjectGeneratedError, type ModelMessage } from "ai";
 import type { AttributeValue } from "@opentelemetry/api";
 import { z } from "zod";
 import { env } from "@/lib/env";
@@ -55,6 +55,11 @@ export type RunLLMResult<T> = {
 const SCHEMA_RETRY_ATTEMPTS = 2; // 1 initial attempt + 2 retries = 3 total
 
 function isSchemaMismatchError(err: unknown): boolean {
+  // Prefer the SDK's own type guard (refactor-safe across renames of the error
+  // name). Fall back to the stable error name so detection still works when the
+  // `ai` module is mocked in unit tests (where the class export is absent) or if
+  // the SDK changes its guard shape.
+  if (NoObjectGeneratedError?.isInstance?.(err)) return true;
   return err instanceof Error && err.name === "AI_NoObjectGeneratedError";
 }
 
