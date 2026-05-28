@@ -125,6 +125,34 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M43 — Per-step durations in run timeline
+
+**Goal:** A run takes 5-15 minutes end-to-end and can stall
+on any node (Mistral rate limit on extractor, LLM call slow,
+search adapter timeout). The step list showed `nodeName` +
+token usage + trace link but nothing about *how long* each
+step took, so it was impossible to spot a slow step at a
+glance.
+
+**What shipped:**
+
+- New `formatStepDuration(ms)` helper with 5 unit tests
+  covering: sub-second (1-decimal), 1s..59s (integer), 1m..
+  59m (omitting 0s suffix), >=1h (omitting 0m suffix), and
+  negative/non-finite clamp to "0s" (wall-clock skew
+  shouldn't render "-3s").
+- `RunStepList` now renders the duration next to each
+  step's token usage. In-progress steps render in Thoth
+  blue to signal liveness; completed steps render in the
+  default muted color.
+- `nowMs` is passed in as a prop rather than computed in
+  render — React 19's purity rule blocks impure calls in
+  render bodies. The run-detail server page captures
+  `Date.now()` once per request; RefreshTick polls every 2s
+  so in-progress durations tick up naturally.
+
+**Key files:** `components/runs/run-step-list.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`, `tests/components/run-step-list.test.ts`
+
 ## V2-M42 — Live run-status polling on the project page
 
 **Goal:** The run-detail page polls every 2s via `RefreshTick`

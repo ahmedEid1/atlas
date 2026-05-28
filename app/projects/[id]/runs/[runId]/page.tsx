@@ -128,7 +128,11 @@ export default async function RunPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Steps</h2>
-        <RunStepList steps={run.steps as never} />
+        {/* eslint-disable-next-line react-hooks/purity -- wall-clock IS the
+            source of truth for in-progress step durations; the page is a
+            server component re-invoked per request (and via RefreshTick polling
+            every 2s), so `nowMs` advances naturally on each render. */}
+        <RunStepList steps={run.steps as never} nowMs={Date.now()} />
       </section>
 
       {isOutbound && (discoveryQueries.length > 0 || run.discoveredPapers.length > 0) && (
