@@ -112,6 +112,7 @@ There is no self-serve "export my data" endpoint yet. That's the most commonly-r
 - **No CAPTCHA.** Clerk handles bot signups on its end; the demo flow is rate-limited at the API layer.
 - **No data-sharing with the LLM providers beyond the prompts themselves.** Mistral / Anthropic / OpenAI / Groq each have their own terms; check them for the provider you choose. Mistral's free Experiment tier (our default) is explicitly EU-jurisdiction.
 - **No outbound search by default.** The `Project.searchScope` column defaults to `"uploaded_only"` — every project Thoth has ever created (and every future one whose creator doesn't tick the outbound box) stays on the v1 uploaded-PDF-only path with no calls to OpenAlex / arXiv / Exa. Outbound search is opt-in per project, opt-in per provider, and globally killable via `SEARCH_DISABLED=1`.
+- **No SSRF surface in the v2 fetcher.** The fetcher (`lib/agent/nodes/fetcher.ts`) downloads PDFs from URLs returned by the search providers. Before calling `fetch()`, the URL passes through `isSafeExternalUrl()` which rejects: non-HTTP(S) schemes (`file://`, `ftp://`, `gopher://`, `javascript:`), `localhost` / `127.0.0.0/8` loopback, `169.254.0.0/16` link-local (AWS/GCP metadata service — IAM-credential leak risk), RFC 1918 private subnets (10/8, 172.16-31/12, 192.168/16), the `0.0.0.0` wildcard, and malformed URLs. This is defence-in-depth on top of Vercel's network isolation; the obvious malicious-URL injection cases never even leave the runtime.
 
 ---
 
