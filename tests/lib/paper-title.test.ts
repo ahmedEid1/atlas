@@ -70,7 +70,7 @@ describe("formatReferenceLine", () => {
   it("renders the full shape when every field is present", () => {
     expect(
       formatReferenceLine({
-        corpusItemId: "cm_a",
+        paperId: "cm_a",
         title: "Graph Attention Networks",
         authors: ["P. Veličković", "G. Cucurull"],
         year: 2018,
@@ -86,7 +86,7 @@ describe("formatReferenceLine", () => {
   it("falls back to 'Untitled paper' for a null title", () => {
     expect(
       formatReferenceLine({
-        corpusItemId: "cm_b",
+        paperId: "cm_b",
         title: null,
         externalDoi: null,
         externalArxivId: null,
@@ -97,7 +97,7 @@ describe("formatReferenceLine", () => {
   it("uses the arXiv link when there's no DOI", () => {
     expect(
       formatReferenceLine({
-        corpusItemId: "cm_c",
+        paperId: "cm_c",
         title: "Chain of Thought",
         year: 2022,
         externalDoi: null,
@@ -109,7 +109,7 @@ describe("formatReferenceLine", () => {
   it("omits author/year/venue/link sections that are absent (uploaded PDF)", () => {
     expect(
       formatReferenceLine({
-        corpusItemId: "cm_d",
+        paperId: "cm_d",
         title: "Uploaded Paper",
         externalDoi: null,
         externalArxivId: null,

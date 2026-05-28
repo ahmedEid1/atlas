@@ -146,6 +146,45 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M107 — Shared draft-references mapper + select fragment
+
+**Goal:** The `includedPapers → DraftReference[]`
+mapping (+ its Prisma `select` shape) was copy-pasted
+across three surfaces: the draft.md download route
+(M99), the run-detail page (M102), and the showcase
+page (M104). Identical logic in three places — exactly
+the drift risk M96 flagged (two title extractions had
+silently diverged before).
+
+**What shipped:**
+
+- New `lib/draft-references.ts`:
+    - `INCLUDED_PAPER_REFERENCE_SELECT` — the Prisma
+      select fragment, spread into all three run
+      queries.
+    - `toDraftReferences(includedPapers)` — the mapper,
+      returning `DraftReference[]` via the shared
+      `extractPaperTitle`.
+    - `IncludedPaperForReference` — the joined input
+      type.
+- All three surfaces swapped to the shared select +
+  mapper. The run page + showcase dropped their inline
+  maps + the now-unused `extractPaperTitle` import.
+- `formatReferenceLine` (paper-title.ts) param renamed
+  `corpusItemId` → `paperId` so it accepts a
+  `DraftReference` directly — the .md route now does
+  `toDraftReferences(...).map(formatReferenceLine)`,
+  one clean pipeline. Its 4 tests updated.
+- 4 new `toDraftReferences` tests (V2 full metadata,
+  uploaded-PDF nulls, no-heading null title, empty
+  list).
+
+**Net:** ~60 lines of duplicated mapping/select
+collapsed to one helper; a future field addition
+touches one file instead of three.
+
+**Key files:** `lib/draft-references.ts`, `lib/paper-title.ts`, `app/api/runs/[id]/draft.md/route.ts`, `app/projects/[id]/runs/[runId]/page.tsx`, `app/showcase/page.tsx`, `tests/lib/draft-references.test.ts`, `tests/lib/paper-title.test.ts`
+
 ## V2-M106 — Test the empty-references edge case on draft.md
 
 **Goal:** The draft.md route (M99) only appends a

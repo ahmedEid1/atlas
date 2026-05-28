@@ -8,7 +8,10 @@ import {
   type ClaimCheckRow,
 } from "@/components/runs/CitationFaithfulnessWidget";
 import { loadCitedPaperTitles } from "@/lib/cited-paper-titles";
-import { extractPaperTitle } from "@/lib/paper-title";
+import {
+  INCLUDED_PAPER_REFERENCE_SELECT,
+  toDraftReferences,
+} from "@/lib/draft-references";
 
 /**
  * Public read-only view of the pinned showcase review.
@@ -42,22 +45,11 @@ export default async function ShowcasePage() {
       project: { select: { title: true, question: true } },
       claimChecks: { orderBy: { createdAt: "asc" } },
       // M104: join included papers so the public exemplar shows a real
-      // References section + named citations — not opaque cuids.
+      // References section + named citations — not opaque cuids. Shared
+      // select fragment (M107) keeps it in sync with the other surfaces.
       includedPapers: {
         orderBy: { createdAt: "asc" },
-        select: {
-          corpusItemId: true,
-          corpusItem: {
-            select: {
-              parsedMarkdown: true,
-              externalDoi: true,
-              externalArxivId: true,
-              discoveredAs: {
-                select: { authors: true, publicationYear: true, venue: true },
-              },
-            },
-          },
-        },
+        select: INCLUDED_PAPER_REFERENCE_SELECT,
       },
     },
   });
@@ -71,15 +63,7 @@ export default async function ShowcasePage() {
     ...(c as ClaimCheckRow),
     paperTitle: titleById.get(c.paperId) ?? null,
   }));
-  const references = run.includedPapers.map((ip) => ({
-    paperId: ip.corpusItemId,
-    title: extractPaperTitle(ip.corpusItem.parsedMarkdown),
-    authors: ip.corpusItem.discoveredAs?.authors ?? null,
-    year: ip.corpusItem.discoveredAs?.publicationYear ?? null,
-    venue: ip.corpusItem.discoveredAs?.venue ?? null,
-    externalDoi: ip.corpusItem.externalDoi,
-    externalArxivId: ip.corpusItem.externalArxivId,
-  }));
+  const references = toDraftReferences(run.includedPapers);
 
   const supportedCount = run.claimChecks.filter((c) => c.verdict === "SUPPORTED").length;
   const unsupportedCount = run.claimChecks.filter((c) => c.verdict === "UNSUPPORTED").length;

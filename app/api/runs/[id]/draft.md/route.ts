@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { buildRunFilename } from "@/lib/download-filename";
-import { extractPaperTitle, formatReferenceLine } from "@/lib/paper-title";
+import { formatReferenceLine } from "@/lib/paper-title";
+import {
+  INCLUDED_PAPER_REFERENCE_SELECT,
+  toDraftReferences,
+} from "@/lib/draft-references";
 
 /**
  * Download a completed Run's draft as a Markdown file.
@@ -32,21 +36,10 @@ export async function GET(
       project: { select: { ownerId: true, title: true } },
       // Included papers, to build a References appendix that resolves the
       // draft's `[<corpusItemId>]` markers (opaque cuids on their own).
+      // Shared select fragment (M107) — same as the run page + showcase.
       includedPapers: {
         orderBy: { createdAt: "asc" },
-        select: {
-          corpusItemId: true,
-          corpusItem: {
-            select: {
-              parsedMarkdown: true,
-              externalDoi: true,
-              externalArxivId: true,
-              discoveredAs: {
-                select: { authors: true, publicationYear: true, venue: true },
-              },
-            },
-          },
-        },
+        select: INCLUDED_PAPER_REFERENCE_SELECT,
       },
     },
   });
@@ -87,17 +80,9 @@ export async function GET(
   // · venue · link). Only appended when there are included papers.
   let references = "";
   if (run.includedPapers.length > 0) {
-    const lines = run.includedPapers.map((ip) =>
-      formatReferenceLine({
-        corpusItemId: ip.corpusItemId,
-        title: extractPaperTitle(ip.corpusItem.parsedMarkdown),
-        authors: ip.corpusItem.discoveredAs?.authors ?? null,
-        year: ip.corpusItem.discoveredAs?.publicationYear ?? null,
-        venue: ip.corpusItem.discoveredAs?.venue ?? null,
-        externalDoi: ip.corpusItem.externalDoi,
-        externalArxivId: ip.corpusItem.externalArxivId,
-      }),
-    );
+    // Shared mapper (M107) → same DraftReference shape the on-page
+    // references use; formatReferenceLine renders each as a markdown line.
+    const lines = toDraftReferences(run.includedPapers).map(formatReferenceLine);
     references = `\n\n## References\n\n${lines.join("\n")}\n`;
   }
 

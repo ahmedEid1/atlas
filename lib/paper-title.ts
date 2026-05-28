@@ -76,8 +76,11 @@ export function formatAuthors(authors: string[] | null | undefined): string | nu
 
 /**
  * Build a one-line human-readable reference for the draft's References
- * appendix. The corpusItemId is the citation key the draft cites with
- * (see M98), so the line lets a reader resolve `[<id>]` markers.
+ * appendix (the .md download). The `paperId` is the citation key the
+ * draft cites with (= corpusItemId, see M98), so the line lets a reader
+ * resolve `[<id>]` markers. Takes the same `DraftReference` shape the
+ * on-page references use (M107) so the two surfaces share one input
+ * contract.
  *
  * Shape (fields omitted when absent):
  *   - **[<id>]** Title — Authors (Year). Venue. https://doi.org/<doi>
@@ -85,7 +88,7 @@ export function formatAuthors(authors: string[] | null | undefined): string | nu
  * Exported for unit testing.
  */
 export function formatReferenceLine(ref: {
-  corpusItemId: string;
+  paperId: string;
   title: string | null;
   authors?: string[] | null;
   year?: number | null;
@@ -93,7 +96,7 @@ export function formatReferenceLine(ref: {
   externalDoi?: string | null;
   externalArxivId?: string | null;
 }): string {
-  const parts: string[] = [`- **[${ref.corpusItemId}]**`];
+  const parts: string[] = [`- **[${ref.paperId}]**`];
   parts.push(ref.title ?? "Untitled paper");
   const authorStr = formatAuthors(ref.authors);
   const yearStr = ref.year != null ? `(${ref.year})` : null;
