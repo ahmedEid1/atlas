@@ -63,6 +63,26 @@ Produce: a clean PNG per feature + one walkthrough video → per-feature GIFs
   capture script). README/docs/media are non-code but keep the tree green.
 - Commit + push incrementally per phase. Confirm media renders on GitHub.
 
+## Status: COMPLETE ✅
+
+All phases shipped + pushed to `master` (commits `1ba9f97`, `9a87c09`, `f5edcfa`,
+`0631349`, `6802921`); 676 unit tests green, tsc + lint clean.
+
+- README redesigned (audience-first, ~170 lines) with **6 feature visuals**:
+  showcase-walkthrough GIF, MCP-demo GIF, showcase citation-audit PNG, evals PNG,
+  MCP-setup GIF, and the HITL-gates GIF.
+- Deep detail extracted to `docs/architecture.md`, `docs/llm-providers.md`,
+  `CHANGELOG.md`; repo hygiene added (`LICENSE`, `CONTRIBUTING.md`, `.github/`
+  PR + issue templates).
+- Version aligned to **2.0.0** everywhere; GitHub description + 15 topics refreshed.
+
+**How the HITL-gate media was captured (no live agent run):** the live and
+local-agent capture paths were blocked (prod-pointed `.env`, Trigger PAT routing,
+Mistral/OCR quota). Instead, a throwaway `app/capture-demo/page.tsx` rendered the
+real `ApprovalCard` components with realistic mock props, made public via a temp
+`proxy.ts` matcher entry, captured with `scripts/capture-gates.ts` against a local
+`pnpm dev`, then fully reverted. To re-capture: recreate that page + matcher entry.
+
 ## Risks / notes
 - Hardest part is **automated Clerk login + video capture**; if the live-app
   login proves brittle, fall back to capturing against a local `pnpm dev`
