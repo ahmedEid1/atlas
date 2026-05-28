@@ -146,6 +146,28 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M83 — Same a11y badge pattern on the run-detail header
+
+**Goal:** M82 cleaned the project headings'
+accessible names. The run-detail page header has the
+same "outbound"/"hybrid" scope badge as a sibling of
+the h1 (not nested — good), but the badge itself was
+a bare `<span>` without aria-hidden + sr-only
+treatment. Screen reader users heard just "outbound"
+— ambiguous out of context.
+
+**What shipped:**
+
+- Run-detail header scope badge → `aria-hidden="true"`
+  (decorative).
+- Sibling `<span className="sr-only">` provides
+  natural-language equivalent: "Outbound search" /
+  "Hybrid search".
+- Consistent with the M82 pattern on project list
+  + project detail surfaces.
+
+**Key files:** `app/projects/[id]/runs/[runId]/page.tsx`
+
 ## V2-M82 — Heading accessible name cleanup
 
 **Goal:** M54 (latest-run pill) and M74 (scope badge)

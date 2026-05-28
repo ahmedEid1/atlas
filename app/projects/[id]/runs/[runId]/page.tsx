@@ -139,12 +139,22 @@ export default async function RunPage({
           <h1 className="text-2xl font-semibold">{run.question}</h1>
           <div className="flex items-center gap-2">
             {isOutbound && (
-              <span
-                className="text-[10px] font-medium uppercase tracking-wider text-[var(--thoth-blue)] bg-[var(--thoth-blue-mist)]/50 px-1.5 py-0.5 rounded"
-                title={`Outbound search · providers: ${run.project.searchProviders.join(", ") || "none"}`}
-              >
-                {run.project.searchScope === "hybrid" ? "hybrid" : "outbound"}
-              </span>
+              // Decorative + sr-only natural-language sibling, same pattern
+              // as the project header (M82). The bare "outbound" /
+              // "hybrid" pill text alone is ambiguous to AT users; the
+              // sr-only label spells out the scope.
+              <>
+                <span
+                  className="text-[10px] font-medium uppercase tracking-wider text-[var(--thoth-blue)] bg-[var(--thoth-blue-mist)]/50 px-1.5 py-0.5 rounded"
+                  aria-hidden="true"
+                  title={`Outbound search · providers: ${run.project.searchProviders.join(", ") || "none"}`}
+                >
+                  {run.project.searchScope === "hybrid" ? "hybrid" : "outbound"}
+                </span>
+                <span className="sr-only">
+                  {run.project.searchScope === "hybrid" ? "Hybrid search" : "Outbound search"}
+                </span>
+              </>
             )}
             {run.steps.length > 0 && (
               <TokenSpendBadge steps={run.steps} budget={env.MAX_TOKENS_PER_RUN} />
