@@ -125,6 +125,39 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M38 — PATCH /api/projects/[id] for editing project settings
+
+**Goal:** A real CRUD gap. Users could create + read + delete
+projects (POST /api/projects, GET /api/projects/[id], DELETE
+/api/projects/[id]) but the only way to change a project's
+settings (typo in title, flip scope from uploaded_only to
+outbound, switch providers, adjust max-hits) was to delete + start
+over. Add the missing PATCH endpoint.
+
+**What shipped:**
+
+- New `PATCH /api/projects/[id]` route. Schema mirrors the POST
+  create schema with every field optional + the same Zod refines
+  (year-range ordering, maxHits ≤ 100). Auto-defaults providers
+  to OpenAlex+arXiv when flipping scope to outbound/hybrid AND the
+  caller didn't pass an explicit list AND the row currently has
+  no providers — matching the create-time defaulting behavior.
+  Owner check via `updateMany({ where: { id, ownerId } })` pushes
+  the filter to the DB layer (same atomic pattern as DELETE in
+  M24). 404 for unowned/missing, 400 for validation failure,
+  401 for unauthenticated.
+- 6 new unit tests cover: happy-path update, 404 unowned, 400
+  yearStart>yearEnd, provider auto-default branch, explicit-list
+  branch skips the default, 401 unauth.
+
+**What still doesn't ship in this milestone (deliberate):** the UI
+to surface this endpoint. A future iteration could add an
+"Edit project" dialog reusing the NewProjectDialog shape. For now
+the API surface is sufficient — power users + MCP-driven flows can
+call it directly.
+
+**Key files:** `app/api/projects/[id]/route.ts`, `tests/api/projects.test.ts`
+
 ## V2-M37 — BibTeX export of included papers
 
 **Goal:** Researchers writing actual literature reviews need to
