@@ -409,14 +409,17 @@ The answers each landed on, with the file the implementation lives in:
 
 Plus a long iteration tail (M5–M31) covering: MCP introspection tools,
 project-page V2 panel, run-detail discovery summary, cost-cap knobs,
-search-tuning UI, eval CLI wiring, the **10 audit bugs fixed**
-(M11–M19, M22 — keptExternalIds, rejection-reason plumbing, hybrid
-upload-merge, `skipDiscoveryGate`, `papersApproved.corpusItemIds`,
-hybrid cross-source dedup, screener idempotency, CorpusItem
-per-project uniqueness, `SEARCH_DISABLED` fail-fast, V2 status enum
-values), the live e2e suite (23 tests: public-surface, MCP transport,
+search-tuning UI, eval CLI wiring, the **12 audit/security fixes**
+(M11–M19, M22, M33 + trigger.config allowlist — keptExternalIds,
+rejection-reason plumbing, hybrid upload-merge,
+`skipDiscoveryGate`, `papersApproved.corpusItemIds`, hybrid
+cross-source dedup, screener idempotency, CorpusItem per-project
+uniqueness, `SEARCH_DISABLED` fail-fast, V2 status enum values,
+fetcher SSRF defense, Trigger.dev env-sync allowlist), the
+live e2e suite (22 tests: public-surface, MCP transport,
 authenticated walkthroughs, full agent-pipeline runs including a
-COMPLETED happy-path), and Trigger.dev worker redeploys. Full
+COMPLETED happy-path), the M34 draft-download endpoint, and
+Trigger.dev worker redeploys. Full
 shipping log in [`docs/superpowers/plans/thoth-v2-roadmap.md`](../plans/thoth-v2-roadmap.md).
 
 ---
