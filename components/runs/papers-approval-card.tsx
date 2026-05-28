@@ -87,7 +87,7 @@ export function PapersApprovalCard({
   return (
     <Card className="p-5 space-y-4 border-primary">
       <div>
-        <h3 className="text-lg font-semibold">Approve included papers</h3>
+        <h2 className="text-lg font-semibold">Approve included papers</h2>
         <p className="text-sm text-muted-foreground">
           The retriever scored each corpus item. Uncheck any you don&apos;t want included. {selected.size} of {proposed.length} selected.
         </p>

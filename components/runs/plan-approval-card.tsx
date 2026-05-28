@@ -75,14 +75,14 @@ export function PlanApprovalCard({
   return (
     <Card className="p-5 space-y-4 border-primary">
       <div>
-        <h3 className="text-lg font-semibold">Review proposed plan</h3>
+        <h2 className="text-lg font-semibold">Review proposed plan</h2>
         <p className="text-sm text-muted-foreground">
           The planner produced this plan. Approve to start retrieving papers, or reject and the run ends.
         </p>
       </div>
 
       <section className="text-sm">
-        <h4 className="font-medium mb-2">PICOC</h4>
+        <h3 className="font-medium mb-2">PICOC</h3>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {Object.entries(plan.picoc).map(([k, v]) => (
             <div key={k} className="rounded border p-2">
@@ -94,17 +94,17 @@ export function PlanApprovalCard({
       </section>
 
       <section className="text-sm">
-        <h4 className="font-medium mb-1">Sub-questions</h4>
+        <h3 className="font-medium mb-1">Sub-questions</h3>
         <ul className="list-disc pl-5 space-y-1">{plan.subQuestions.map((q, i) => <li key={i}>{q}</li>)}</ul>
       </section>
 
       <section className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <h4 className="font-medium mb-1">Inclusion criteria</h4>
+          <h3 className="font-medium mb-1">Inclusion criteria</h3>
           <ul className="list-disc pl-5 space-y-1">{plan.inclusionCriteria.map((c, i) => <li key={i}>{c}</li>)}</ul>
         </div>
         <div>
-          <h4 className="font-medium mb-1">Exclusion criteria</h4>
+          <h3 className="font-medium mb-1">Exclusion criteria</h3>
           <ul className="list-disc pl-5 space-y-1">{plan.exclusionCriteria.map((c, i) => <li key={i}>{c}</li>)}</ul>
         </div>
       </section>

@@ -51,7 +51,7 @@ export function DraftView({
   return (
     <Card className="p-6 space-y-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="eyebrow text-[var(--thoth-stone)]">Draft review</h3>
+        <h2 className="eyebrow text-[var(--thoth-stone)]">Draft review</h2>
         {runId && (
           <div className="flex items-baseline gap-3">
             {/* `download` attribute intentionally bare — the server's
@@ -77,34 +77,34 @@ export function DraftView({
         )}
       </div>
       <div className="text-[var(--thoth-blue-ink)] leading-relaxed text-sm">
-        {/* The containing page already owns the single <h1> (project title on
-            the showcase / run-detail surfaces). The drafter LLM tends to put
-            its review heading at H1, which would create two H1s on the page
-            and break the document outline. Demote every level by one so the
-            draft sits beneath the page heading: # → h2, ## → h3, ### → h4.
-            (h4-h6 can still appear if the LLM gets nested-deep; map them too
-            so the outline degrades sanely.) */}
+        {/* The page owns the single <h1> (project/run title) and the "Draft
+            review" wrapper above is an <h2> section. The drafter LLM tends to
+            put its review heading at H1, so demote every draft level by TWO to
+            nest the draft content UNDER the "Draft review" h2 without skipping
+            levels: # → h3, ## → h4, ### → h5, deeper → h6. Class names (visual
+            sizes) are unchanged — only the semantic tag shifts, so the outline
+            is correct for screen readers while the design is untouched. */}
         <ReactMarkdown
           components={{
             h1: ({ children }) => (
-              <h2 className="font-display text-2xl text-[var(--thoth-blue-ink)] mt-6 mb-3 leading-tight">
-                {children}
-              </h2>
-            ),
-            h2: ({ children }) => (
-              <h3 className="font-display text-xl text-[var(--thoth-blue-ink)] mt-6 mb-2 leading-tight">
+              <h3 className="font-display text-2xl text-[var(--thoth-blue-ink)] mt-6 mb-3 leading-tight">
                 {children}
               </h3>
             ),
-            h3: ({ children }) => (
-              <h4 className="font-display text-lg text-[var(--thoth-blue-ink)] mt-4 mb-2 leading-tight">
+            h2: ({ children }) => (
+              <h4 className="font-display text-xl text-[var(--thoth-blue-ink)] mt-6 mb-2 leading-tight">
                 {children}
               </h4>
             ),
-            h4: ({ children }) => (
-              <h5 className="font-display text-base text-[var(--thoth-blue-ink)] mt-4 mb-2 leading-tight">
+            h3: ({ children }) => (
+              <h5 className="font-display text-lg text-[var(--thoth-blue-ink)] mt-4 mb-2 leading-tight">
                 {children}
               </h5>
+            ),
+            h4: ({ children }) => (
+              <h6 className="font-display text-base text-[var(--thoth-blue-ink)] mt-4 mb-2 leading-tight">
+                {children}
+              </h6>
             ),
             h5: ({ children }) => (
               <h6 className="font-display text-sm text-[var(--thoth-blue-ink)] mt-3 mb-2 leading-tight">
@@ -153,9 +153,9 @@ export function DraftView({
 
       {references && references.length > 0 && (
         <section className="pt-2 border-t border-[var(--thoth-rule)]">
-          <h4 className="font-display text-lg text-[var(--thoth-blue-ink)] mb-2">
+          <h3 className="font-display text-lg text-[var(--thoth-blue-ink)] mb-2">
             References
-          </h4>
+          </h3>
           <ul className="space-y-1.5 text-xs">
             {references.map((r) => {
               const authorStr = formatAuthors(r.authors);

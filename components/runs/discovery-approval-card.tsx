@@ -141,7 +141,7 @@ export function DiscoveryApprovalCard({ runId, checkpointId, queries, hits }: Pr
   return (
     <Card className="p-5 space-y-4 border-primary">
       <div>
-        <h3 className="text-lg font-semibold">Review discovered papers</h3>
+        <h2 className="text-lg font-semibold">Review discovered papers</h2>
         <p className="text-sm text-muted-foreground">
           The discoverer ran {queries.length} {queries.length === 1 ? "query" : "queries"} across your
           enabled providers and found {hits.length} unique {hits.length === 1 ? "paper" : "papers"}{" "}
@@ -151,7 +151,7 @@ export function DiscoveryApprovalCard({ runId, checkpointId, queries, hits }: Pr
 
       <section>
         <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
-          <h4 className="text-sm font-medium">Search queries</h4>
+          <h3 className="text-sm font-medium">Search queries</h3>
           {!editing && !showReject && (
             <button
               type="button"
@@ -240,7 +240,7 @@ export function DiscoveryApprovalCard({ runId, checkpointId, queries, hits }: Pr
 
       <section>
         <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
-          <h4 className="text-sm font-medium">Hits ({kept.size} of {hits.length} kept)</h4>
+          <h3 className="text-sm font-medium">Hits ({kept.size} of {hits.length} kept)</h3>
           {hits.length > 1 && (
             <div className="flex items-center gap-2 text-xs">
               <button

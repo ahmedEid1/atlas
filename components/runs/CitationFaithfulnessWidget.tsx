@@ -63,7 +63,7 @@ export function CitationFaithfulnessWidget({
   return (
     <div className="border border-[var(--thoth-rule)] rounded-lg p-4 bg-[var(--thoth-papyrus)]">
       <div className="flex items-baseline justify-between gap-3 mb-2">
-        <h3 className="eyebrow text-[var(--thoth-stone)]">Citation faithfulness</h3>
+        <h2 className="eyebrow text-[var(--thoth-stone)]">Citation faithfulness</h2>
         {/* Bare `download` attribute — defer to the server's
             Content-Disposition for the human-readable filename
             (M66). Same reasoning as DraftView's download links. */}

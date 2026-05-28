@@ -125,6 +125,40 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M121 — Fix heading hierarchy on run-detail + showcase (WCAG)
+
+**Goal:** Close a real accessibility defect found by inspecting the live
+`/showcase` accessibility tree: the page jumped `h1 → h3` (skipping `h2`) and
+then inverted to `h2` inside the draft. The smoking gun was *internal
+inconsistency* — on the same run-detail page, `Discovery` and `Steps` were
+correctly `h2` under the `h1`, but `CritiquePanel`, `CitationFaithfulnessWidget`,
+`DraftView`, and the three approval cards used `h3`. Mixed levels for peer
+sections = an oversight, not a deliberate pattern (the `/evals` page does
+`h1 → h2` correctly).
+
+**What shipped:** made every top-level run section a consistent `h2` (matching
+the already-correct Discovery/Steps), and their subsections `h3`:
+
+- `CritiquePanel`, `CitationFaithfulnessWidget`, `DraftView` ("Draft review"),
+  `plan/discovery/papers` approval-card titles: `h3 → h2`.
+- approval-card + discovery-card subsections ("PICOC", "Sub-questions",
+  "Search queries", "Hits", …): `h4 → h3`.
+- `DraftView` draft-content demotion shifted down one (`#→h3, ##→h4, …`) so the
+  LLM draft nests under the "Draft review" `h2`; References `h4 → h3`.
+
+Every change swaps only the **tag**, never the `className`, so the visual
+design is byte-identical — only the screen-reader outline changes. Resulting
+hierarchy is sequential (`h1 → h2 → h3 → h4`) with no skips/inversions in any
+render state (the approval cards render conditionally; all-`h2` tops keep it
+valid regardless of which sections are present).
+
+**Verification:** all components are used only on run-detail + showcase (both
+single-`h1`); the e2e heading assertions match by accessible name (no `level`
+constraint) so they're unaffected; 644 unit/integ green. The live heading
+order is confirmable via the Playwright accessibility snapshot post-deploy.
+
+**Key files:** `components/runs/{CritiquePanel,CitationFaithfulnessWidget,draft-view,plan-approval-card,discovery-approval-card,papers-approval-card}.tsx`
+
 ## V2-M120 — Set the SCREENING run status (declared-but-never-set)
 
 **Goal:** Close a half-built status: `RunStatus.SCREENING` was defined in the

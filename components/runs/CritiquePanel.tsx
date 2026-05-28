@@ -17,7 +17,7 @@ export function CritiquePanel({ critiqueScore }: CritiquePanelProps) {
         : "text-[var(--thoth-warn)] bg-[color-mix(in_oklab,var(--thoth-warn)_8%,var(--thoth-papyrus))]";
   return (
     <div className="border border-[var(--thoth-rule)] rounded-lg p-4 bg-[var(--thoth-papyrus)]">
-      <h3 className="eyebrow text-[var(--thoth-stone)] mb-2">Critic score</h3>
+      <h2 className="eyebrow text-[var(--thoth-stone)] mb-2">Critic score</h2>
       <div className={`inline-flex items-center px-3 py-1 rounded-full text-2xl font-mono ${color}`}>
         {critiqueScore.toFixed(1)} / 5
       </div>
