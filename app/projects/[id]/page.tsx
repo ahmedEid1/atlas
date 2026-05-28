@@ -33,6 +33,7 @@ import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { DeleteRunButton } from "@/components/runs/delete-run-button";
 import { RefreshTickList } from "@/components/runs/refresh-tick";
 import { RunsBreakdown } from "@/components/runs/runs-breakdown";
+import { relativeTime } from "@/lib/relative-time";
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -159,20 +160,32 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         ) : (
           <ul className="space-y-2">
             <RefreshTickList runs={project.runs.map((r) => ({ status: r.status }))} />
-            {project.runs.map((r) => (
-              <li key={r.id} className="flex items-stretch gap-2">
-                <Link
-                  href={`/projects/${project.id}/runs/${r.id}`}
-                  className="flex flex-1 items-center justify-between rounded border bg-card p-3 hover:bg-accent"
-                >
-                  <span className="text-sm truncate">{new Date(r.createdAt).toLocaleString()}</span>
-                  <RunStatusPill status={r.status as RunStatus} />
-                </Link>
-                <div className="flex items-center px-2">
-                  <DeleteRunButton runId={r.id} runLabel={new Date(r.createdAt).toLocaleString()} />
-                </div>
-              </li>
-            ))}
+            {(() => {
+              // eslint-disable-next-line react-hooks/purity -- server-render snapshot for the per-row "Started X ago" label.
+              const nowMs = Date.now();
+              return project.runs.map((r) => {
+                const startedAt = new Date(r.createdAt);
+                const absolute = startedAt.toLocaleString();
+                return (
+                  <li key={r.id} className="flex items-stretch gap-2">
+                    <Link
+                      href={`/projects/${project.id}/runs/${r.id}`}
+                      className="flex flex-1 items-center justify-between rounded border bg-card p-3 hover:bg-accent"
+                    >
+                      <span className="text-sm truncate">
+                        <time dateTime={startedAt.toISOString()} title={absolute}>
+                          Started {relativeTime(startedAt.getTime(), nowMs)}
+                        </time>
+                      </span>
+                      <RunStatusPill status={r.status as RunStatus} />
+                    </Link>
+                    <div className="flex items-center px-2">
+                      <DeleteRunButton runId={r.id} runLabel={absolute} />
+                    </div>
+                  </li>
+                );
+              });
+            })()}
           </ul>
         )}
       </section>

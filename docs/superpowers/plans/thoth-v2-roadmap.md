@@ -125,6 +125,25 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M56 — Relative-time on project page runs list
+
+**Goal:** Same change as M55 but applied to the project
+detail page's runs list. Rows read "5/28/2026, 12:42:33 PM"
+— locale-dependent and forces the reader to compute "is
+that an hour ago or yesterday?". Switch to the M55
+`relativeTime` helper so rows read "Started 4 hours ago".
+
+**What shipped:**
+
+- Runs list rows now render `Started {relativeTime(...)}`
+  with the absolute datetime preserved in the `<time>`
+  tooltip + `dateTime` attribute.
+- Page-level `nowMs` snapshot at the start of the map so
+  all rows compute against the same reference clock (no
+  one-row-off-by-1 second jitter).
+
+**Key files:** `app/projects/[id]/page.tsx`
+
 ## V2-M55 — Relative-time "Updated X ago" on dashboard
 
 **Goal:** The dashboard project list eyebrow showed "Updated
