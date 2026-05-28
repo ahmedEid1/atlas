@@ -146,6 +146,38 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M63 — Citation faithfulness widget: breakdown + filter
+
+**Goal:** The widget rendered "8 of 10 citations
+supported" — but for the user reviewing the draft, the
+*actionable* info is the 2 that aren't supported. With
+even a moderate number of citations, scanning a flat
+verdicts list for the red rows was tedious.
+
+**What shipped:**
+
+- Breakdown line now also shows UNSUPPORTED + UNCLEAR
+  counts in their verdict-coloured spans
+  ("8 of 10 citations supported · 1 unsupported · 1
+  unclear."). Each count uses the brand
+  VERDICT_COLOR palette so they read consistently with
+  the panel rows.
+- New "Only unsupported / unclear" checkbox visible when
+  the verdicts panel is open AND there's at least one
+  problematic citation. Defaults off — first interaction
+  shows everything (least surprise). When toggled on,
+  filters the panel to actionable rows only.
+- Filter checkbox auto-hides for fully-clean runs (all
+  SUPPORTED) so users on a happy-path draft don't see
+  the noise.
+
+**Why no test:** the widget is a client component
+without a current jsdom setup; filter is a one-liner
+`claimChecks.filter(...)` whose correctness is direct
+from the type.
+
+**Key files:** `components/runs/CitationFaithfulnessWidget.tsx`
+
 ## V2-M62 — Start-new-run shortcut on FAILED runs
 
 **Goal:** When a run failed, the user had to navigate
