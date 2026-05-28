@@ -9,6 +9,12 @@ export type ClaimCheckRow = {
   verdict: "SUPPORTED" | "UNSUPPORTED" | "UNCLEAR";
   reason: string;
   paperExcerpt: string | null;
+  /**
+   * Human-readable title of the cited paper, resolved server-side (M101)
+   * from the corpusItemId via lib/cited-paper-titles. Optional + nullable:
+   * a row without it (or null) falls back to showing the raw paperId.
+   */
+  paperTitle?: string | null;
 };
 
 export type CitationFaithfulnessWidgetProps = {
@@ -130,7 +136,22 @@ export function CitationFaithfulnessWidget({
               className="text-xs border-l-2 pl-2"
               style={{ borderColor: VERDICT_COLOR[c.verdict] ?? "var(--thoth-stone)" }}
             >
-              <div className="font-mono text-[var(--thoth-stone)]">[{c.paperId}] — {c.verdict.toLowerCase()}</div>
+              {/* Prefer the resolved paper title (M101); fall back to the
+                  raw corpusItemId when it's missing/unresolved. The id is
+                  always shown in a mono tag so a reader can still
+                  cross-reference the draft's `[id]` markers. */}
+              <div className="text-[var(--thoth-stone)]">
+                {c.paperTitle ? (
+                  <>
+                    <span className="text-[var(--thoth-blue-ink)] font-medium">{c.paperTitle}</span>
+                    {" "}
+                    <span className="font-mono text-[10px] opacity-70">[{c.paperId}]</span>
+                  </>
+                ) : (
+                  <span className="font-mono">[{c.paperId}]</span>
+                )}
+                {" "}— {c.verdict.toLowerCase()}
+              </div>
               <div className="text-[var(--thoth-blue-ink)] italic">&quot;{c.claim}&quot;</div>
               <div className="text-[var(--thoth-stone)]">{c.reason}</div>
               {c.paperExcerpt && (

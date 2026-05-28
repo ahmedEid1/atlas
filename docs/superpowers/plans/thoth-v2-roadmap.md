@@ -146,6 +146,40 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M101 — Citation faithfulness widget shows paper titles
+
+**Goal:** The on-page CitationFaithfulnessWidget's
+per-verdict rows rendered `[{paperId}] — supported` —
+the same opaque-cuid problem M100 fixed for the
+downloadable audit.json + MCP tool, but on the primary
+*viewing* surface. A user reviewing their run's
+citation audit saw `[cm7d9f2a1b] — unsupported` with no
+idea which paper failed.
+
+**What shipped:**
+
+- `ClaimCheckRow` type gains optional `paperTitle`.
+- The widget renders the resolved title in
+  blue-ink-medium with the raw id demoted to a small
+  mono tag beside it (`Graph Attention Networks
+  [cm123]`). Falls back to the bare `[id]` mono tag
+  when no title — so the draft's `[id]` markers are
+  always cross-referenceable.
+- The run-detail server page resolves titles via the
+  shared `loadCitedPaperTitles` (M100) + enriches the
+  claimChecks before passing them to the widget. Same
+  helper, same query, as the audit.json route — no
+  divergence risk.
+
+**Surface coverage of citedPaperTitle:**
+| Surface | shows title |
+|---|---|
+| audit.json download (M100) | ✓ |
+| MCP get_citation_audit (M100) | ✓ |
+| on-page faithfulness widget (M101) | ✓ |
+
+**Key files:** `components/runs/CitationFaithfulnessWidget.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`
+
 ## V2-M100 — citedPaperTitle on audit claims (HTTP + MCP)
 
 **Goal:** The citation audit's per-claim shape had

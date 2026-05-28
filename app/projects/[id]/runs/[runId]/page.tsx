@@ -46,6 +46,7 @@ import {
   CitationFaithfulnessWidget,
   type ClaimCheckRow,
 } from "@/components/runs/CitationFaithfulnessWidget";
+import { loadCitedPaperTitles } from "@/lib/cited-paper-titles";
 
 export default async function RunPage({
   params,
@@ -82,6 +83,16 @@ export default async function RunPage({
     },
   });
   if (!run || run.project.ownerId !== user.id) notFound();
+
+  // Resolve cited paper ids → titles so the faithfulness widget can show
+  // "Graph Attention Networks [cm123]" instead of a bare cuid (M101).
+  // Same helper the audit.json + MCP audit surfaces use (M100).
+  const claimTitleById = await loadCitedPaperTitles(
+    (run.claimChecks ?? []).map((c) => c.paperId),
+  );
+  const claimChecksWithTitles: ClaimCheckRow[] = (run.claimChecks ?? []).map(
+    (c) => ({ ...(c as ClaimCheckRow), paperTitle: claimTitleById.get(c.paperId) ?? null }),
+  );
 
   const isOutbound =
     run.project.searchScope === "outbound" ||
@@ -305,7 +316,7 @@ export default async function RunPage({
           <CritiquePanel critiqueScore={run.critiqueScore} />
           <CitationFaithfulnessWidget
             faithfulnessScore={run.faithfulnessScore}
-            claimChecks={(run.claimChecks ?? []) as ClaimCheckRow[]}
+            claimChecks={claimChecksWithTitles}
             runId={runId}
           />
         </section>
