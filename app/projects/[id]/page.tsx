@@ -32,6 +32,7 @@ import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { DeleteRunButton } from "@/components/runs/delete-run-button";
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
+import { ProjectTokenStat } from "@/components/projects/project-token-stat";
 import { RefreshTickList } from "@/components/runs/refresh-tick";
 import { RunsBreakdown } from "@/components/runs/runs-breakdown";
 import { relativeTime } from "@/lib/relative-time";
@@ -47,6 +48,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     },
   });
   if (!project || project.ownerId !== user.id) notFound();
+
+  // Aggregate token usage across every RunStep of every run owned by
+  // this project. Scoped at the project level (not just visible runs)
+  // so the total is correct even for projects with >10 runs. Single
+  // scalar sum query — Postgres handles it via the FK indexes on Run +
+  // RunStep, so cheap.
+  const tokenAgg = await db.runStep.aggregate({
+    where: { run: { projectId: id } },
+    _sum: { inputTokens: true, outputTokens: true, cacheReadInputTokens: true },
+  });
+  const projectTokens = {
+    in: tokenAgg._sum.inputTokens ?? 0,
+    out: tokenAgg._sum.outputTokens ?? 0,
+    cache: tokenAgg._sum.cacheReadInputTokens ?? 0,
+  };
 
   const scope = project.searchScope as "uploaded_only" | "outbound" | "hybrid";
   const isOutbound = scope === "outbound" || scope === "hybrid";
@@ -153,12 +169,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-3">
             <h2 className="text-lg font-medium">Reviews</h2>
-            <RunsBreakdown runs={project.runs} />
+            <ProjectTokenStat tokens={projectTokens} />
           </div>
           <StartReviewButton projectId={project.id} disabled={!canStartReview} />
         </div>
+        <RunsBreakdown runs={project.runs} />
         {project.runs.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             {scope === "outbound"

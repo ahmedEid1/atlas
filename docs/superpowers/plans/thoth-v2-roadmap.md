@@ -125,6 +125,40 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M59 — Project-level token aggregate stat
+
+**Goal:** The per-run `TokenSpendBadge` (M36) shows how
+close a single run is to MAX_TOKENS_PER_RUN. There was no
+project-level counterpart — a user couldn't see "this
+whole project has consumed 1.2M tokens across 4 runs"
+without manually summing each run's badge.
+
+**What shipped:**
+
+- Project page server query gains a `db.runStep.aggregate
+  ({ where: { run: { projectId: id } }, _sum: { ... } })`
+  call. Scoped at the project (not just visible runs) so
+  the total is correct for projects with >10 runs.
+  Single scalar sum query — cheap thanks to FK indexes on
+  Run + RunStep.
+- New `ProjectTokenStat` component: compact monospace
+  badge (`121k tk total`), styled to match the per-run
+  badge family but in a neutral stone variant (no
+  budget % since there's no project-level cap). Tooltip
+  carries the precise breakdown (in / out / cache).
+- Compact number formatter handles M / k / raw scales so
+  a long-running project doesn't render `1,243,891 tk`
+  next to the section heading.
+- Auto-hides when billable = 0 so a fresh project
+  doesn't render an empty stat.
+
+**Why no test:** the component is presentational
+(formatting + conditional render), with the aggregation
+done by Prisma's `_sum` (Prisma's own test surface). A
+unit test would mostly be tautological.
+
+**Key files:** `components/projects/project-token-stat.tsx`, `app/projects/[id]/page.tsx`
+
 ## V2-M58 — Delete-run button on run detail page
 
 **Goal:** Mirroring M57 for runs. The list-row Delete
