@@ -131,8 +131,51 @@ export function DiscoveryApprovalCard({ runId, checkpointId, queries, hits }: Pr
       </section>
 
       <section>
-        <div className="flex items-baseline justify-between mb-2">
+        <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
           <h4 className="text-sm font-medium">Hits ({kept.size} of {hits.length} kept)</h4>
+          {hits.length > 1 && (
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setKept(new Set(hits.map((h) => h.externalId)))}
+                disabled={isPending || kept.size === hits.length}
+                className="text-[var(--thoth-blue)] hover:underline disabled:opacity-40 disabled:no-underline"
+              >
+                Select all
+              </button>
+              <span className="text-muted-foreground">·</span>
+              <button
+                type="button"
+                onClick={() => setKept(new Set())}
+                disabled={isPending || kept.size === 0}
+                className="text-[var(--thoth-blue)] hover:underline disabled:opacity-40 disabled:no-underline"
+              >
+                Select none
+              </button>
+              {openCount > 0 && openCount < hits.length && (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setKept(
+                        new Set(
+                          hits
+                            .filter((h) => h.accessStatus === "open")
+                            .map((h) => h.externalId),
+                        ),
+                      )
+                    }
+                    disabled={isPending}
+                    className="text-[var(--thoth-blue)] hover:underline disabled:opacity-40 disabled:no-underline"
+                    title="Keep only the hits with a known open-access URL — paywalled / unknown PDFs may fail at fetch."
+                  >
+                    Only open-access ({openCount})
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <ul className="space-y-2 text-sm max-h-96 overflow-y-auto pr-2">
           {hits.map((h) => (

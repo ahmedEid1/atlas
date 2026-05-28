@@ -146,6 +146,30 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M64 — Bulk selection helpers on DiscoveryApprovalCard
+
+**Goal:** The discovery HITL gate ships up to 50 hits at
+a time (cost-cap ceiling). Curating that list with a row-
+by-row checkbox is tedious — users want common actions:
+"keep everything", "drop everything", "only OA URLs"
+(paywalled / unknown PDFs are likely to fail at fetch).
+
+**What shipped:**
+
+- "Select all" / "Select none" inline buttons next to
+  the "Hits" heading; disabled when the action is a
+  no-op (already all/none kept).
+- "Only open-access (N)" button — only rendered when
+  there's a meaningful mix (`openCount > 0 &&
+  openCount < hits.length`). Title-tooltip explains the
+  trade-off (paywalled/unknown may fail at fetch).
+- Buttons hidden for single-hit lists where bulk
+  selection makes no sense.
+- All buttons go through the same `setKept(new Set(...))`
+  state so the approve handler downstream is unchanged.
+
+**Key files:** `components/runs/discovery-approval-card.tsx`
+
 ## V2-M63 — Citation faithfulness widget: breakdown + filter
 
 **Goal:** The widget rendered "8 of 10 citations
