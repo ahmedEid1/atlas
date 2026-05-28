@@ -125,6 +125,43 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M55 — Relative-time "Updated X ago" on dashboard
+
+**Goal:** The dashboard project list eyebrow showed "Updated
+28 May 2026" (absolute). For an active project the
+glanceable signal is "Updated 2 days ago" / "Updated 4 hours
+ago" — easier to triage what needs attention.
+
+**What shipped:**
+
+- New `lib/relative-time.ts` with a `relativeTime(thenMs,
+  nowMs, locale?)` helper using `Intl.RelativeTimeFormat`
+  so locale negotiation works server-side without a
+  separate i18n dep.
+- Resolution buckets: <60s "just now"; 60s..1h minutes;
+  1h..24h hours; 1d..30d days; 30d..365d months; >365d
+  years. Future timestamps clamp to "just now" rather
+  than rendering "in 3 seconds" (clock skew).
+- `numeric: "auto"` for natural singular forms ("1 minute
+  ago" / "yesterday" / "1 hour ago").
+- `ProjectList` accepts an optional `nowMs` prop. When
+  passed (dashboard does), the eyebrow renders relative
+  time; when omitted (showcase fixture), falls back to
+  absolute date.
+- `<time>` tag retains the ISO `dateTime` attribute and
+  gains a tooltip `title` with the absolute datetime so
+  accessibility tech still surfaces the precise time.
+- 4 unit tests (just-now / bucket matrix / numeric:auto
+  singular form / future-clock-skew clamp).
+
+**Why server-passed nowMs and not a client effect:**
+matches the M43 step-duration pattern. The dashboard
+re-renders on every navigation back to it, so the
+relative-time copy refreshes naturally; a live-ticking
+effect would be overkill for the eyebrow surface.
+
+**Key files:** `lib/relative-time.ts`, `components/projects/project-list.tsx`, `app/dashboard/page.tsx`, `tests/lib/relative-time.test.ts`
+
 ## V2-M54 — Latest-run pill on dashboard project rows
 
 **Goal:** The dashboard project list showed title + scope

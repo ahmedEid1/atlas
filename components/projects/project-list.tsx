@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DeleteProjectButton } from "./delete-project-button";
 import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill";
+import { relativeTime } from "@/lib/relative-time";
 
 type Project = {
   id: string;
@@ -37,7 +38,10 @@ export { countsLine };
  * as the deck. Hover lifts the title color to Thoth blue and reveals a
  * small "open →" affordance on the right.
  */
-export function ProjectList({ projects }: { projects: Project[] }) {
+export function ProjectList({ projects, nowMs }: { projects: Project[]; nowMs?: number }) {
+  // `nowMs` is server-passed (vs Date.now() in render) so the eyebrow
+  // "Updated 2 days ago" copy stays referentially pure. Caller can omit
+  // for legacy / showcase fixtures — falls back to the absolute date.
   if (projects.length === 0) {
     return (
       <div className="rule pt-10 text-center">
@@ -66,13 +70,22 @@ export function ProjectList({ projects }: { projects: Project[] }) {
                 Updated{" "}
                 <time
                   dateTime={new Date(p.updatedAt).toISOString()}
-                  className="text-[var(--thoth-blue-ink)] tabular-nums"
-                >
-                  {new Date(p.updatedAt).toLocaleDateString("en-GB", {
+                  title={new Date(p.updatedAt).toLocaleString("en-GB", {
                     year: "numeric",
                     month: "short",
                     day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
+                  className="text-[var(--thoth-blue-ink)] tabular-nums"
+                >
+                  {nowMs !== undefined
+                    ? relativeTime(new Date(p.updatedAt).getTime(), nowMs)
+                    : new Date(p.updatedAt).toLocaleDateString("en-GB", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
                 </time>
               </p>
               <h2

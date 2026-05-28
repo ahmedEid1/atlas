@@ -51,7 +51,9 @@ export default async function DashboardPage() {
         <NewProjectDialog />
       </header>
 
-      <ProjectList projects={projects} />
+      {/* eslint-disable-next-line react-hooks/purity -- server-render
+          snapshot for relative-time labels. */}
+      <ProjectList projects={projects} nowMs={Date.now()} />
     </main>
   );
 }

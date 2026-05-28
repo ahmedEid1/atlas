@@ -12,7 +12,7 @@
 [![Public evals](https://img.shields.io/badge/evals-public-C9A961?style=flat-square)](https://thoth-slr.vercel.app/evals)
 [![MCP Registry](https://img.shields.io/badge/MCP-registered-orange?style=flat-square)](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-552%20passing-success?style=flat-square)](#)
+[![Tests](https://img.shields.io/badge/tests-556%20passing-success?style=flat-square)](#)
 [![Status](https://img.shields.io/badge/status-v1.0.1-informational?style=flat-square)](#)
 [![Deploy cost](https://img.shields.io/badge/deploy-%240%2Fmo-brightgreen?style=flat-square)](#)
 
@@ -38,7 +38,7 @@ Thoth turns a research question into an evidence-grounded literature review. Two
 | **Live app** | [thoth-slr.vercel.app](https://thoth-slr.vercel.app) (Clerk sign-in) |
 | **Public eval dashboard** | [`/evals`](https://thoth-slr.vercel.app/evals) — recall/precision/faithfulness/coverage over a 17-question versioned golden set (14 real-paper SLR questions across LLM/ML/SE + 3 synthetic seeds), refreshed weekly via CI |
 | **Official MCP Registry entry** | [`io.github.ahmedEid1/thoth`](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) — `status: active` |
-| **Tests** | 552 unit/integration + 22 live e2e (3 MCP-transport + 7 real-browser public-surface + 6 authenticated walkthroughs incl. PDF upload + 6 full-pipeline agent runs through Mistral free-tier including COMPLETED draft + cite_check), all green; tsc + lint clean |
+| **Tests** | 556 unit/integration + 22 live e2e (3 MCP-transport + 7 real-browser public-surface + 6 authenticated walkthroughs incl. PDF upload + 6 full-pipeline agent runs through Mistral free-tier including COMPLETED draft + cite_check), all green; tsc + lint clean |
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
 | **Deploy cost** | $0 / month (Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers) |
 | **Self-host fallback** | One-VM deploy on Oracle Cloud Always Free (4 ARM cores, 24 GB RAM) — [`docs/self-host/`](docs/self-host/oracle-cloud-quickstart.md) |
@@ -100,7 +100,7 @@ See [`docs/mcp/tools.md`](docs/mcp/tools.md) for the full tool reference and [`d
 git clone https://github.com/ahmedEid1/thoth.git
 cd thoth
 cp .env.example .env       # fill in Clerk + Trigger.dev keys + MISTRAL_API_KEY
-docker compose up -d       # postgres :5523, minio :9010/:9011, langfuse :3030
+docker compose up -d       # postgres :5563, minio :9010/:9011, langfuse :3030
 pnpm install
 pnpm prisma migrate dev
 pnpm dev                   # Next.js on :3000
@@ -126,7 +126,7 @@ Power users can tick **Skip discovery approval** at project-create time to bypas
 
 ```bash
 pnpm verify                                                              # typecheck + lint + test — the pre-tag check (RELEASING.md)
-pnpm test                                                                # 552 unit/integration tests on their own
+pnpm test                                                                # 556 unit/integration tests on their own
 pnpm test:e2e:live       # 16 e2e against https://thoth-slr.vercel.app: 3 MCP-transport + 7 real-browser + 6 authenticated walkthroughs incl. PDF upload
 pnpm test:e2e:live:full  # 6 full agent-run pipeline tests (slow — exercises Mistral free-tier end-to-end including draft + cite_check + hybrid mode)
 #                          ^ authenticated specs need E2E_EMAIL + CLERK_SECRET_KEY in .env / .env.test;
