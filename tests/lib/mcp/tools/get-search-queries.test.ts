@@ -18,7 +18,8 @@ describe("getSearchQueries", () => {
   it("returns the discoverer's queries + provider set + provider errors", async () => {
     vi.mocked(db.run.findFirst).mockResolvedValue({
       id: "r1",
-      project: { searchScope: "outbound", searchProviders: ["openalex", "arxiv"] },
+      question: "How does chain-of-thought prompting work?",
+      project: { title: "CoT Review", searchScope: "outbound", searchProviders: ["openalex", "arxiv"] },
     } as never);
     vi.mocked(db.humanCheckpoint.findFirst).mockResolvedValue({
       proposal: {
@@ -37,6 +38,10 @@ describe("getSearchQueries", () => {
 
     expect(res).toEqual({
       reviewId: "r1",
+      // M79: projectTitle + reviewQuestion joined so AI assistants have
+      // project context without a second lookup.
+      projectTitle: "CoT Review",
+      reviewQuestion: "How does chain-of-thought prompting work?",
       searchScope: "outbound",
       searchProviders: ["openalex", "arxiv"],
       queries: ["chain of thought prompting", "in-context learning survey"],
@@ -49,7 +54,8 @@ describe("getSearchQueries", () => {
   it("returns empty queries + empty errors for uploaded_only runs", async () => {
     vi.mocked(db.run.findFirst).mockResolvedValue({
       id: "r2",
-      project: { searchScope: "uploaded_only", searchProviders: [] },
+      question: "q",
+      project: { title: "Uploaded Project", searchScope: "uploaded_only", searchProviders: [] },
     } as never);
     vi.mocked(db.humanCheckpoint.findFirst).mockResolvedValue(null as never);
     vi.mocked(db.runStep.findMany).mockResolvedValue([] as never);
@@ -67,7 +73,8 @@ describe("getSearchQueries", () => {
   it("returns empty queries when checkpoint exists but proposal is malformed", async () => {
     vi.mocked(db.run.findFirst).mockResolvedValue({
       id: "r3",
-      project: { searchScope: "outbound", searchProviders: ["openalex"] },
+      question: "q",
+      project: { title: "Project 3", searchScope: "outbound", searchProviders: ["openalex"] },
     } as never);
     vi.mocked(db.humanCheckpoint.findFirst).mockResolvedValue({
       proposal: { queries: "not-an-array" },
@@ -85,7 +92,8 @@ describe("getSearchQueries", () => {
   it("scopes the query to the calling user's runs", async () => {
     vi.mocked(db.run.findFirst).mockResolvedValue({
       id: "r4",
-      project: { searchScope: "outbound", searchProviders: ["arxiv"] },
+      question: "q",
+      project: { title: "Project 4", searchScope: "outbound", searchProviders: ["arxiv"] },
     } as never);
     vi.mocked(db.humanCheckpoint.findFirst).mockResolvedValue(null as never);
     vi.mocked(db.runStep.findMany).mockResolvedValue([] as never);

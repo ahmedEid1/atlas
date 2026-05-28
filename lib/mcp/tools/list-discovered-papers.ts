@@ -9,6 +9,10 @@ export const listDiscoveredPapersInput = z.object({
 
 export const listDiscoveredPapersOutput = z.object({
   reviewId: z.string(),
+  // M79: project context so an AI assistant has the human-readable name
+  // + research question without a second lookup. Mirrors M77 / M78.
+  projectTitle: z.string(),
+  reviewQuestion: z.string(),
   searchScope: z.enum(["uploaded_only", "outbound", "hybrid"]),
   totalDiscovered: z.number().int(),
   totalScreenedIn: z.number().int(),
@@ -40,7 +44,11 @@ export async function listDiscoveredPapers(
 ): Promise<z.infer<typeof listDiscoveredPapersOutput>> {
   const run = await db.run.findFirst({
     where: { id: input.reviewId, project: { ownerId: ctx.userId } },
-    select: { id: true, project: { select: { searchScope: true } } },
+    select: {
+      id: true,
+      question: true,
+      project: { select: { title: true, searchScope: true } },
+    },
   });
   if (!run) throw new NotFoundError("review_not_found");
 
@@ -87,6 +95,8 @@ export async function listDiscoveredPapers(
 
   return {
     reviewId: run.id,
+    projectTitle: run.project.title,
+    reviewQuestion: run.question,
     searchScope: run.project.searchScope as "uploaded_only" | "outbound" | "hybrid",
     totalDiscovered: rows.length,
     totalScreenedIn: screenedIn,

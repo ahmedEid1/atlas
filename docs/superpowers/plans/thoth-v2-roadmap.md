@@ -146,6 +146,43 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M79 — MCP `get_search_queries` + `list_discovered_papers` project context
+
+**Goal:** Completes the MCP enrichment chain (M77 → M78
+→ M79). The remaining two V2 MCP tools —
+`get_search_queries` and `list_discovered_papers` —
+returned `reviewId` + `searchScope` but no
+`projectTitle` or `reviewQuestion`. An AI assistant
+calling these still needed a second lookup to talk
+about the discovery sweep meaningfully.
+
+**What shipped:**
+
+- `getSearchQueriesOutput` + `listDiscoveredPapersOutput`
+  Zod schemas both gain `projectTitle: z.string()` +
+  `reviewQuestion: z.string()`.
+- Both handlers' Prisma selects join `project.title` +
+  the run's `question` field.
+- Existing unit-test fixtures extended; success-path
+  assertions check the new fields' exact values.
+
+**Why no `runStartedAt` / `runCompletedAt`:** these two
+tools are about the discovery sweep, not the run's
+overall lifecycle. The audit + draft tools (which DO
+include those timestamps) are appropriate places —
+duplicating here adds noise.
+
+**Surface-symmetry chain (complete):**
+| Tool | + projectTitle | + reviewQuestion | + run timestamps |
+|---|---|---|---|
+| `get_citation_audit` (M77) | ✓ | ✓ | ✓ |
+| `get_review_draft` (M78) | ✓ | (already had `researchQuestion`) | (already had `generatedAt`) |
+| `get_search_queries` (M79) | ✓ | ✓ | — |
+| `list_discovered_papers` (M79) | ✓ | ✓ | — |
+| `list_reviews` (already had) | ✓ (`projectName`) | ✓ (`researchQuestion`) | ✓ |
+
+**Key files:** `lib/mcp/tools/get-search-queries.ts`, `lib/mcp/tools/list-discovered-papers.ts`, `tests/lib/mcp/tools/get-search-queries.test.ts`, `tests/lib/mcp/tools/list-discovered-papers.test.ts`
+
 ## V2-M78 — MCP `get_review_draft` + list_reviews V2 status doc
 
 **Goal:** M77 enriched `get_citation_audit` with project

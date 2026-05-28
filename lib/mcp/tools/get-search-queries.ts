@@ -9,6 +9,10 @@ export const getSearchQueriesInput = z.object({
 
 export const getSearchQueriesOutput = z.object({
   reviewId: z.string(),
+  // M79: project context so an AI assistant has the human-readable name
+  // + research question without a second lookup. Mirrors M77 / M78.
+  projectTitle: z.string(),
+  reviewQuestion: z.string(),
   searchScope: z.enum(["uploaded_only", "outbound", "hybrid"]),
   searchProviders: z.array(z.string()),
   queries: z.array(z.string()),
@@ -34,7 +38,8 @@ export async function getSearchQueries(
     where: { id: input.reviewId, project: { ownerId: ctx.userId } },
     select: {
       id: true,
-      project: { select: { searchScope: true, searchProviders: true } },
+      question: true,
+      project: { select: { title: true, searchScope: true, searchProviders: true } },
     },
   });
   if (!run) throw new NotFoundError("review_not_found");
@@ -62,6 +67,8 @@ export async function getSearchQueries(
 
   return {
     reviewId: run.id,
+    projectTitle: run.project.title,
+    reviewQuestion: run.question,
     searchScope: run.project.searchScope as "uploaded_only" | "outbound" | "hybrid",
     searchProviders: run.project.searchProviders,
     queries,

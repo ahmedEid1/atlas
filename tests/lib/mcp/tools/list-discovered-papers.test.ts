@@ -16,7 +16,9 @@ beforeEach(() => vi.clearAllMocks());
 describe("listDiscoveredPapers", () => {
   it("returns hits with screening verdicts + counts for an outbound run", async () => {
     vi.mocked(db.run.findFirst).mockResolvedValue({
-      id: "r1", project: { searchScope: "outbound" },
+      id: "r1",
+      question: "How does outbound discovery work?",
+      project: { title: "Outbound Review", searchScope: "outbound" },
     } as never);
     vi.mocked(db.discoveredPaper.findMany).mockResolvedValue([
       {
@@ -47,6 +49,9 @@ describe("listDiscoveredPapers", () => {
     );
 
     expect(res.reviewId).toBe("r1");
+    // M79: projectTitle + reviewQuestion joined.
+    expect(res.projectTitle).toBe("Outbound Review");
+    expect(res.reviewQuestion).toBe("How does outbound discovery work?");
     expect(res.searchScope).toBe("outbound");
     expect(res.totalDiscovered).toBe(3);
     expect(res.totalScreenedIn).toBe(1);
@@ -63,7 +68,9 @@ describe("listDiscoveredPapers", () => {
 
   it("returns an empty list for an uploaded_only run", async () => {
     vi.mocked(db.run.findFirst).mockResolvedValue({
-      id: "r2", project: { searchScope: "uploaded_only" },
+      id: "r2",
+      question: "Uploaded test",
+      project: { title: "Uploaded Project", searchScope: "uploaded_only" },
     } as never);
     vi.mocked(db.discoveredPaper.findMany).mockResolvedValue([] as never);
 
@@ -81,7 +88,9 @@ describe("listDiscoveredPapers", () => {
 
   it("scopes the query to the calling user's runs", async () => {
     vi.mocked(db.run.findFirst).mockResolvedValue({
-      id: "r3", project: { searchScope: "hybrid" },
+      id: "r3",
+      question: "Hybrid test",
+      project: { title: "Hybrid Project", searchScope: "hybrid" },
     } as never);
     vi.mocked(db.discoveredPaper.findMany).mockResolvedValue([] as never);
 
