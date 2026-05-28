@@ -217,7 +217,7 @@ The fetcher node downloads PDFs for OA hits. Pipeline:
 
 ## 6. HITL gates
 
-Two HITL gates in V2 (V1 had two also):
+Three HITL gates in V2 (V1 had two — plan + papers):
 
 - **`plan_gate`** — unchanged.
 - **`discovery_gate`** (NEW) — shows queries + top hits, user can drop individual hits or reject the whole sweep. Query-editing UI deferred to a follow-up; today the user rejects + re-plans if the queries are wrong.
