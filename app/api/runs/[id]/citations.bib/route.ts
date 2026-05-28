@@ -46,6 +46,14 @@ export async function GET(
               externalDoi: true,
               externalArxivId: true,
               parsedMarkdown: true,
+              // M97: V2 discovered papers carry author/year/venue on the
+              // DiscoveredPaper row (one per corpus item via the
+              // discoveredAs back-relation). Join it so the BibTeX gets
+              // real bibliographic fields, not just title + DOI. Null for
+              // uploaded PDFs (no DiscoveredPaper).
+              discoveredAs: {
+                select: { authors: true, publicationYear: true, venue: true },
+              },
             },
           },
         },
@@ -66,12 +74,16 @@ export async function GET(
     // when writing claims to the draft. assessor.ts numbers them in
     // include-list order, so we match that here.
     const citationKey = `paper_${String(idx + 1).padStart(3, "0")}`;
+    const discovered = ip.corpusItem.discoveredAs;
     return {
       citationKey,
       title,
       externalDoi: ip.corpusItem.externalDoi,
       externalArxivId: ip.corpusItem.externalArxivId,
       source: ip.corpusItem.source,
+      authors: discovered?.authors ?? null,
+      year: discovered?.publicationYear ?? null,
+      venue: discovered?.venue ?? null,
     };
   });
 

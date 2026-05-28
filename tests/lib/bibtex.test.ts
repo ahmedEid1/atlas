@@ -94,6 +94,56 @@ describe("paperToBibtex", () => {
     );
   });
 
+  it("emits author / year / journal when present (M97 — V2 discovered papers)", () => {
+    const out = paperToBibtex({
+      citationKey: "paper_008",
+      title: "Graph Attention Networks",
+      externalDoi: "10.1/gat",
+      externalArxivId: null,
+      source: null,
+      authors: ["Petar Veličković", "Guillem Cucurull", "Arantxa Casanova"],
+      year: 2018,
+      venue: "ICLR",
+    });
+    // BibTeX joins authors with " and ".
+    expect(out).toContain(
+      "author = {Petar Veličković and Guillem Cucurull and Arantxa Casanova}",
+    );
+    expect(out).toContain("year = {2018}");
+    expect(out).toContain("journal = {ICLR}");
+  });
+
+  it("omits author / year / journal when absent (uploaded PDFs)", () => {
+    const out = paperToBibtex({
+      citationKey: "paper_009",
+      title: "Uploaded paper with no metadata",
+      externalDoi: null,
+      externalArxivId: null,
+      source: "corpus/p/x.pdf",
+      authors: null,
+      year: null,
+      venue: null,
+    });
+    expect(out).not.toContain("author =");
+    expect(out).not.toContain("year =");
+    expect(out).not.toContain("journal =");
+  });
+
+  it("omits author when the list is present but empty", () => {
+    const out = paperToBibtex({
+      citationKey: "paper_010",
+      title: "x",
+      externalDoi: null,
+      externalArxivId: null,
+      source: null,
+      authors: [],
+      year: 2020,
+      venue: null,
+    });
+    expect(out).not.toContain("author =");
+    expect(out).toContain("year = {2020}");
+  });
+
   it("sanitises non-alphanumeric chars in citation key", () => {
     const out = paperToBibtex({
       citationKey: "10.1/some-doi/with/slashes",

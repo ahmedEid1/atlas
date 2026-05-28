@@ -18,6 +18,15 @@ export type BibTexPaper = {
   externalArxivId: string | null;
   /** R2 blob key for uploaded items, e.g. "corpus/<projectId>/<uuid>.pdf". */
   source: string | null;
+  /**
+   * Bibliographic metadata (M97). Populated for V2 discovered papers
+   * from the DiscoveredPaper row; null for uploaded PDFs where only the
+   * OCR'd title is known. A BibTeX entry without author + year is barely
+   * usable in a real manuscript, so we emit these when available.
+   */
+  authors?: string[] | null;
+  year?: number | null;
+  venue?: string | null;
 };
 
 /**
@@ -61,6 +70,22 @@ export function paperToBibtex(p: BibTexPaper): string {
   const entryType = p.externalDoi ? "article" : "misc";
 
   const fields: string[] = [`  title = {${title}}`];
+  // Author list: BibTeX joins multiple authors with " and ". Each
+  // author is emitted verbatim (escaped) — we don't try to reformat
+  // "First Last" → "Last, First" since the provider data is already in
+  // display order + reformatting risks mangling non-Western name order.
+  if (p.authors && p.authors.length > 0) {
+    const authorField = p.authors.map((a) => bibtexEscape(a)).join(" and ");
+    fields.push(`  author = {${authorField}}`);
+  }
+  if (p.year != null) {
+    fields.push(`  year = {${p.year}}`);
+  }
+  if (p.venue) {
+    // `journal` is the @article-canonical field; @misc tolerates it +
+    // most engines surface it as the publication venue regardless.
+    fields.push(`  journal = {${bibtexEscape(p.venue)}}`);
+  }
   if (p.externalDoi) {
     fields.push(`  doi = {${bibtexEscape(p.externalDoi)}}`);
     fields.push(`  url = {https://doi.org/${bibtexEscape(p.externalDoi)}}`);

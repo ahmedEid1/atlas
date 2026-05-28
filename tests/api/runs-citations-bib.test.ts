@@ -29,6 +29,8 @@ describe("GET /api/runs/[id]/citations.bib", () => {
             externalDoi: "10.1/test",
             externalArxivId: null,
             parsedMarkdown: "# First paper title\n\nText.",
+            // Uploaded PDF — no DiscoveredPaper, so no author/year/venue.
+            discoveredAs: null,
           },
         },
         {
@@ -38,6 +40,12 @@ describe("GET /api/runs/[id]/citations.bib", () => {
             externalDoi: null,
             externalArxivId: "2201.11903",
             parsedMarkdown: "# Chain of thought prompting\n\nText.",
+            // V2 discovered paper — M97 joins these into the BibTeX.
+            discoveredAs: {
+              authors: ["Jason Wei", "Xuezhi Wang"],
+              publicationYear: 2022,
+              venue: "NeurIPS",
+            },
           },
         },
       ],
@@ -65,6 +73,11 @@ describe("GET /api/runs/[id]/citations.bib", () => {
     expect(body).toContain("title = {Chain of thought prompting}");
     expect(body).toContain("doi = {10.1/test}");
     expect(body).toContain("eprint = {2201.11903}");
+    // M97: the V2 discovered paper (paper_002) gets author/year/journal
+    // from its DiscoveredPaper join; the uploaded PDF (paper_001) does not.
+    expect(body).toContain("author = {Jason Wei and Xuezhi Wang}");
+    expect(body).toContain("year = {2022}");
+    expect(body).toContain("journal = {NeurIPS}");
   });
 
   it("returns 404 for runs with no draft (citations only after the agent completes)", async () => {

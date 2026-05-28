@@ -146,6 +146,47 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M97 — BibTeX entries gain author / year / venue
+
+**Goal:** The exported `.bib` only had title + DOI +
+arXiv id. A BibTeX entry without `author` + `year` is
+barely usable in a real manuscript — the whole point
+of the download is to paste citations into LaTeX.
+V2 discovered papers carry authors + publicationYear +
+venue on the `DiscoveredPaper` row; we just weren't
+threading them through.
+
+**What shipped:**
+
+- `BibTexPaper` type gains optional `authors`, `year`,
+  `venue`.
+- `paperToBibtex` emits:
+    - `author = {A and B and C}` (BibTeX's " and "
+      join) when authors is non-empty.
+    - `year = {2022}` when year is set.
+    - `journal = {NeurIPS}` when venue is set (the
+      @article-canonical field; @misc tolerates it).
+  Each is omitted when absent, so uploaded PDFs (which
+  only have an OCR'd title) don't emit empty fields.
+- `citations.bib` route joins `corpusItem.discoveredAs`
+  (the DiscoveredPaper back-relation) + maps
+  authors/publicationYear/venue into the BibTexPaper.
+  Null for uploaded PDFs.
+- Author names emitted verbatim (escaped) — no
+  "First Last" → "Last, First" reformatting, which
+  would mangle non-Western name order.
+- 3 new bibtex-lib tests (present / absent / empty-list
+  author) + the route test now includes a V2 paper
+  asserting the joined author/year/journal.
+
+**Why journal-not-booktitle for venue:** most venues in
+the discovery providers are journals or arXiv; @article
++ journal is the safe default. A future refinement could
+pick booktitle for conference proceedings, but the
+provider data doesn't reliably distinguish.
+
+**Key files:** `lib/bibtex.ts`, `app/api/runs/[id]/citations.bib/route.ts`, `tests/lib/bibtex.test.ts`, `tests/api/runs-citations-bib.test.ts`
+
 ## V2-M96 — Shared paper-title extraction (corpus list + .bib parity)
 
 **Goal:** Two surfaces extract a paper title from OCR'd
