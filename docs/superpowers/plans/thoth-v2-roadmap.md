@@ -125,6 +125,41 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M51 — Surface failed-step name on FAILED runs
+
+**Goal:** When a run failed, the run-detail header just
+showed `run.failureReason` as a single line of red text.
+The user had to scan the steps list to find which step
+blew up. For FAILED runs this is the most important
+information on the page — promote it.
+
+**What shipped:**
+
+- The single line of red text becomes a small bordered
+  destructive panel containing:
+    - The `run.failureReason` (terminal-error copy).
+    - A "Failed during: [humanised node name]" caption
+      identifying the last step with a `failureReason`,
+      using `nodeLabel` for the friendly mapping.
+    - When the step's failureReason differs from the
+      run-level reason (e.g. extractor failed with "Mistral
+      429" but the run's reason was a wrapper message),
+      both are shown.
+- "Last step with failureReason by startedAt" is the
+  heuristic — covers the common case where the terminal
+  failure is the outermost step + the inner-per-item case
+  where a per-paper step had its own failure that
+  bubbled up.
+
+**Why no separate tests:** the change is presentational
+(JSX inside the failure branch); existing run-detail
+integration tests would need DOM scraping to verify, which
+isn't worth standing up jsdom for. The failed-step lookup
+is a one-liner over `run.steps` (already test-covered as
+a Prisma include).
+
+**Key files:** `app/projects/[id]/runs/[runId]/page.tsx`
+
 ## V2-M50 — Per-page tab titles
 
 **Goal:** Every page in the app rendered with the same

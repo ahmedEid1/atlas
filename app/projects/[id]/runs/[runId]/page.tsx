@@ -28,7 +28,7 @@ export async function generateMetadata({
   return { title: `${run.project.title} — ${status}` };
 }
 import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill";
-import { RunStepList } from "@/components/runs/run-step-list";
+import { RunStepList, nodeLabel } from "@/components/runs/run-step-list";
 import { PlanApprovalCard } from "@/components/runs/plan-approval-card";
 import { PapersApprovalCard } from "@/components/runs/papers-approval-card";
 import { DiscoveryApprovalCard } from "@/components/runs/discovery-approval-card";
@@ -149,7 +149,29 @@ export default async function RunPage({
             <RunStatusPill status={run.status as RunStatus} />
           </div>
         </div>
-        {run.failureReason && <p className="text-destructive text-sm">{run.failureReason}</p>}
+        {run.failureReason && (
+          <div className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
+            <p className="font-medium text-destructive">{run.failureReason}</p>
+            {(() => {
+              // Surface which step blew up — the last step with a failureReason,
+              // by startedAt. Per-item inner steps may also have a failureReason
+              // but the *outer* terminal failure is what we want to spotlight.
+              const failedStep = [...run.steps]
+                .reverse()
+                .find((s) => s.failureReason);
+              if (!failedStep) return null;
+              return (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Failed during: <span className="font-medium">{nodeLabel(failedStep.nodeName)}</span>
+                  {failedStep.failureReason &&
+                  failedStep.failureReason !== run.failureReason ? (
+                    <> — {failedStep.failureReason}</>
+                  ) : null}
+                </p>
+              );
+            })()}
+          </div>
+        )}
       </header>
 
       <section className="space-y-3">
