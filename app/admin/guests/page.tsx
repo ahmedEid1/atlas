@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAdminEmail } from "@/lib/admin";
+import { nowSnapshot } from "@/lib/now";
 
 /**
  * Server-only operator view of guest provisioning activity.
@@ -31,11 +32,10 @@ export default async function GuestsAdminPage() {
   if (!user) notFound();
   if (!isAdminEmail(user.email)) notFound();
 
-  // `dynamic = "force-dynamic"` above means this server component runs
-  // on every request — `Date.now()` is request-scoped, not build-time,
-  // so the react-hooks/purity rule's concern doesn't apply here.
-  // eslint-disable-next-line react-hooks/purity
-  const since = new Date(Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000);
+  // M80: nowSnapshot() encapsulates the wall-clock read in a single
+  // helper. `dynamic = "force-dynamic"` above ensures this server
+  // component runs on every request, so the wall-clock value is fresh.
+  const since = new Date(nowSnapshot() - LOOKBACK_HOURS * 60 * 60 * 1000);
   const guests = await db.user.findMany({
     where: { isGuest: true, createdAt: { gte: since } },
     select: { id: true, clerkId: true, email: true, createdAt: true },

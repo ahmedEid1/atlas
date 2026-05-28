@@ -146,6 +146,32 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M81 — Fourth `Date.now()` caller + nowSnapshot tests
+
+**Goal:** M80 swept three server pages. Missed a fourth:
+`app/admin/guests/page.tsx` had its own eslint-disable
++ rationale comment for the same pattern. Also: the new
+helper had no unit tests.
+
+**What shipped:**
+
+- Admin guests page swapped to `nowSnapshot()`; its
+  eslint-disable + the 3-line rationale comment removed
+  (justification now lives once, in `lib/now.ts`).
+- 2 unit tests on `nowSnapshot`:
+    - returns a finite positive ms timestamp.
+    - returns a value within `[Date.now() before,
+      Date.now() after]` — sanity check that it isn't
+      accidentally re-implemented as a constant or
+      build-time inline.
+
+**Why test such a tiny helper:** future refactors might
+be tempted to "simplify" by inlining or pre-computing
+the value; the bracketing assertion catches both
+mistakes before deploy.
+
+**Key files:** `app/admin/guests/page.tsx`, `tests/lib/now.test.ts`
+
 ## V2-M80 — Extract `nowSnapshot()` helper
 
 **Goal:** Three server pages (dashboard, project detail,
