@@ -38,9 +38,16 @@ type Item = {
  * Exported for unit testing.
  */
 export function corpusItemLabel(item: { source: string; parsedMarkdown: string | null }): string {
-  // First H1/H2 heading of the OCR'd markdown, sanitised — the shared
-  // helper (lib/paper-title.ts) is also used by the citations.bib route
-  // so the two surfaces can't drift.
+  // First H1/H2 heading of the OCR'd markdown, sanitised via the shared
+  // helper (lib/paper-title.ts).
+  //
+  // DELIBERATE: this is a parsed-document management view, so it shows the
+  // document's OWN title (the OCR heading) — NOT the provider's bibliographic
+  // title. That's the opposite precedence from the citation surfaces
+  // (references / .bib / cite-check audit), which prefer `DiscoveredPaper.title`
+  // (M118/M119). Don't "unify" them: a corpus row should reflect what's in the
+  // parsed file; a citation should read as a clean bibliography entry. The
+  // humanised `source` fallback below means this never shows "Untitled paper".
   const title = extractPaperTitle(item.parsedMarkdown);
   if (title) return title.length > 140 ? title.slice(0, 137) + "…" : title;
 
