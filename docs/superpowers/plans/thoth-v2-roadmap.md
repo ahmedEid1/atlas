@@ -146,6 +146,46 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M90 — Extract `useRefreshPolling` shared hook
+
+**Goal:** Three near-identical inline `useEffect`
+blocks polled `router.refresh()` with visibility-aware
+pause/resume:
+  - `RefreshTickList` (run-status live updates)
+  - `CorpusItemList` (PENDING/PARSING items)
+  - Plus the M82-era pill effect was implicitly the
+    same shape
+
+Each had its own 30-line block with `setInterval` +
+`visibilitychange` listener + early-return-on-disabled.
+Real duplication: any future tweak (interval bump,
+backoff, cancellation policy) had to touch every site.
+
+**What shipped:**
+
+- New `useRefreshPolling(enabled, intervalMs = 2000)`
+  hook in `components/runs/use-refresh-polling.ts`.
+  Encapsulates: interval start/stop, visibility-pause +
+  tab-return-refresh, router import.
+- `RefreshTick` / `RefreshTickList` slimmed to compute
+  the "is anything active" signature, pass through to
+  the hook. Component file shrinks from 67 to 30 lines.
+- `CorpusItemList` polling effect (M61) similarly
+  swapped to the hook. Removes ~30 lines of inline
+  effect body + the visibility-listener boilerplate.
+- The visibility-pause logic — which was the load-
+  bearing part for free-tier Vercel invocation budget —
+  now lives in exactly one place with one set of
+  JSDoc'd rationale.
+
+**Why a hook, not a higher-order component:** the call
+sites need to keep their own data (the runs[] / items[]
+prop) so they can compute the "enabled" derivation
+themselves. A hook lets the caller stay in control of
+its data shape; a HOC would force a fixed prop name.
+
+**Key files:** `components/runs/use-refresh-polling.ts`, `components/runs/refresh-tick.tsx`, `components/corpus/corpus-item-list.tsx`
+
 ## V2-M89 — EditProjectDialog auto-populates providers on first switch to outbound
 
 **Goal:** V1 projects (originally created as

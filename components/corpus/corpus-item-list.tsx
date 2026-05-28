@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SummaryView, type PaperSummary } from "@/components/corpus/summary-view";
+import { useRefreshPolling } from "@/components/runs/use-refresh-polling";
 
 type Item = {
   id: string;
@@ -106,53 +107,16 @@ const STATUS_VARIANT: Record<Item["status"], "default" | "secondary" | "destruct
 };
 
 export function CorpusItemList({ items }: { items: Item[] }) {
-  const router = useRouter();
-
-  // Poll while parse pipeline is mid-flight. Pauses when the tab is hidden
-  // so a backgrounded upload page doesn't keep firing 2s router.refresh()
-  // hits at the Vercel function quota for nothing. Mirrors the visibility
-  // logic on the run-detail RefreshTick.
-  // (Trigger.dev's realtime SDK could replace the polling entirely; left
-  // as polling so far because the parse pipeline finishes in ~30-60s and
+  // Poll while parse pipeline is mid-flight. Visibility-pause + tab-
+  // return refresh live in useRefreshPolling so this stays terse.
+  // (Trigger.dev's realtime SDK could replace the polling entirely;
+  // left as polling because the parse pipeline finishes in ~30-60s and
   // the realtime subscription needs an auth-token route + JWT plumbing.)
-  // Stable signature for the effect dependency: status-string list joined
-  // with commas. Without this, `items` is a new array reference on every
-  // server-page render (every 2s while polling), so the effect tore down
-  // + re-set the interval each tick. The behaviour was correct but the
-  // cleanup/re-setup churn was unnecessary.
   const statusSig = items.map((i) => i.status).join(",");
-  useEffect(() => {
-    const anyParsing = statusSig
-      .split(",")
-      .some((s) => s === "PENDING" || s === "PARSING");
-    if (!anyParsing) return;
-
-    let intervalId: ReturnType<typeof setInterval> | undefined;
-    const start = () => {
-      if (intervalId !== undefined) return;
-      intervalId = setInterval(() => router.refresh(), 2000);
-    };
-    const stop = () => {
-      if (intervalId === undefined) return;
-      clearInterval(intervalId);
-      intervalId = undefined;
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        router.refresh();
-        start();
-      } else {
-        stop();
-      }
-    };
-
-    if (document.visibilityState === "visible") start();
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [statusSig, router]);
+  const anyParsing = statusSig
+    .split(",")
+    .some((s) => s === "PENDING" || s === "PARSING");
+  useRefreshPolling(anyParsing);
 
   if (items.length === 0) {
     return (
