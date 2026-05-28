@@ -190,6 +190,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               const nowMs = Date.now();
               return project.runs.map((r) => {
                 const startedAt = new Date(r.createdAt);
+                // Completed runs get a more useful "Completed X ago" label
+                // — that's when the result became available. In-progress
+                // runs stay on "Started X ago" since there's no completion
+                // moment yet.
+                const completedAt = r.completedAt ? new Date(r.completedAt) : null;
+                const labelDate = completedAt ?? startedAt;
+                const labelPrefix = completedAt ? "Completed" : "Started";
                 const absolute = startedAt.toLocaleString();
                 return (
                   <li key={r.id} className="flex items-stretch gap-2">
@@ -198,8 +205,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                       className="flex flex-1 items-center justify-between rounded border bg-card p-3 hover:bg-accent"
                     >
                       <span className="text-sm truncate">
-                        <time dateTime={startedAt.toISOString()} title={absolute}>
-                          Started {relativeTime(startedAt.getTime(), nowMs)}
+                        <time dateTime={labelDate.toISOString()} title={absolute}>
+                          {labelPrefix} {relativeTime(labelDate.getTime(), nowMs)}
                         </time>
                       </span>
                       <RunStatusPill status={r.status as RunStatus} />

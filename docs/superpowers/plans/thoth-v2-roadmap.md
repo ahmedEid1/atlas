@@ -146,6 +146,35 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M69 — Project page runs list: completed-at copy
+
+**Goal:** M56 rendered every row as "Started X ago". For
+COMPLETED runs the user cares more about *when the result
+became available* — "Completed 2 hours ago" is the
+glanceable signal that determines whether the draft is
+still fresh in their mind. Switch the copy when a run has
+finished.
+
+**What shipped:**
+
+- Row label is now conditional: `Completed X ago` when
+  `r.completedAt` is set, `Started X ago` otherwise.
+- The `<time>` element's `dateTime` attribute now points
+  at the displayed timestamp (completed vs started) so
+  copy-paste + screen-reader UX matches the visible
+  copy. Tooltip continues to show the absolute start
+  time for full context.
+- No data fetch changes — `completedAt` was already
+  selected by the existing `runs: { take: 10 }` include.
+
+**Why not also "Failed X ago" for FAILED runs:** the
+status pill already reads "failed" + the row links to a
+page whose header spotlights the failure reason + the
+failed step. Adding a third copy branch would clutter
+without adding clarity.
+
+**Key files:** `app/projects/[id]/page.tsx`
+
 ## V2-M68 — Sanitise OCR artifacts in corpus item titles
 
 **Goal:** M47's `corpusItemLabel` extracted the first
