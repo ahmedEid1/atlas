@@ -207,6 +207,7 @@ export default async function RunPage({
           <CitationFaithfulnessWidget
             faithfulnessScore={run.faithfulnessScore}
             claimChecks={(run.claimChecks ?? []) as ClaimCheckRow[]}
+            runId={runId}
           />
         </section>
       )}

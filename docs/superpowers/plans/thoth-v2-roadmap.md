@@ -125,6 +125,34 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M35 — cite_check audit JSON download
+
+**Goal:** Parallel to M34. The markdown draft is downloadable;
+the cite_check audit (per-claim verdicts + faithfulness score)
+deserves the same treatment for downstream analysis. Users with
+an MCP client already have this data via `get_citation_audit`;
+this gives non-MCP users the same channel.
+
+**What shipped:**
+
+- New route: `GET /api/runs/[id]/audit.json`. Returns the audit
+  in the same shape the `get_citation_audit` MCP tool returns
+  (reviewId, faithfulnessScore, totalClaims + per-verdict
+  counts, claims[]). `Content-Disposition: attachment;
+  filename="thoth-<id>-audit.json"`. `Cache-Control: no-store`
+  matches the M34 endpoint's behaviour. 404 for "no draft yet"
+  (cite_check only runs once the drafter completes), unowned,
+  or missing.
+- `CitationFaithfulnessWidget` gains an optional `runId` prop +
+  renders a "Download .json" link in its header. The showcase
+  page intentionally omits `runId` (public exemplar, not the
+  user's own data).
+- 5 new tests in `tests/api/runs-audit-json.test.ts`: full audit
+  shape, no-draft 404, unowned 404, unauthenticated 401, empty
+  claimChecks array.
+
+**Key files:** `app/api/runs/[id]/audit.json/route.ts`, `components/runs/CitationFaithfulnessWidget.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`, `tests/api/runs-audit-json.test.ts`
+
 ## V2-M34 — Markdown download for the draft
 
 **Goal:** Real UX gap — users can read the draft in the page but

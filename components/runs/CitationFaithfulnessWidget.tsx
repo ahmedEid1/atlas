@@ -14,6 +14,10 @@ export type ClaimCheckRow = {
 export type CitationFaithfulnessWidgetProps = {
   faithfulnessScore: number | null;
   claimChecks: ClaimCheckRow[];
+  /** When set, renders a "Download .json" link pointing at
+   *  `/api/runs/{runId}/audit.json` so a user can grab the
+   *  structured audit for downstream analysis. */
+  runId?: string;
 };
 
 // Verdict colours map to the Thoth palette (see docs/brand.md) instead
@@ -29,6 +33,7 @@ const VERDICT_COLOR: Record<ClaimCheckRow["verdict"], string> = {
 export function CitationFaithfulnessWidget({
   faithfulnessScore,
   claimChecks,
+  runId,
 }: CitationFaithfulnessWidgetProps) {
   const [open, setOpen] = useState(false);
   // useId would be nicer but the widget is used once per page so a static id
@@ -45,7 +50,18 @@ export function CitationFaithfulnessWidget({
   const supported = claimChecks.filter((c) => c.verdict === "SUPPORTED").length;
   return (
     <div className="border border-[var(--thoth-rule)] rounded-lg p-4 bg-[var(--thoth-papyrus)]">
-      <h3 className="eyebrow text-[var(--thoth-stone)] mb-2">Citation faithfulness</h3>
+      <div className="flex items-baseline justify-between gap-3 mb-2">
+        <h3 className="eyebrow text-[var(--thoth-stone)]">Citation faithfulness</h3>
+        {runId && claimChecks.length > 0 && (
+          <a
+            href={`/api/runs/${runId}/audit.json`}
+            download={`thoth-${runId}-audit.json`}
+            className="text-[10px] text-[var(--thoth-stone)] hover:text-[var(--thoth-blue)] underline-offset-4 hover:underline transition-colors"
+          >
+            Download .json
+          </a>
+        )}
+      </div>
       <div className={`inline-flex items-center px-3 py-1 rounded-full text-2xl font-mono ${color}`}>
         {pct}%
       </div>
