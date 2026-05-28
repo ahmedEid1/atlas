@@ -322,7 +322,9 @@ Shipped controls (status of each, as of v2.0):
 The self-host story is unchanged: outbound providers still need to be
 reachable from the self-host VM, but the search-API keys (Exa) live in
 `.env.prod` and never travel to Trigger.dev Cloud (the v1 sync allowlist
-in `trigger.config.ts` will gain `EXA_API_KEY` only if outbound is enabled).
+in `trigger.config.ts` now lists `EXA_API_KEY` + `SEARCH_DISABLED` +
+`MAX_TOKENS_PER_RUN` + `MAX_DISCOVERED_PAPERS_PER_RUN` so an armed deploy
+picks them up — see commit `d720fd5`).
 
 ---
 
