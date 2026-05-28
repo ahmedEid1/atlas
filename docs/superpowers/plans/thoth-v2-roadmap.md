@@ -146,6 +146,30 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M67 — Client download links defer to the server filename
+
+**Goal:** M66 made the server emit
+`thoth-archaeal-hibernation-2026-05-28.md` Content-
+Disposition filenames. But the client `<a download={...}>`
+attributes in DraftView + CitationFaithfulnessWidget were
+still set to `thoth-${runId}.${ext}` — pre-M66 format.
+Same-origin downloads honour Content-Disposition so the
+ACTUAL saved filename is correct, but the inconsistency
+was confusing + brittle (a later proxy or browser policy
+change could surface the client value).
+
+**What shipped:**
+
+- Bare `download` attribute (no value) on all three
+  download links — explicitly defers to the server's
+  Content-Disposition while still hinting to the
+  browser that this is a download, not a navigation.
+- Inline comment explaining the choice (so a future
+  reader doesn't add the run-id back thinking it's a
+  missing prop).
+
+**Key files:** `components/runs/draft-view.tsx`, `components/runs/CitationFaithfulnessWidget.tsx`
+
 ## V2-M66 — Human-readable download filenames
 
 **Goal:** The three download routes (M34 draft.md, M35

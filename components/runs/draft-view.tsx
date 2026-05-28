@@ -25,16 +25,21 @@ export function DraftView({ draft, runId }: { draft: string; runId?: string }) {
         <h3 className="eyebrow text-[var(--thoth-stone)]">Draft review</h3>
         {runId && (
           <div className="flex items-baseline gap-3">
+            {/* `download` attribute intentionally bare — the server's
+                Content-Disposition (M66) sets the friendly project-titled
+                filename, and a bare `download` lets the browser honor it.
+                Setting `download="thoth-<runId>..."` here would override
+                the server's filename in same-origin requests. */}
             <a
               href={`/api/runs/${runId}/draft.md`}
-              download={`thoth-${runId}.md`}
+              download
               className="text-xs text-[var(--thoth-stone)] hover:text-[var(--thoth-blue)] underline-offset-4 hover:underline transition-colors"
             >
               Download .md
             </a>
             <a
               href={`/api/runs/${runId}/citations.bib`}
-              download={`thoth-${runId}-citations.bib`}
+              download
               className="text-xs text-[var(--thoth-stone)] hover:text-[var(--thoth-blue)] underline-offset-4 hover:underline transition-colors"
             >
               Download .bib

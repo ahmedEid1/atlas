@@ -58,10 +58,13 @@ export function CitationFaithfulnessWidget({
     <div className="border border-[var(--thoth-rule)] rounded-lg p-4 bg-[var(--thoth-papyrus)]">
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <h3 className="eyebrow text-[var(--thoth-stone)]">Citation faithfulness</h3>
+        {/* Bare `download` attribute — defer to the server's
+            Content-Disposition for the human-readable filename
+            (M66). Same reasoning as DraftView's download links. */}
         {runId && claimChecks.length > 0 && (
           <a
             href={`/api/runs/${runId}/audit.json`}
-            download={`thoth-${runId}-audit.json`}
+            download
             className="text-[10px] text-[var(--thoth-stone)] hover:text-[var(--thoth-blue)] underline-offset-4 hover:underline transition-colors"
           >
             Download .json
