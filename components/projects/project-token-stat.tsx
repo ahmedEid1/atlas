@@ -23,8 +23,8 @@ export function ProjectTokenStat({
   const billable = tokens.in + tokens.out;
   if (billable === 0) return null;
 
-  const tooltip = `Total tokens across all runs: in ${tokens.in.toLocaleString()} · out ${tokens.out.toLocaleString()}${
-    tokens.cache > 0 ? ` · cache ${tokens.cache.toLocaleString()}` : ""
+  const tooltip = `Total tokens across all runs: in ${tokens.in.toLocaleString("en-US")} · out ${tokens.out.toLocaleString("en-US")}${
+    tokens.cache > 0 ? ` · cache ${tokens.cache.toLocaleString("en-US")}` : ""
   }`;
 
   return (

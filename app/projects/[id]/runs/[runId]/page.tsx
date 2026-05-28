@@ -162,7 +162,7 @@ export default async function RunPage({
             <RunStatusPill status={run.status as RunStatus} />
             <DeleteRunButton
               runId={runId}
-              runLabel={new Date(run.createdAt).toLocaleString()}
+              runLabel={new Date(run.createdAt).toLocaleString("en-GB")}
               variant="page"
               redirectTo={`/projects/${projectId}`}
             />

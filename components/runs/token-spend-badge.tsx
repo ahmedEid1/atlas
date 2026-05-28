@@ -48,7 +48,7 @@ export function TokenSpendBadge({
   return (
     <span
       className={`inline-flex items-baseline gap-2 px-2 py-1 text-[10px] font-mono rounded border ${colour}`}
-      title={`Billable: ${billable.toLocaleString()} of ${budget.toLocaleString()} tokens (in ${totalIn.toLocaleString()} · out ${totalOut.toLocaleString()}${totalCache > 0 ? ` · cache ${totalCache.toLocaleString()}` : ""})`}
+      title={`Billable: ${billable.toLocaleString("en-US")} of ${budget.toLocaleString("en-US")} tokens (in ${totalIn.toLocaleString("en-US")} · out ${totalOut.toLocaleString("en-US")}${totalCache > 0 ? ` · cache ${totalCache.toLocaleString("en-US")}` : ""})`}
     >
       <span>{compactCount(billable)} / {compactCount(budget)} tk</span>
       <span className="opacity-70">{pct}%</span>

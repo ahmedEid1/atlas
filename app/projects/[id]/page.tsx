@@ -217,7 +217,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 const completedAt = r.completedAt ? new Date(r.completedAt) : null;
                 const labelDate = completedAt ?? startedAt;
                 const labelPrefix = completedAt ? "Completed" : "Started";
-                const absolute = startedAt.toLocaleString();
+                // en-GB matches the existing project-list eyebrow + evals
+                // page convention — locale-stable across runners + visitors.
+                const absolute = startedAt.toLocaleString("en-GB");
                 return (
                   <li key={r.id} className="flex items-stretch gap-2">
                     <Link

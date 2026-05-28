@@ -146,6 +146,42 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M92 — Sweep locale-default toLocaleString calls
+
+**Goal:** M91 fixed `compactCount`. Four more
+`toLocaleString()` calls (no locale arg) lurked across
+the codebase, each producing different output by
+runner / visitor locale:
+  - `TokenSpendBadge` tooltip (billable, budget, in,
+    out, cache token counts × 5 calls)
+  - `ProjectTokenStat` tooltip (in, out, cache × 3
+    calls)
+  - Run-detail page `runLabel` prop (date)
+  - Project page runs-list `absolute` (date)
+
+**What shipped:**
+
+- Number formatters → `.toLocaleString("en-US")` to
+  match M91's `compactCount` convention.
+- Date formatters → `.toLocaleString("en-GB")` to
+  match the existing project-list eyebrow + evals
+  page convention (already explicit on those
+  surfaces).
+- Codebase is now zero locale-default `toLocaleString`
+  calls. `grep -rn "toLocaleString\(\)\)"` returns
+  nothing in production code.
+
+**Why two different hardcoded locales:** numbers + dates
+benefit from different conventions. "en-US" produces
+"1,234" + "5/28/2026, 12:42:33 PM"; "en-GB" produces
+"1,234" + "28/05/2026, 12:42:33". The number format
+is the same; the date format differs — and en-GB's
+DD/MM/YYYY is more readable for the engineering
+surfaces it appears on (where exact timestamp matters
+more than localised familiarity).
+
+**Key files:** `components/runs/token-spend-badge.tsx`, `components/projects/project-token-stat.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`, `app/projects/[id]/page.tsx`
+
 ## V2-M91 — compactCount hardcodes "en-US" locale
 
 **Goal:** `compactCount(1_234)` was returning
