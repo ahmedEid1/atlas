@@ -37,10 +37,13 @@ name: evals
 #   - The full 18-golden sweep is opt-in via `workflow_dispatch` with
 #     `goldens: all` — pick that when you've added a new golden or want
 #     a fresh complete baseline and you're OK burning more Mistral quota.
-#     NB: golden 017 is the v2 OUTBOUND golden — it drives the full
-#     discoverer→fetcher→screener→draft pipeline against live OpenAlex/arXiv,
-#     so it's slower than the uploaded_only goldens (per-golden 15-min cap
-#     applies). It's intentionally NOT in the smoke set.
+#     NB: golden 017 is the v2 OUTBOUND pipeline-smoke golden — it drives the
+#     full discoverer→fetcher→screener→draft pipeline against live OpenAlex/arXiv.
+#     The 50-paper screen makes ~50+ sequential smart-tier calls and rate-limits
+#     out on Mistral's free tier mid-run (see M126), so it often writes no rows
+#     and its discovery_recall is informational, NOT a cron baseline. It is
+#     intentionally NOT in the smoke set — run it manually (goldens=all) on a
+#     fresh-quota window.
 #   - Per-golden walltime cap (EVAL_GOLDEN_TIMEOUT_MS, default 15 min in
 #     scripts/run-evals.ts) means one stuck golden no longer kills the
 #     whole run.

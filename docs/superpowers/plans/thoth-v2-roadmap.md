@@ -152,11 +152,16 @@ rows, all `ok=true`, real LLM-generated queries) + M118/M119 discovered-paper
 titles (50 fresh + 105 prior rows, 0 empty titles) — the outbound
 discoverer/fetcher/search path works end-to-end.
 
-**Follow-up (M125 correction):** the live re-run surfaced only 1 of 017's 5
-"calibrated" `expectedDois` (RAGTruth) → `discovery_recall` 0.2. The discoverer's
-queries are LLM-generated and vary per run, so the one-throwaway-run calibration
-didn't reproduce. 017's `expectedDois` are being re-calibrated from a clean
-completed run.
+**Follow-up (M125 correction):** the live re-runs surfaced 1 then 0 of 017's 5
+"calibrated" `expectedDois` (`discovery_recall` 0.2 → 0.0). The discoverer's
+queries are LLM-generated and vary per run, so a fixed-DOI baseline doesn't
+reproduce; the full 50-paper screen also rate-limits out on the free tier before
+completing. Decision (with the maintainer): rather than chase a recall@pool
+metric, **017 was reframed as an outbound pipeline-smoke golden** — its assertion
+is that the outbound path executes and persists the SearchQuery (M114) +
+DiscoveredPaper (M118/M119) audit rows (all verified live on prod here);
+`discovery_recall` is kept INFORMATIONAL (not a gate), and 017 stays out of the
+cron smoke set (manual `workflow_dispatch: goldens=all` only).
 
 **Tests:** `tests/lib/llm.test.ts` — retries same provider on schema mismatch +
 recovers; gives up after bounded retries (no infinite loop); does NOT retry
@@ -193,14 +198,20 @@ structurally always 0.
   returns DOIs (not arXiv ids) and ranks recent RAG-specific papers above the
   foundational RAG/REALM preprints, so the "obvious" arXiv ids would have
   scored a misleading 0. The five chosen (RAGTruth, Active RAG/FLARE,
-  Benchmarking-LLMs-in-RAG, Adaptive-RAG, RAGAs) are confirmed-surfaced +
-  on-topic, making `discovery_recall` a genuine regression baseline.
+  Benchmarking-LLMs-in-RAG, Adaptive-RAG, RAGAs) are on-topic. **⚠️ Correction
+  (M126):** the "confirmed-surfaced" calibration did NOT hold — live re-runs
+  scored `discovery_recall` 0.2 then 0.0 (LLM-generated queries vary per run, so
+  exact-DOI recall doesn't reproduce). 017 was reframed as an outbound
+  *pipeline-smoke* golden; `discovery_recall` is informational, not a baseline.
 
-**Validation status:** structurally valid (the real loader parses all 18
-goldens incl. 017) + the DOIs are calibration-confirmed surfaced. End-to-end
-`discovery_recall` (full pipeline + metric) will be confirmed on the next
-`goldens: all` sweep — 017 is intentionally NOT in the 6-golden smoke set the
-cron runs (it drives the slower full outbound pipeline).
+**Validation status (superseded by M126):** structurally valid (the loader
+parses all 18 goldens incl. 017). The end-to-end run surfaced two issues — see
+M126: (1) the run failed at the screener on a transient Mistral schema-miss
+(fixed in M126), then on free-tier rate-limits over the 50-paper screen; (2)
+`discovery_recall` against the 5 DOIs is non-reproducible (0.2 → 0.0). Per that
+finding 017 is now an outbound *pipeline-smoke* golden — it verifies the path
+executes + persists the M114/M118/M119 audit rows (verified live on prod) — kept
+out of the cron smoke set and run manually via `workflow_dispatch: goldens=all`.
 
 **Tests:** golden-schema accepts searchScope/searchProviders + rejects unknown
 providers + defaults them undefined for v1.

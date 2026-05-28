@@ -7,24 +7,33 @@ picoc:
   outcome: Hallucination rate, factual accuracy / faithfulness, and QA exact-match
   context: Open-domain and knowledge-intensive NLP benchmarks, 2020-2024
 
-# V2 OUTBOUND golden. The discoverer fires against real provider APIs
-# (OpenAlex + arXiv); the meaningful signal is `discovery_recall` /
-# `screening_precision` against `expectedDois` below. The synthetic `papers`
-# block is schema-required scaffolding only — a pure-outbound run builds its
-# own corpus and ignores the seeded paper, and run-evals.ts skips the
-# seed-corpus-based v1 metrics (citation_recall/precision, coverage) for
+# V2 OUTBOUND pipeline-SMOKE golden. Purpose: exercise the live outbound path
+# (discoverer → fetcher → screener → assessor → drafter → critic → cite_check
+# against real OpenAlex + arXiv) and verify it persists the per-call SearchQuery
+# audit rows (M114) + provider-titled DiscoveredPaper rows (M118/M119). The
+# synthetic `papers` block is schema-required scaffolding only — a pure-outbound
+# run builds its own corpus and ignores the seeded paper, and run-evals.ts skips
+# the seed-corpus-based v1 metrics (citation_recall/precision, coverage) for
 # searchScope: outbound.
+#
+# NOT in the weekly cron smoke set — run manually via `workflow_dispatch:
+# goldens=all` on a fresh-quota window. The full 50-paper screen makes ~50+
+# sequential smart-tier calls and rate-limits out on Mistral's free tier mid-run
+# (see M126), so discovery_recall can't be relied on as a cron baseline.
 searchScope: outbound
 searchProviders:
   - openalex
   - arxiv
 
-# Calibrated, NOT guessed: each id below was confirmed to be surfaced by the
-# live discoverer for this question (OpenAlex returns DOIs, not arXiv ids, and
-# ranks recent RAG-specific papers above the foundational RAG/REALM preprints —
-# so the "obvious" arXiv ids would have scored a misleading 0). These five are
-# on-topic (RAG hallucination / factual grounding / RAG evaluation) and within
-# the discoverer's top hits, so discovery_recall is a real regression baseline.
+# INFORMATIONAL, not a calibrated gate. These five ids are on-topic reference
+# papers (RAG hallucination / factual grounding / RAG evaluation), but exact-DOI
+# discovery_recall against a live, LLM-driven discoverer is inherently NOISY: the
+# discoverer's queries are LLM-generated and vary per run, so even these specific
+# papers don't reliably surface (observed discovery_recall 0.2 then 0.0 across
+# two back-to-back runs — see M126). Treat the resulting discovery_recall as an
+# informational signal, NOT a regression baseline. They keep the metric wired so
+# a manual run still reports it; the golden's real assertion is that the outbound
+# pipeline runs and persists its audit rows.
 expectedDois:
   - "10.18653/v1/2024.acl-long.585"     # RAGTruth: a hallucination corpus for RAG
   - "10.18653/v1/2023.emnlp-main.495"   # Active Retrieval Augmented Generation (FLARE)
@@ -55,5 +64,5 @@ expectedClaims:
   - retrieval augmentation reduces hallucination versus parametric-only generation
 
 metadata:
-  source: "Synthetic v2-outbound golden — discovery_recall calibrated against the live OpenAlex/arXiv discoverer 2026-05-28"
+  source: "Synthetic v2-outbound pipeline-smoke golden — discovery_recall is informational/noisy, not calibrated (see M126). Manual workflow_dispatch only."
   difficulty: medium
