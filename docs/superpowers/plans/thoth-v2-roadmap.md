@@ -125,6 +125,39 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M50 — Per-page tab titles
+
+**Goal:** Every page in the app rendered with the same
+"Thoth — Agentic systematic literature reviews" tab title
+because only `app/layout.tsx` declared metadata. Users with
+several Thoth tabs open had to switch into each tab to know
+which project / run it was.
+
+**What shipped:**
+
+- `app/projects/[id]/page.tsx` adds a `generateMetadata`
+  that renders `${project.title} — Thoth` as the tab
+  title. Existence-probe posture preserved: a missing /
+  not-yours project gets "Project not found" instead of a
+  richer title.
+- `app/projects/[id]/runs/[runId]/page.tsx` adds a
+  `generateMetadata` that renders
+  `${project.title} — ${status}` ("GAT review —
+  completed", "GAT review — awaiting plan review"). A
+  status in the tab title means juggling multiple
+  in-flight runs across tabs becomes possible without
+  context-switching into each.
+- Both fall back to a generic title before owner checks
+  complete so an existence-probe can't enumerate other
+  users' project / run titles via tab metadata.
+
+**Why no separate tests:** Next.js metadata generation is
+tested by Next.js itself; our `generateMetadata` is just
+an `await` + a conditional that mirrors the page-handler's
+existing posture (which IS test-covered).
+
+**Key files:** `app/projects/[id]/page.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`
+
 ## V2-M49 — Runs section status breakdown
 
 **Goal:** The "Reviews" section on the project page just

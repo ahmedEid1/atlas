@@ -1,7 +1,30 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+/**
+ * Per-project tab title. Falls back to a generic copy when the project
+ * is missing / not owned — same posture as the page handler (which
+ * renders notFound() anyway), so leaking a richer title from an
+ * existence-probe isn't possible.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const user = await requireUser().catch(() => null);
+  if (!user) return { title: "Project" };
+  const project = await db.project.findUnique({
+    where: { id },
+    select: { title: true, ownerId: true },
+  });
+  if (!project || project.ownerId !== user.id) return { title: "Project not found" };
+  return { title: `${project.title} — Thoth` };
+}
 import { UploadButton } from "@/components/corpus/upload-button";
 import { CorpusItemList } from "@/components/corpus/corpus-item-list";
 import { StartReviewButton } from "@/components/runs/start-review-button";

@@ -1,6 +1,32 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+/**
+ * Per-run tab title. Joins the project title + run status so the
+ * browser tab tells the user at a glance which run is in which state
+ * across multiple open tabs ("GAT review — completed", "GAT review —
+ * awaiting plan review"). Falls back to a generic copy when the run is
+ * missing / not owned — same existence-probe posture as the page
+ * handler (which renders notFound()).
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ runId: string }>;
+}): Promise<Metadata> {
+  const { runId } = await params;
+  const user = await requireUser().catch(() => null);
+  if (!user) return { title: "Review run" };
+  const run = await db.run.findUnique({
+    where: { id: runId },
+    select: { status: true, project: { select: { title: true, ownerId: true } } },
+  });
+  if (!run || run.project.ownerId !== user.id) return { title: "Run not found" };
+  const status = run.status.toLowerCase().replace(/_/g, " ");
+  return { title: `${run.project.title} — ${status}` };
+}
 import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill";
 import { RunStepList } from "@/components/runs/run-step-list";
 import { PlanApprovalCard } from "@/components/runs/plan-approval-card";
