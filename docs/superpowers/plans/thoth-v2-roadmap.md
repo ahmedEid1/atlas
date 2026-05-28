@@ -125,6 +125,56 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M61 — Corpus-list polling effect uses stable signature
+
+**Goal:** `CorpusItemList` polls every 2s while any item
+is PENDING / PARSING via a `useEffect` whose dependency
+array was `[items, router]`. Because `items` is a new
+array reference on every server-page render (every 2s
+while polling is active), the effect tore down + re-set
+the interval on every tick. Behaviour was correct but
+the cleanup/re-setup churn was unnecessary.
+
+**What shipped:**
+
+- Effect dependency switched from `items` to a stable
+  string signature `items.map(i => i.status).join(",")`
+  — only changes when at least one item's status
+  actually changes.
+- Matches the M42 RefreshTickList pattern (stable
+  signature for the same reason).
+
+**Key files:** `components/corpus/corpus-item-list.tsx`
+
+## V2-M62 — Start-new-run shortcut on FAILED runs
+
+**Goal:** When a run failed, the user had to navigate
+back to the project page to start a new run — even
+though the only thing the new run needs is the project
+id + the same config (already on the project row). The
+M51 failed-run panel was a good spotlight, but the next
+step ("try again") required leaving the page.
+
+**What shipped:**
+
+- `StartReviewButton` gains `label` + `pendingLabel`
+  props so callers can re-use the same component with
+  different copy.
+- The failed-run panel on the run-detail page now
+  embeds the button labelled "Start new run" /
+  "Starting new run…". Single click → POST → navigate
+  to the new run.
+- Same error handling (run-already-active /
+  no-PARSED-items / generic) — inherited from the
+  shared component.
+
+**Why not a dedicated component:** the API call, error
+mapping, and pending-state handling are identical to
+the project-page Start button. A label prop is
+right-sized vs. a parallel component.
+
+**Key files:** `components/runs/start-review-button.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`
+
 ## V2-M60 — Shared `compactCount` formatter helper
 
 **Goal:** Both `TokenSpendBadge` (M36) and the new

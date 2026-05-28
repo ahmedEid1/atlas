@@ -4,7 +4,30 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-export function StartReviewButton({ projectId, disabled }: { projectId: string; disabled?: boolean }) {
+/**
+ * Triggers a new review run via POST /api/projects/<id>/runs.
+ *
+ * Used in two places:
+ *   - project-page Reviews section (default label "Start review")
+ *   - run-detail page on FAILED / REJECTED runs as a recovery
+ *     affordance ("Start new run") — saves the user from
+ *     navigating back to the project page to click Start.
+ *
+ * The `label` + `pendingLabel` props let the caller customise the
+ * copy without forking the component. All success / error paths
+ * are shared.
+ */
+export function StartReviewButton({
+  projectId,
+  disabled,
+  label = "Start review",
+  pendingLabel = "Starting…",
+}: {
+  projectId: string;
+  disabled?: boolean;
+  label?: string;
+  pendingLabel?: string;
+}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -32,7 +55,7 @@ export function StartReviewButton({ projectId, disabled }: { projectId: string; 
   return (
     <div className="flex flex-col gap-1">
       <Button onClick={start} disabled={isPending || disabled}>
-        {isPending ? "Starting…" : "Start review"}
+        {isPending ? pendingLabel : label}
       </Button>
       {error && <p className="text-destructive text-xs">{error}</p>}
     </div>

@@ -30,6 +30,7 @@ export async function generateMetadata({
 import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill";
 import { RunStepList, nodeLabel } from "@/components/runs/run-step-list";
 import { DeleteRunButton } from "@/components/runs/delete-run-button";
+import { StartReviewButton } from "@/components/runs/start-review-button";
 import { PlanApprovalCard } from "@/components/runs/plan-approval-card";
 import { PapersApprovalCard } from "@/components/runs/papers-approval-card";
 import { DiscoveryApprovalCard } from "@/components/runs/discovery-approval-card";
@@ -177,6 +178,13 @@ export default async function RunPage({
                 </p>
               );
             })()}
+            <div className="mt-2">
+              <StartReviewButton
+                projectId={projectId}
+                label="Start new run"
+                pendingLabel="Starting new run…"
+              />
+            </div>
           </div>
         )}
       </header>

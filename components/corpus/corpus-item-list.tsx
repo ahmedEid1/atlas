@@ -81,10 +81,16 @@ export function CorpusItemList({ items }: { items: Item[] }) {
   // (Trigger.dev's realtime SDK could replace the polling entirely; left
   // as polling so far because the parse pipeline finishes in ~30-60s and
   // the realtime subscription needs an auth-token route + JWT plumbing.)
+  // Stable signature for the effect dependency: status-string list joined
+  // with commas. Without this, `items` is a new array reference on every
+  // server-page render (every 2s while polling), so the effect tore down
+  // + re-set the interval each tick. The behaviour was correct but the
+  // cleanup/re-setup churn was unnecessary.
+  const statusSig = items.map((i) => i.status).join(",");
   useEffect(() => {
-    const anyParsing = items.some(
-      (i) => i.status === "PENDING" || i.status === "PARSING",
-    );
+    const anyParsing = statusSig
+      .split(",")
+      .some((s) => s === "PENDING" || s === "PARSING");
     if (!anyParsing) return;
 
     let intervalId: ReturnType<typeof setInterval> | undefined;
@@ -112,7 +118,7 @@ export function CorpusItemList({ items }: { items: Item[] }) {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [items, router]);
+  }, [statusSig, router]);
 
   if (items.length === 0) {
     return (
