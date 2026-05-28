@@ -36,6 +36,33 @@ export function NewProjectDialog() {
     });
   }
 
+  /**
+   * Reset every field back to its initial state. Called when the user
+   * closes the dialog (cancel / outside-click / Esc) so a re-open
+   * doesn't leak the previous project's title + question.
+   * Submit's success branch closes the dialog AND navigates away, so
+   * the navigation unmount handles that case naturally.
+   */
+  function resetForm() {
+    setTitle("");
+    setQuestion("");
+    setScope("uploaded_only");
+    setProviders(new Set(["openalex", "arxiv"]));
+    setYearStart("");
+    setYearEnd("");
+    setMaxHits("");
+    setSkipDiscoveryGate(false);
+    setError(null);
+  }
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    // Reset on close (Cancel / outside-click / Esc). Don't reset on
+    // open — the user might be re-opening to fix a validation error
+    // they saw on a previous submit attempt.
+    if (!next) resetForm();
+  }
+
   function submit() {
     setError(null);
     startTransition(async () => {
@@ -90,7 +117,7 @@ export function NewProjectDialog() {
     scope !== "uploaded_only" && providers.size === 0;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={<Button />}>New project</DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>New SLR project</DialogTitle></DialogHeader>
