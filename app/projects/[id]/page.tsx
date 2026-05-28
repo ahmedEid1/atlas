@@ -9,6 +9,7 @@ import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { DeleteRunButton } from "@/components/runs/delete-run-button";
 import { RefreshTickList } from "@/components/runs/refresh-tick";
+import { RunsBreakdown } from "@/components/runs/runs-breakdown";
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -120,7 +121,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Reviews</h2>
+          <div>
+            <h2 className="text-lg font-medium">Reviews</h2>
+            <RunsBreakdown runs={project.runs} />
+          </div>
           <StartReviewButton projectId={project.id} disabled={!canStartReview} />
         </div>
         {project.runs.length === 0 ? (

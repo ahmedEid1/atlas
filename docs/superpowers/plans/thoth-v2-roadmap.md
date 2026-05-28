@@ -125,6 +125,42 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M49 — Runs section status breakdown
+
+**Goal:** The "Reviews" section on the project page just
+showed N rows with status pills. With several runs the
+user had to eyeball the pills to know "did anything
+complete?" / "is anything still going?". Add a one-line
+breakdown above the list.
+
+**What shipped:**
+
+- New `bucketRuns()` helper sorting runs into completed /
+  failed / active buckets. REJECTED is grouped with FAILED
+  ("didn't produce a draft") rather than its own bucket —
+  the project-page summary is about outcomes, not reasons.
+- `RunsBreakdown` component renders a tabular-nums caption:
+  "2 completed · 3 in progress · 1 failed". Zero-count
+  buckets are hidden so a fresh project doesn't read "0
+  completed · 0 active · 0 failed". Returns null when all
+  buckets are zero.
+- Project-page Reviews section header gets the breakdown
+  line under the "Reviews" h2 + above the runs list.
+- Forward-compat: unknown statuses are silently ignored so
+  a future enum member can't render junk.
+- 5 unit tests cover mixed buckets, empty list, V2 active
+  states, REJECTED grouping, and unknown-status forward
+  compat.
+
+**Why bucket from `project.runs` (top 10) rather than
+groupBy:** the project page already loads the runs for
+the list; reusing the data avoids a second DB round-trip.
+For projects with >10 runs the breakdown is "of the 10
+most recent" — accurate enough for the at-a-glance
+summary the section is meant to provide.
+
+**Key files:** `components/runs/runs-breakdown.tsx`, `app/projects/[id]/page.tsx`, `tests/components/runs-breakdown.test.ts`
+
 ## V2-M48 — Status pill covers all V2 states + friendlier labels
 
 **Goal:** The `RunStatusPill` component's status union +
