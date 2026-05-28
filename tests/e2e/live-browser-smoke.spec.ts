@@ -82,6 +82,15 @@ test("public /showcase renders the seeded exemplar review", async ({ page }) => 
   // We don't pin specific copy because the seeded content might evolve.
   const bodyText = await page.locator("body").innerText();
   expect(bodyText.length, "/showcase rendered an empty body").toBeGreaterThan(100);
+
+  // Regression guard (M116): the References section + cite_check widget
+  // resolve paper titles by CorpusItem id. A seed that mismatches the
+  // draft's [paper_id] markers against the corpus ids — or omits the `# `
+  // markdown heading extractPaperTitle needs — renders every reference as
+  // "Untitled paper". No real reference should ever read that.
+  expect(bodyText, "/showcase references failed to resolve titles").not.toContain(
+    "Untitled paper",
+  );
 });
 
 test("security.txt is served per RFC 9116", async ({ request }) => {

@@ -125,6 +125,51 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M116 — Fix the public showcase's broken references ("Untitled paper" ×4)
+
+**Goal:** Fix a visible defect on `/showcase` — the project's public exemplar
+— found by actually loading the deployed page (accessibility snapshot). The
+References section rendered four entries as `[<cuid>] Untitled paper`, and
+those ids didn't match the draft's `[p_react]` / `[p_cot]` / … citation
+markers. The cite_check faithfulness widget had the same unresolved-title
+problem. On the page a first-time visitor lands on, that reads as broken.
+
+**Root cause (two seed bugs in `scripts/seed-showcase-review.ts`):**
+
+1. Corpus items were created with **db-generated cuids**, but the draft +
+   claim checks cite the semantic local ids (`p_react` …). Both title-
+   resolution paths key on `CorpusItem.id` (`toDraftReferences` via
+   `corpusItemId`; `loadCitedPaperTitles` via `claimCheck.paperId`), so
+   nothing matched — every reference fell back to "Untitled paper" and the
+   inline markers pointed at ids absent from the References list. The
+   `CorpusSeed.id` comment ("becomes [paper_id] in the draft") showed the id
+   was *meant* to be the citation key.
+2. The seed's `parsedMarkdown` started with a plain-text title line, but
+   `extractPaperTitle` only reads `^#{1,2}` headings — so even a matching
+   lookup yielded no title. Real runs get the heading free from Mistral OCR.
+
+**Fix:** create the corpus items with explicit `id: c.id` (so
+`corpusItemId` == the `[paper_id]` markers == `claimCheck.paperId`, exactly
+like agent/eval runtime), and store `parsedMarkdown` as a real H1
+(`# ${c.markdown}`). Verified the title resolution directly: before → `null`
+("Untitled paper"); after → real titles for all four papers.
+
+**Regression guard:** the `/showcase` browser-smoke e2e now asserts the page
+never contains "Untitled paper" (it previously only checked body length,
+which is why this slipped through).
+
+**Deploy note:** the fix is in the seed script; the live showcase only
+reflects it after `pnpm tsx scripts/seed-showcase-review.ts` runs against
+prod Neon (the script can't run against a plain Postgres — `lib/db` is
+Neon-WebSocket-only — so it's validated against prod on re-seed).
+
+**Why this matters:** `/showcase` is the unauthenticated landing exemplar —
+the single best demonstration of the whole product. Broken references there
+undercut the citation-faithfulness value prop the page exists to show.
+
+**Key files:** `scripts/seed-showcase-review.ts`,
+`tests/e2e/live-browser-smoke.spec.ts`
+
 ## V2-M115 — Honor the project's publication-year filter (declared-but-dead bug)
 
 **Goal:** Fix a genuine end-to-end gap found during a fresh audit. The

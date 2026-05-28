@@ -206,12 +206,23 @@ async function main(): Promise<void> {
   for (const c of CORPUS) {
     const item = await db.corpusItem.create({
       data: {
+        // Use the semantic local id (e.g. "p_react") as the CorpusItem id so
+        // it equals the [paper_id] markers the draft cites with. Without this
+        // the draft's `[p_react]` markers never matched the cuid-keyed
+        // References list or the cite_check title lookup — every reference
+        // rendered "[<cuid>] Untitled paper". CorpusItem.id is a free-form
+        // String PK, so a fixed id is valid; the project is wiped + reseeded
+        // each run so there's no collision.
+        id: c.id,
         projectId: project.id,
         kind: "NOTE",
         status: "PARSED",
         source: `showcase:${c.id}`,
         rawText: c.markdown,
-        parsedMarkdown: c.markdown,
+        // Store the title as a real H1 heading so `extractPaperTitle`
+        // (which only reads `^#{1,2}` lines) resolves it. Real runs get this
+        // for free from Mistral OCR; the seed has to add the `# ` itself.
+        parsedMarkdown: `# ${c.markdown}`,
         summary: { abstract: c.summary, keyFindings: [], methodology: "" },
         summarisedAt: new Date(),
       },
@@ -265,10 +276,11 @@ async function main(): Promise<void> {
   }
   console.log(`  ${EXTRACTED_CLAIMS.length} extracted claims`);
 
-  // ClaimCheck.paperId stores the [paper_id] token used in the draft.
-  // We seed using the same local short ids ("p_react" etc) so the draft
-  // text + audit panel stay readable. (At eval/agent runtime this would
-  // hold the corpus item cuid; here it's a presentation choice.)
+  // ClaimCheck.paperId stores the [paper_id] token used in the draft, which
+  // equals the CorpusItem id (we seed both as "p_react" etc). This mirrors
+  // eval/agent runtime exactly — there paperId is the corpus item cuid; here
+  // it's the corpus item's (semantic) id — so cite_check title resolution
+  // (loadCitedPaperTitles keys on CorpusItem.id) works the same way.
   for (const ck of CLAIM_CHECKS) {
     await db.claimCheck.create({
       data: {
