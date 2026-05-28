@@ -220,7 +220,7 @@ The fetcher node downloads PDFs for OA hits. Pipeline:
 Two HITL gates in V2 (V1 had two also):
 
 - **`plan_gate`** — unchanged.
-- **`discovery_gate`** (NEW) — shows queries + top hits, user can edit/drop queries.
+- **`discovery_gate`** (NEW) — shows queries + top hits, user can drop individual hits or reject the whole sweep. Query-editing UI deferred to a follow-up; today the user rejects + re-plans if the queries are wrong.
 - **`papers_gate`** — unchanged in shape; now operates on screener output.
 
 The discovery_gate is **opt-out at the project level**: a power user who
@@ -260,11 +260,13 @@ V1's `MAX_TOKENS_PER_RUN` pattern.
   Existing projects default to `uploaded_only`; the upgrade is opt-in per project.
 - **Run page**: new "Discovery" section between Steps and Approval Cards.
   Lists the generated queries + top-N hits live as the discoverer runs.
-- **Discovery approval card**: renders queries as editable text rows + hit
-  list with checkboxes. Per-row "drop" + global "approve all" + global
-  "regenerate queries".
+- **Discovery approval card**: shipped — renders queries as read-only
+  rows + hit list with per-row "keep" checkboxes + global "approve N"
+  + global "reject all" with reason. Query-editing + regenerate-queries
+  are deferred (the spec's original plan); today the path is "reject +
+  re-plan" when queries are wrong.
 - **Corpus list**: PARSED items from discovery render with a small provider
-  badge (`openalex` / `arxiv` / `exa`) + the original OA URL.
+  badge (`openalex` / `arxiv` / `exa` / `uploaded`) + the original OA URL.
 
 ---
 
