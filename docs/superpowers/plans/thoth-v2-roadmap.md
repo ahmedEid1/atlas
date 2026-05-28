@@ -146,6 +146,37 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M104 — Showcase page gets references + named citations
+
+**Goal:** The public `/showcase` exemplar — the page
+signed-out visitors land on to see "what Thoth
+produces" — rendered the draft + faithfulness widget
+but with opaque `[corpusItemId]` cuids (no titles, no
+references). The authenticated run-detail view had been
+fully polished (M100-M102); the marketing surface
+lagged behind.
+
+**What shipped:**
+
+- Showcase query joins `includedPapers` (same shape as
+  the run-detail page) + resolves cited-paper titles
+  via the shared `loadCitedPaperTitles` (M100).
+- `CitationFaithfulnessWidget` gets
+  `claimChecksWithTitles` → named citations ("Graph
+  Attention Networks [cm123]" not bare cuid).
+- `DraftView` gets a `references` prop → the public
+  exemplar now ends with a real References section.
+- Reuses the exact helpers the authenticated view uses,
+  so the public + private surfaces render identically.
+
+**Why it matters:** the showcase is the conversion
+surface — a signed-out researcher deciding whether Thoth
+is credible. A review that ends with a proper References
+list + named in-text citations reads as a real
+publication; opaque cuids read as a prototype.
+
+**Key files:** `app/showcase/page.tsx`
+
 ## V2-M103 — Remove stale eslint-disable in lib/now.ts
 
 **Goal:** `pnpm lint` emitted a warning: "Unused

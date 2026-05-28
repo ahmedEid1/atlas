@@ -7,6 +7,8 @@ import {
   CitationFaithfulnessWidget,
   type ClaimCheckRow,
 } from "@/components/runs/CitationFaithfulnessWidget";
+import { loadCitedPaperTitles } from "@/lib/cited-paper-titles";
+import { extractPaperTitle } from "@/lib/paper-title";
 
 /**
  * Public read-only view of the pinned showcase review.
@@ -39,9 +41,45 @@ export default async function ShowcasePage() {
     include: {
       project: { select: { title: true, question: true } },
       claimChecks: { orderBy: { createdAt: "asc" } },
+      // M104: join included papers so the public exemplar shows a real
+      // References section + named citations — not opaque cuids.
+      includedPapers: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          corpusItemId: true,
+          corpusItem: {
+            select: {
+              parsedMarkdown: true,
+              externalDoi: true,
+              externalArxivId: true,
+              discoveredAs: {
+                select: { authors: true, publicationYear: true, venue: true },
+              },
+            },
+          },
+        },
+      },
     },
   });
   if (!run) notFound();
+
+  // Resolve cited paper titles for the faithfulness widget + build the
+  // draft's References list. Same shared helpers the run-detail page uses
+  // (M100-M102), so the public showcase matches the authenticated view.
+  const titleById = await loadCitedPaperTitles(run.claimChecks.map((c) => c.paperId));
+  const claimChecksWithTitles = run.claimChecks.map((c) => ({
+    ...(c as ClaimCheckRow),
+    paperTitle: titleById.get(c.paperId) ?? null,
+  }));
+  const references = run.includedPapers.map((ip) => ({
+    paperId: ip.corpusItemId,
+    title: extractPaperTitle(ip.corpusItem.parsedMarkdown),
+    authors: ip.corpusItem.discoveredAs?.authors ?? null,
+    year: ip.corpusItem.discoveredAs?.publicationYear ?? null,
+    venue: ip.corpusItem.discoveredAs?.venue ?? null,
+    externalDoi: ip.corpusItem.externalDoi,
+    externalArxivId: ip.corpusItem.externalArxivId,
+  }));
 
   const supportedCount = run.claimChecks.filter((c) => c.verdict === "SUPPORTED").length;
   const unsupportedCount = run.claimChecks.filter((c) => c.verdict === "UNSUPPORTED").length;
@@ -85,12 +123,12 @@ export default async function ShowcasePage() {
           <CritiquePanel critiqueScore={run.critiqueScore} />
           <CitationFaithfulnessWidget
             faithfulnessScore={run.faithfulnessScore}
-            claimChecks={run.claimChecks as ClaimCheckRow[]}
+            claimChecks={claimChecksWithTitles}
           />
         </section>
       )}
 
-      {run.draft && <DraftView draft={run.draft} />}
+      {run.draft && <DraftView draft={run.draft} references={references} />}
     </main>
   );
 }
