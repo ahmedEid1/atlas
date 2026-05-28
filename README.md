@@ -118,6 +118,7 @@ See [`.env.example`](.env.example) for the full env-var list. Non-obvious ones: 
 5. On the project page, click **Start review**. No uploads needed — the discoverer builds the corpus.
 6. Approve the plan, then review the **Discovery approval card**: query list + per-row checkboxes against the discovered papers. Uncheck anything off-topic, then **Approve**.
 7. The fetcher OCRs the kept open-access PDFs, the screener votes include/exclude per paper, the **Papers approval card** appears with the screener's include set. Uncheck any false positives, approve, and the assessor → drafter → critic → cite_check pipeline runs as in v1.
+8. The final draft renders inline as Markdown + a **Download .md** link in the corner lets you keep a local copy. The CitationFaithfulnessWidget shows per-claim supported/unsupported verdicts; the same data is queryable via the `get_citation_audit` MCP tool.
 
 Power users can tick **Skip discovery approval** at project-create time to bypass the discovery HITL gate (cost-cap + max-hits ceiling still apply). MCP clients can use `list_discovered_papers` + `get_search_queries` to inspect any run after the fact.
 
