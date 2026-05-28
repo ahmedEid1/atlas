@@ -38,7 +38,7 @@ Thoth turns a research question into an evidence-grounded literature review. Two
 | **Live app** | [thoth-slr.vercel.app](https://thoth-slr.vercel.app) (Clerk sign-in) |
 | **Public eval dashboard** | [`/evals`](https://thoth-slr.vercel.app/evals) — recall/precision/faithfulness/coverage over a 17-question versioned golden set (14 real-paper SLR questions across LLM/ML/SE + 3 synthetic seeds), refreshed weekly via CI |
 | **Official MCP Registry entry** | [`io.github.ahmedEid1/thoth`](https://registry.modelcontextprotocol.io/v0.1/servers?search=thoth) — `status: active` |
-| **Tests** | 476 unit/integration + 22 live e2e (3 MCP-transport + 7 real-browser public-surface + 6 authenticated walkthroughs incl. PDF upload + 6 full-pipeline agent runs through Mistral free-tier including COMPLETED draft + cite_check), all green; tsc + lint clean |
+| **Tests** | 480 unit/integration + 22 live e2e (3 MCP-transport + 7 real-browser public-surface + 6 authenticated walkthroughs incl. PDF upload + 6 full-pipeline agent runs through Mistral free-tier including COMPLETED draft + cite_check), all green; tsc + lint clean |
 | **Audit log** | Every MCP tool call recorded in `McpCall` with SHA-256 input hash; no raw input ever stored |
 | **Deploy cost** | $0 / month (Vercel + Neon + Cloudflare R2 + Langfuse Cloud + Trigger.dev Cloud — all free tiers) |
 | **Self-host fallback** | One-VM deploy on Oracle Cloud Always Free (4 ARM cores, 24 GB RAM) — [`docs/self-host/`](docs/self-host/oracle-cloud-quickstart.md) |
@@ -125,7 +125,7 @@ Power users can tick **Skip discovery approval** at project-create time to bypas
 
 ```bash
 pnpm verify                                                              # typecheck + lint + test — the pre-tag check (RELEASING.md)
-pnpm test                                                                # 476 unit/integration tests on their own
+pnpm test                                                                # 480 unit/integration tests on their own
 pnpm test:e2e:live       # 16 e2e against https://thoth-slr.vercel.app: 3 MCP-transport + 7 real-browser + 6 authenticated walkthroughs incl. PDF upload
 pnpm test:e2e:live:full  # 6 full agent-run pipeline tests (slow — exercises Mistral free-tier end-to-end including draft + cite_check + hybrid mode)
 pnpm tsx scripts/verify-mcp-audit.ts                                     # spot-check the McpCall audit log
@@ -175,7 +175,7 @@ The full design is at [`docs/superpowers/specs/thoth-design.md`](docs/superpower
 - ~~**v1.0.1** — Post-release polish~~ ✅ — public `/evals` page gains metric explanations + "How this works" section (lifecycle / philosophy / per-metric definitions), eval CI bounded to a 6-golden smoke set with per-golden walltime cap (`EVAL_GOLDEN_TIMEOUT_MS`) and bumped `generateObject` retries so a flaky free-tier provider can't kill the whole sweep, regression threshold widened 10% → 20% to tolerate per-claim LLM-judge variance.
 - ~~**v2.0.0** — Outbound web search~~ ✅ — Multi-agent SLR: `discoverer → fetcher → screener` chain finds papers across **OpenAlex**, **arXiv**, **Exa** (opt-in), acquires open-access PDFs, OCRs them, applies plan-derived inclusion criteria — before V1's assessor/drafter/critic/cite_check pipeline ever runs. Three search modes: `uploaded_only` (V1, default), `outbound` (no uploads needed), `hybrid` (uploads + outbound merged via DOI-aware dedup). Per-project tuning (year range, max hits, skip-discovery-gate). New HITL gate (`APPROVE_DISCOVERY`) + status enum (`DISCOVERING` / `FETCHING` / `SCREENING`). V2 MCP tools (`list_discovered_papers`, `get_search_queries`). Eval framework gains `discovery_recall` + `screening_precision` metrics. Full shipping log + the 10 audit bugs found-and-fixed in the post-M4 review pass: [`docs/superpowers/plans/thoth-v2-roadmap.md`](docs/superpowers/plans/thoth-v2-roadmap.md).
 
-V2 is shipped. **23 live e2e tests** pass against the deployed instance, exercising every user workflow including the COMPLETED happy-path agent run end-to-end through Mistral free tier. Eval CI continues to run weekly; the dashboard at `/evals` updates whenever a sweep lands.
+V2 is shipped. **22 live e2e tests** pass against the deployed instance, exercising every user workflow including the COMPLETED happy-path agent run end-to-end through Mistral free tier. Eval CI continues to run weekly; the dashboard at `/evals` updates whenever a sweep lands.
 
 ## Security & privacy
 
