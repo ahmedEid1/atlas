@@ -11,6 +11,51 @@ type Step = {
 };
 
 /**
+ * Human-readable label for a node name. Inner per-item nodes (suffixed
+ * `_paper` / `_citation`) get a verb-y label noting they're per-item.
+ * Unknown node names fall through to the raw nodeName — preserves
+ * forward-compat as new nodes are added.
+ *
+ * Exported for unit testing.
+ */
+export function nodeLabel(nodeName: string): string {
+  switch (nodeName) {
+    case "planner":
+      return "Planning the review";
+    case "retriever":
+      return "Retrieving papers";
+    case "retriever_paper":
+      return "Reading paper";
+    case "discoverer":
+      return "Discovering outbound papers";
+    case "fetcher":
+      return "Fetching paper metadata";
+    case "fetcher_paper":
+      return "Fetching paper";
+    case "screener":
+      return "Screening papers";
+    case "screener_paper":
+      return "Screening paper";
+    case "assessor":
+      return "Assessing papers";
+    case "assessor_paper":
+      return "Assessing paper";
+    case "extractor":
+      return "Extracting claims";
+    case "drafter":
+      return "Drafting the review";
+    case "critic":
+      return "Reviewing the draft";
+    case "cite_check":
+      return "Verifying citations";
+    case "cite_check_citation":
+      return "Verifying citation";
+    default:
+      return nodeName;
+  }
+}
+
+/**
  * Format a millisecond duration as a compact human-readable string.
  * Examples: 0.4s · 12s · 1m 23s · 1h 5m. Negative values clamp to 0.
  * Exported for unit testing.
@@ -58,7 +103,7 @@ export function RunStepList({ steps, nowMs }: { steps: Step[]; nowMs: number }) 
               <span className="font-mono text-xs text-muted-foreground">
                 {s.endedAt ? "✓" : "…"}
               </span>
-              <span className="font-medium">{s.nodeName}</span>
+              <span className="font-medium">{nodeLabel(s.nodeName)}</span>
               {s.failureReason && (
                 <span className="text-destructive text-xs">{s.failureReason}</span>
               )}
