@@ -137,7 +137,7 @@ export default async function EvalsPage() {
               honest if evals/golden/ readdir fails (totalYamls === 0). */}
           {(totalYamls > 0 ? totalYamls : goldenIds.length)} golden SLR question
           {(totalYamls > 0 ? totalYamls : goldenIds.length) === 1 ? "" : "s"},
-          4 metrics, the latest commit-of-record run for each. Designed so a
+          {" "}{METRICS.length} metrics, the latest commit-of-record run for each. Designed so a
           regression is a public signal — not a hidden one.
         </p>
         {lastRunDate && lastRun && lastRunAt && (
@@ -347,7 +347,7 @@ export default async function EvalsPage() {
 
         {/* Per-metric definitions */}
         <div className="bg-[oklch(1_0_0)] border border-[var(--thoth-rule)] rounded-lg p-6">
-          <p className="eyebrow mb-4">The four metrics, in detail</p>
+          <p className="eyebrow mb-4">The {METRICS.length} metrics, in detail</p>
           <dl className="space-y-5 text-sm text-[var(--thoth-ink)] leading-relaxed">
             <div>
               <dt className="font-display text-base font-medium text-[var(--thoth-blue-ink)]">
@@ -405,6 +405,35 @@ export default async function EvalsPage() {
                 catching outright omissions of canonical findings.
                 Treat low scores here as a prompt for inspection, not as
                 proof of failure.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-display text-base font-medium text-[var(--thoth-blue-ink)]">
+                Discovery recall ·{" "}
+                <span className="font-mono text-xs text-[var(--thoth-stone)]">
+                  expected ∩ discovered / expected
+                </span>
+              </dt>
+              <dd className="mt-1">
+                <em>Outbound mode only.</em> Of the papers the golden expects,
+                how many did the discoverer surface from the live providers
+                (OpenAlex / arXiv / Exa) before screening? Informational —
+                the discoverer&apos;s queries are LLM-generated and vary per
+                run, so read it as a directional signal, not a hard gate.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-display text-base font-medium text-[var(--thoth-blue-ink)]">
+                Screening precision ·{" "}
+                <span className="font-mono text-xs text-[var(--thoth-stone)]">
+                  expected ∩ screened-in / screened-in
+                </span>
+              </dt>
+              <dd className="mt-1">
+                <em>Outbound mode only.</em> Of the discovered papers the
+                screener voted to include, how many were on the golden&apos;s
+                expected list? Measures whether the include/exclude judgement
+                keeps the corpus on-topic.
               </dd>
             </div>
           </dl>
