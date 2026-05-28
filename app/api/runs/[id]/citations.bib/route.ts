@@ -32,6 +32,8 @@ export async function GET(
       id: true,
       draft: true,
       createdAt: true,
+      completedAt: true,
+      question: true,
       project: { select: { ownerId: true, title: true } },
       includedPapers: {
         orderBy: { createdAt: "asc" },
@@ -74,7 +76,21 @@ export async function GET(
     };
   });
 
-  const body = buildBibtexFile(papers);
+  // Prepend a `%` provenance preamble before the buildBibtexFile output.
+  // BibTeX treats `%`-prefixed lines as comments, so the metadata is
+  // visible at the top of the file but ignored by every parser. Sanitise
+  // newlines so a title with a stray \n can't break out of the comment.
+  const sanitiseLine = (s: string) => s.replace(/[\r\n]+/g, " ");
+  const provenance = [
+    `% Project: ${sanitiseLine(run.project.title)}`,
+    `% Question: ${sanitiseLine(run.question)}`,
+    `% Run started: ${run.createdAt.toISOString()}`,
+    run.completedAt ? `% Run completed: ${run.completedAt.toISOString()}` : null,
+    `% Generated: ${new Date().toISOString()}`,
+    "%",
+    "",
+  ].filter(Boolean).join("\n");
+  const body = provenance + buildBibtexFile(papers);
   const filename = buildRunFilename({
     projectTitle: run.project.title,
     runId: id,

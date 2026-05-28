@@ -146,6 +146,60 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M76 — Provenance headers on .md + .bib downloads
+
+**Goal:** M75 stamped the audit JSON with project +
+question + timestamps so saved copies stay
+identifiable. Same gap on the .md (draft) and .bib
+(citations) downloads — once on disk, both are opaque
+about which review they came from.
+
+**What shipped:**
+
+- **`draft.md`** route prepends an HTML-comment
+  provenance header before the markdown body:
+    ```
+    <!--
+      Thoth review draft
+      Project: <title>
+      Question: <question>
+      Run started: <iso>
+      Run completed: <iso or omitted>
+      Generated: <iso>
+    -->
+
+    <draft body>
+    ```
+  HTML comments render to nothing in every common
+  Markdown processor (Pandoc, GFM, react-markdown,
+  mkdocs) so the prepended block is invisible when the
+  draft is rendered but preserved as text in the file.
+  Embedded `--` is sanitised to `- -` so a title with a
+  double-dash can't accidentally close the comment.
+- **`citations.bib`** route prepends `%`-prefixed
+  metadata lines before the existing `buildBibtexFile`
+  output. BibTeX treats `%` lines as comments, so the
+  metadata is visible at the top but ignored by every
+  parser. Newlines in titles / questions are sanitised
+  to spaces so a stray `\n` can't break out of the
+  comment.
+- Existing test fixtures extended with `completedAt` +
+  `question`; existing body assertions migrated to
+  partial `.toContain` checks for the new header fields
+  while preserving the bare-body assertions.
+
+**Why HTML comments not YAML frontmatter on .md:** YAML
+frontmatter is the heavier-but-more-machine-readable
+choice (Pandoc / Hugo / Jekyll / R Markdown all
+recognise it). But react-markdown — what the Thoth
+showcase + run-detail surfaces render with — does NOT
+strip frontmatter by default; users viewing the .md
+file in a tool that doesn't recognise YAML would see
+the raw `---` block as document content. HTML comments
+are universally rendered as nothing.
+
+**Key files:** `app/api/runs/[id]/draft.md/route.ts`, `app/api/runs/[id]/citations.bib/route.ts`, `tests/api/runs-draft-md.test.ts`, `tests/api/runs-citations-bib.test.ts`
+
 ## V2-M75 — Audit JSON stamped with project + run metadata
 
 **Goal:** The downloadable audit JSON (M35, refined in

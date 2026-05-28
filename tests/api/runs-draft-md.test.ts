@@ -17,6 +17,8 @@ describe("GET /api/runs/[id]/draft.md", () => {
     vi.mocked(db.run.findUnique).mockResolvedValue({
       draft: "# My Review\n\nClaim [paper_001].",
       createdAt: new Date("2026-05-28T14:00:00Z"),
+      completedAt: new Date("2026-05-28T14:15:30Z"),
+      question: "How does archaeal hibernation work?",
       project: { ownerId: "u1", title: "GAT Review" },
     } as never);
 
@@ -35,7 +37,17 @@ describe("GET /api/runs/[id]/draft.md", () => {
     // Cache-Control: no-store so a re-run's new draft isn't masked by a
     // cached old download.
     expect(res.headers.get("cache-control")).toBe("no-store");
-    expect(await res.text()).toBe("# My Review\n\nClaim [paper_001].");
+    // M76: HTML-comment provenance header prepended; the original
+    // draft body is preserved verbatim afterwards.
+    const text = await res.text();
+    expect(text).toContain("<!--");
+    expect(text).toContain("Thoth review draft");
+    expect(text).toContain("Project: GAT Review");
+    expect(text).toContain("Question: How does archaeal hibernation work?");
+    expect(text).toContain("Run started: 2026-05-28T14:00:00.000Z");
+    expect(text).toContain("Run completed: 2026-05-28T14:15:30.000Z");
+    expect(text).toContain("-->");
+    expect(text.endsWith("# My Review\n\nClaim [paper_001].")).toBe(true);
   });
 
   it("returns 404 when the run has no draft yet (in-flight or rejected)", async () => {

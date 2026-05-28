@@ -26,6 +26,8 @@ export async function GET(
     select: {
       draft: true,
       createdAt: true,
+      completedAt: true,
+      question: true,
       project: { select: { ownerId: true, title: true } },
     },
   });
@@ -40,7 +42,26 @@ export async function GET(
     suffix: "md",
   });
 
-  return new NextResponse(run.draft, {
+  // Prepend an HTML-comment provenance header so a researcher who archives
+  // the .md can identify the source review later. HTML comments render to
+  // nothing in every common Markdown processor (Pandoc, GFM, react-markdown,
+  // mkdocs) so the prepended block is invisible when the draft is rendered
+  // but preserved as text in the file. Sanitise embedded `--` to avoid
+  // accidentally closing the comment.
+  const sanitise = (s: string) => s.replace(/--/g, "- -");
+  const header = [
+    "<!--",
+    `  Thoth review draft`,
+    `  Project: ${sanitise(run.project.title)}`,
+    `  Question: ${sanitise(run.question)}`,
+    `  Run started: ${run.createdAt.toISOString()}`,
+    run.completedAt ? `  Run completed: ${run.completedAt.toISOString()}` : null,
+    `  Generated: ${new Date().toISOString()}`,
+    "-->",
+    "",
+  ].filter(Boolean).join("\n");
+
+  return new NextResponse(header + run.draft, {
     status: 200,
     headers: {
       "content-type": "text/markdown; charset=utf-8",

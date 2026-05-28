@@ -18,6 +18,8 @@ describe("GET /api/runs/[id]/citations.bib", () => {
       id: "r1",
       draft: "# Review",
       createdAt: new Date("2026-05-28T14:00:00Z"),
+      completedAt: new Date("2026-05-28T14:15:30Z"),
+      question: "How does archaeal hibernation work?",
       project: { ownerId: "u1", title: "GAT Review" },
       includedPapers: [
         {
@@ -111,6 +113,8 @@ describe("GET /api/runs/[id]/citations.bib", () => {
     vi.mocked(db.run.findUnique).mockResolvedValue({
       id: "r1", draft: "Review with no citations.",
       createdAt: new Date("2026-05-28T14:00:00Z"),
+      completedAt: null,
+      question: "Empty citations test",
       project: { ownerId: "u1", title: "Empty Review" },
       includedPapers: [],
     } as never);
@@ -122,6 +126,9 @@ describe("GET /api/runs/[id]/citations.bib", () => {
     );
     expect(res.status).toBe(200);
     const body = await res.text();
-    expect(body).toBe("% No papers included in this review.\n");
+    // M76: provenance preamble is prepended even when the corpus is empty.
+    expect(body).toContain("% Project: Empty Review");
+    expect(body).toContain("% Question: Empty citations test");
+    expect(body).toContain("% No papers included in this review.");
   });
 });
