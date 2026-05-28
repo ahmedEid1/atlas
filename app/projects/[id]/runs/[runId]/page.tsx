@@ -47,6 +47,7 @@ import {
   type ClaimCheckRow,
 } from "@/components/runs/CitationFaithfulnessWidget";
 import { loadCitedPaperTitles } from "@/lib/cited-paper-titles";
+import { extractPaperTitle } from "@/lib/paper-title";
 
 export default async function RunPage({
   params,
@@ -79,6 +80,24 @@ export default async function RunPage({
       discoveredPapers: {
         include: { screening: true },
         orderBy: { initialScore: "desc" },
+      },
+      // Included papers → the on-page draft References section (M102).
+      // Same join shape as the .md download route (M99).
+      includedPapers: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          corpusItemId: true,
+          corpusItem: {
+            select: {
+              parsedMarkdown: true,
+              externalDoi: true,
+              externalArxivId: true,
+              discoveredAs: {
+                select: { authors: true, publicationYear: true, venue: true },
+              },
+            },
+          },
+        },
       },
     },
   });
@@ -322,7 +341,21 @@ export default async function RunPage({
         </section>
       )}
 
-      {run.draft && <DraftView draft={run.draft} runId={runId} />}
+      {run.draft && (
+        <DraftView
+          draft={run.draft}
+          runId={runId}
+          references={run.includedPapers.map((ip) => ({
+            paperId: ip.corpusItemId,
+            title: extractPaperTitle(ip.corpusItem.parsedMarkdown),
+            authors: ip.corpusItem.discoveredAs?.authors ?? null,
+            year: ip.corpusItem.discoveredAs?.publicationYear ?? null,
+            venue: ip.corpusItem.discoveredAs?.venue ?? null,
+            externalDoi: ip.corpusItem.externalDoi,
+            externalArxivId: ip.corpusItem.externalArxivId,
+          }))}
+        />
+      )}
 
       <RefreshTick run={run} />
     </main>

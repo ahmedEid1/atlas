@@ -146,6 +146,48 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M102 — On-page draft References section
+
+**Goal:** The draft rendered on the run-detail page
+(DraftView) shows the LLM's prose with inline
+`[corpusItemId]` markers — opaque cuids with no key on
+screen. M99 added a References appendix to the .md
+*download*; this mirrors it for the *on-page* view so
+the rendered draft is self-contained too.
+
+**What shipped:**
+
+- `DraftView` gains an optional `references:
+  DraftReference[]` prop. When present, a References
+  `<section>` renders below the draft body: each entry
+  is `[corpusItemId]` (mono tag) + title + "— authors
+  (year)" + "· venue" + DOI/arXiv link. Reuses
+  `formatAuthors` (caps at 3 + et al.) for the author
+  string.
+- Run-detail page joins `includedPapers` (same shape
+  as the .md route, M99) + maps them into the
+  `references` prop via the shared `extractPaperTitle`.
+- Showcase page omits `references` (read-only public
+  exemplar, no per-claim resolution) — DraftView
+  renders without the section, unchanged.
+- DOI/arXiv link shows the URL with the `https://`
+  stripped for compactness, opens in a new tab.
+
+**Why structured props, not markdown:** rendering the
+references as React (vs feeding a markdown string to a
+second ReactMarkdown) avoids markdown re-parsing the
+`[corpusItemId]` brackets as link references + keeps
+the link `target=_blank rel=noopener` consistent with
+the rest of the component.
+
+**citedPaperTitle / reference coverage is now total:**
+.bib (M97/M98), .md download (M99), audit.json (M100),
+MCP audit (M100), on-page faithfulness widget (M101),
+on-page draft references (M102). No surface shows a bare
+cuid without a resolvable title anymore.
+
+**Key files:** `components/runs/draft-view.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`
+
 ## V2-M101 — Citation faithfulness widget shows paper titles
 
 **Goal:** The on-page CitationFaithfulnessWidget's

@@ -1,5 +1,22 @@
 import ReactMarkdown from "react-markdown";
 import { Card } from "@/components/ui/card";
+import { formatAuthors } from "@/lib/paper-title";
+
+/**
+ * One reference for the on-page References section (M102). Mirrors the
+ * .md download's appendix (M99) so the draft is self-contained
+ * on-screen too — the inline `[corpusItemId]` markers are otherwise
+ * opaque cuids.
+ */
+export type DraftReference = {
+  paperId: string;
+  title: string | null;
+  authors?: string[] | null;
+  year?: number | null;
+  venue?: string | null;
+  externalDoi?: string | null;
+  externalArxivId?: string | null;
+};
 
 /**
  * Render the LLM-drafted SLR.
@@ -17,8 +34,20 @@ import { Card } from "@/components/ui/card";
  * element maps to Thoth-brand classes so the draft picks up the same
  * typographic system the rest of the site uses, without depending on
  * `@tailwindcss/typography`.
+ *
+ * `references` (optional): when provided, a References section renders
+ * below the draft resolving the inline `[corpusItemId]` markers. Omitted
+ * on the showcase page (read-only, no per-claim resolution).
  */
-export function DraftView({ draft, runId }: { draft: string; runId?: string }) {
+export function DraftView({
+  draft,
+  runId,
+  references,
+}: {
+  draft: string;
+  runId?: string;
+  references?: DraftReference[];
+}) {
   return (
     <Card className="p-6 space-y-3">
       <div className="flex items-baseline justify-between gap-3">
@@ -121,6 +150,48 @@ export function DraftView({ draft, runId }: { draft: string; runId?: string }) {
           {draft}
         </ReactMarkdown>
       </div>
+
+      {references && references.length > 0 && (
+        <section className="pt-2 border-t border-[var(--thoth-rule)]">
+          <h4 className="font-display text-lg text-[var(--thoth-blue-ink)] mb-2">
+            References
+          </h4>
+          <ul className="space-y-1.5 text-xs">
+            {references.map((r) => {
+              const authorStr = formatAuthors(r.authors);
+              const link = r.externalDoi
+                ? `https://doi.org/${r.externalDoi}`
+                : r.externalArxivId
+                  ? `https://arxiv.org/abs/${r.externalArxivId}`
+                  : null;
+              return (
+                <li key={r.paperId} className="leading-snug">
+                  <span className="font-mono text-[10px] text-[var(--thoth-blue)] bg-[var(--thoth-blue-mist)]/40 px-1 rounded">
+                    [{r.paperId}]
+                  </span>{" "}
+                  <span className="text-[var(--thoth-blue-ink)]">{r.title ?? "Untitled paper"}</span>
+                  {authorStr && <span className="text-[var(--thoth-stone)]"> — {authorStr}</span>}
+                  {r.year != null && <span className="text-[var(--thoth-stone)]"> ({r.year})</span>}
+                  {r.venue && <span className="text-[var(--thoth-stone)]"> · {r.venue}</span>}
+                  {link && (
+                    <>
+                      {" · "}
+                      <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--thoth-blue)] hover:underline underline-offset-4"
+                      >
+                        {link.replace(/^https:\/\//, "")}
+                      </a>
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </Card>
   );
 }
