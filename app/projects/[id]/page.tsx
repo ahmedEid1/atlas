@@ -6,6 +6,7 @@ import { UploadButton } from "@/components/corpus/upload-button";
 import { CorpusItemList } from "@/components/corpus/corpus-item-list";
 import { StartReviewButton } from "@/components/runs/start-review-button";
 import { RunStatusPill, type RunStatus } from "@/components/runs/run-status-pill";
+import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,8 +36,25 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   return (
     <main id="main" className="max-w-5xl mx-auto px-6 py-10 space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold">{project.title}</h1>
-        <p className="text-muted-foreground mt-1">{project.question}</p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold">{project.title}</h1>
+            <p className="text-muted-foreground mt-1">{project.question}</p>
+          </div>
+          <EditProjectDialog
+            project={{
+              id: project.id,
+              title: project.title,
+              question: project.question,
+              searchScope: scope,
+              searchProviders: project.searchProviders,
+              searchYearStart: project.searchYearStart,
+              searchYearEnd: project.searchYearEnd,
+              searchMaxHits: project.searchMaxHits,
+              skipDiscoveryGate: project.skipDiscoveryGate,
+            }}
+          />
+        </div>
       </header>
 
       {isOutbound && (
