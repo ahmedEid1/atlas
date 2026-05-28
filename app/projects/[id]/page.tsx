@@ -86,12 +86,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <h1 className="text-2xl font-semibold">
               {project.title}
               {(scope === "outbound" || scope === "hybrid") && (
-                // aria-hidden on the badge so the h1's accessible name is
-                // just the project title — screen readers hearing
-                // "Project Name v2" with no context is worse than nothing,
-                // and an exact-match selector like the e2e walks use
-                // wouldn't match "title v2" anyway. The aria-label below
-                // supplies the human-readable scope name to AT users.
+                // Decorative scope badge — aria-hidden so the h1's
+                // accessible name stays the bare title. No sr-only label
+                // companion here (unlike the dashboard list): the Discovery
+                // configuration panel below already states the scope
+                // accessibly, so an sr-only on the heading would be
+                // redundant — and it duplicated the panel's scope text,
+                // tripping strict-mode getByText() in the live e2e.
                 <span
                   className="ml-2 align-middle text-[0.65rem] font-sans font-medium uppercase tracking-wider text-[var(--thoth-blue)] bg-[var(--thoth-blue-mist)]/50 px-1.5 py-0.5 rounded"
                   aria-hidden="true"
@@ -99,9 +100,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 >
                   {scope === "hybrid" ? "hybrid" : "v2"}
                 </span>
-              )}
-              {(scope === "outbound" || scope === "hybrid") && (
-                <span className="sr-only">{` (${SCOPE_LABEL[scope]})`}</span>
               )}
             </h1>
             <p className="text-muted-foreground mt-1">{project.question}</p>

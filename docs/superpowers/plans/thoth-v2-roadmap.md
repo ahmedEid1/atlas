@@ -146,6 +146,52 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M108 — Fix e2e regression: M82 sr-only label collided with config panel
+
+**Goal / the bug:** Running the live auth-walkthrough
+e2e against the deploy (end-of-session validation)
+caught a real regression M82 introduced. The hybrid-
+project test asserts
+`getByText(/hybrid \(uploaded \+ outbound\)/i)` to
+verify the discovery config panel. M82 had added an
+sr-only scope label to the project-detail `h1`
+(`" (Hybrid (uploaded + outbound))"`) — duplicating
+the scope text that's *also* in the config panel's
+`<dd>`. So `getByText` matched 2 elements →
+strict-mode violation → fail.
+
+My M105 analysis checked the heading *role* selector
+(safe — getByRole does substring on internal role
+selectors) but missed that the sr-only text duplicated
+a string a *different* `getByText` looked for.
+
+**What shipped:**
+
+- Removed the redundant sr-only scope label from the
+  project-detail `h1`. The decorative aria-hidden badge
+  stays; the Discovery configuration panel below
+  already conveys the scope accessibly, so the heading
+  sr-only was pure redundancy (and read awkwardly:
+  "Title (Hybrid (uploaded + outbound))" with nested
+  parens).
+- Kept the sr-only on the **dashboard list** (M82) —
+  there's no config panel there, so it's the only
+  accessible scope cue.
+- Kept it on the **run-detail header** (M83) — also no
+  config panel there.
+
+**Validation:** live browser-smoke (7/7) + this fix
+verified locally; e2e re-run against the deploy after
+it builds.
+
+**Lesson:** sr-only text is part of the accessibility
+tree AND the `getByText` search space. Adding it where
+the same string already appears visibly creates a
+strict-mode landmine. Prefer scoping a11y labels to
+places the info isn't otherwise present.
+
+**Key files:** `app/projects/[id]/page.tsx`
+
 ## V2-M107 — Shared draft-references mapper + select fragment
 
 **Goal:** The `includedPapers → DraftReference[]`
