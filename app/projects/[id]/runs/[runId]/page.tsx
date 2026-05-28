@@ -10,6 +10,8 @@ import { DiscoverySummary } from "@/components/runs/discovery-summary";
 import { StrandedCheckpointCard } from "@/components/runs/stranded-checkpoint-card";
 import { DraftView } from "@/components/runs/draft-view";
 import { RefreshTick } from "@/components/runs/refresh-tick";
+import { TokenSpendBadge } from "@/components/runs/token-spend-badge";
+import { env } from "@/lib/env";
 import { CritiquePanel } from "@/components/runs/CritiquePanel";
 import {
   CitationFaithfulnessWidget,
@@ -114,6 +116,9 @@ export default async function RunPage({
               >
                 {run.project.searchScope === "hybrid" ? "hybrid" : "outbound"}
               </span>
+            )}
+            {run.steps.length > 0 && (
+              <TokenSpendBadge steps={run.steps} budget={env.MAX_TOKENS_PER_RUN} />
             )}
             <RunStatusPill status={run.status as RunStatus} />
           </div>

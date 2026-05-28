@@ -125,6 +125,38 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M36 — Token-spend badge on the run-detail page
+
+**Goal:** Researchers on free-tier LLMs care about per-run cost.
+The cost-cap (`MAX_TOKENS_PER_RUN`) already enforces a hard
+ceiling — but until now there was no UI visibility into where
+each run sat relative to that ceiling. A user couldn't tell from
+the run-detail page whether a review consumed 5% of the budget
+or 95%.
+
+**What shipped:**
+
+- New `TokenSpendBadge` server component
+  (`components/runs/token-spend-badge.tsx`). Sums input + output
+  tokens across all RunSteps (matching `cost-cap.ts`'s billable
+  definition — cache reads excluded, shown separately on hover).
+  Renders next to the status pill on the run-detail header.
+- Color thresholds: <50% neutral stone · 50–80% gold (heading
+  toward the cap) · ≥80% warn brick (close to
+  BudgetExceededError).
+- Compact format: `121,463` → `121k` to keep the badge from
+  ballooning. Full unabbreviated values live in the title
+  attribute on hover.
+- Run-detail page passes `env.MAX_TOKENS_PER_RUN` (400k default
+  per M6) so the percentage reflects whatever the deploy is
+  configured for.
+- 7 new tests cover: input+output summing, k-suffix formatting,
+  cache-token exclusion, warn-color threshold (≥80%), neutral
+  threshold (<50%), title-attribute breakdown content, no-cache
+  title omission.
+
+**Key files:** `components/runs/token-spend-badge.tsx`, `app/projects/[id]/runs/[runId]/page.tsx`, `tests/components/token-spend-badge.test.ts`
+
 ## V2-M35 — cite_check audit JSON download
 
 **Goal:** Parallel to M34. The markdown draft is downloadable;
