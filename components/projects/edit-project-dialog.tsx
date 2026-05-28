@@ -69,6 +69,44 @@ export function EditProjectDialog({ project }: { project: EditProject }) {
     });
   }
 
+  /**
+   * Restore every field to match the `project` prop. Called when the
+   * user closes the dialog without saving so a reopen shows the
+   * canonical row values, not the in-flight edits the user just
+   * abandoned. (Successful save: router.refresh() re-renders the page
+   * with new prop values; the dialog stays closed, so no reset
+   * needed.)
+   */
+  function resetToProject() {
+    setTitle(project.title);
+    setQuestion(project.question);
+    setScope(project.searchScope);
+    setProviders(
+      new Set(
+        project.searchProviders.filter((p): p is Provider =>
+          p === "openalex" || p === "arxiv" || p === "exa",
+        ),
+      ),
+    );
+    setYearStart(
+      project.searchYearStart === null ? "" : String(project.searchYearStart),
+    );
+    setYearEnd(
+      project.searchYearEnd === null ? "" : String(project.searchYearEnd),
+    );
+    setMaxHits(String(project.searchMaxHits));
+    setSkipDiscoveryGate(project.skipDiscoveryGate);
+    setError(null);
+  }
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    // Reset only on close-without-save. Same posture as M70: don't
+    // reset on open, so a re-attempt after a 400 doesn't discard the
+    // user's edits.
+    if (!next) resetToProject();
+  }
+
   function submit() {
     setError(null);
     startTransition(async () => {
@@ -120,7 +158,7 @@ export function EditProjectDialog({ project }: { project: EditProject }) {
   const outboundLocked = scope !== "uploaded_only" && providers.size === 0;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={<Button variant="outline" />}>Edit</DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Edit project</DialogTitle></DialogHeader>

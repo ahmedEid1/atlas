@@ -146,6 +146,34 @@ the cleanup/re-setup churn was unnecessary.
 
 **Key files:** `components/corpus/corpus-item-list.tsx`
 
+## V2-M71 — EditProjectDialog resets to props on close
+
+**Goal:** Same class of bug as M70, applied to the edit
+flow. `EditProjectDialog` initialises its state from the
+`project` prop on first mount via `useState(project.title)`
+etc. — but React only honours the initial value on first
+mount; subsequent re-opens see the *previous edit's* state.
+A user who opened Edit, typed a new title, then cancelled,
+saw their abandoned edits when re-opening (worse than M70:
+the data shown was *misleading* about what the project
+actually contained).
+
+**What shipped:**
+
+- `resetToProject()` helper restoring every field to
+  match the current `project` prop. Mirrors the
+  initial `useState(...)` expressions.
+- `handleOpenChange(next)` wrapper: forwards the flip
+  and calls `resetToProject()` on close.
+- Same "reset only on close, not on open" posture as
+  M70 — keeps re-attempt UX intact after a 400.
+- Successful save path unchanged: `router.refresh()` re-
+  renders the page with the new project values, which
+  pass through `project` prop to a still-closed dialog,
+  so the next open shows canonical values either way.
+
+**Key files:** `components/projects/edit-project-dialog.tsx`
+
 ## V2-M70 — NewProjectDialog resets on close
 
 **Goal:** The dialog kept React state across opens — so a
