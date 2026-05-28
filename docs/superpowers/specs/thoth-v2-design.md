@@ -316,17 +316,23 @@ in `trigger.config.ts` will gain `EXA_API_KEY` only if outbound is enabled).
 
 ## 11. MCP surface
 
-V2.0 keeps the 3 read-only tools. The agent runs server-side; MCP just
-exposes results.
+V2.0 ships **5 read-only tools** (was 3 in V1). The agent runs
+server-side; MCP just exposes results. All tools are tenant-scoped and
+audit-logged through the existing `McpCall` table.
 
-Additions deferred to v2.1+:
+V1 carry-over (unchanged):
+- `list_reviews`
+- `get_review_draft`
+- `get_citation_audit`
 
-- `list_discovered_papers(reviewId)` — returns the DiscoveredPaper rows so a
-  Claude conversation can ask "what did Thoth find but exclude, and why?"
-- `get_search_queries(reviewId)` — what the discoverer actually asked. Useful
-  for a researcher who wants to re-run the same query manually on Scopus.
+V2 additions (shipped in M5):
+- `list_discovered_papers(reviewId)` — every paper the discoverer
+  surfaced from an academic index, with screening verdict + fetch
+  status. Empty for uploaded_only runs.
+- `get_search_queries(reviewId)` — the LLM-generated queries the
+  discoverer ran, the provider set, and per-provider error log.
 
-Both are read-only and tenant-scoped, fitting the existing pattern.
+Full reference: [`docs/mcp/tools.md`](../../mcp/tools.md).
 
 ---
 
