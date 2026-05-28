@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DeleteProjectButton } from "./delete-project-button";
 
 type Project = {
   id: string;
@@ -35,7 +36,7 @@ export function ProjectList({ projects }: { projects: Project[] }) {
   return (
     <ul className="divide-y divide-[var(--thoth-rule)] border-y border-[var(--thoth-rule)]">
       {projects.map((p) => (
-        <li key={p.id} className="group">
+        <li key={p.id} className="group relative">
           <Link
             href={`/projects/${p.id}`}
             className="flex items-start gap-6 py-6 px-1 transition-colors hover:bg-[var(--thoth-blue-mist)]/20"
@@ -79,6 +80,12 @@ export function ProjectList({ projects }: { projects: Project[] }) {
               →
             </span>
           </Link>
+          {/* Absolute-positioned outside the <Link> so the delete button
+              isn't a nested interactive element. opacity-0 → group-hover:opacity-100
+              keeps the editorial look clean until the user mouses over. */}
+          <div className="absolute top-6 right-1 pointer-events-auto">
+            <DeleteProjectButton projectId={p.id} projectTitle={p.title} />
+          </div>
         </li>
       ))}
     </ul>

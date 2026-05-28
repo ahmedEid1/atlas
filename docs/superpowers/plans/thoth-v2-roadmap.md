@@ -125,6 +125,31 @@ to surface. The framework is ready to consume them as soon as they land.
 
 **Key files:** `lib/eval/metrics.ts`, `lib/eval/golden-schema.ts`
 
+## V2-M41 — Delete-project affordance in dashboard
+
+**Goal:** Symmetric with M40. `DELETE /api/projects/[id]`
+existed (added in M24) but the only callers were the e2e
+test + curl-by-hand. The dashboard project list didn't
+surface deletion, so users had to leave the UI to discard a
+project.
+
+**What shipped:**
+
+- `DeleteProjectButton` client component (`components/projects/delete-project-button.tsx`)
+  — same shape as `DeleteRunButton`: confirm() → DELETE →
+  `router.refresh()`. Confirm copy spells out the cascade
+  ("every run, paper, claim, and check") since project
+  deletion is the most destructive op in the app.
+- Project-list row layout: the existing `<Link>` still wraps
+  the card content; the delete button is absolutely
+  positioned on top, outside the `<Link>` element, so it
+  doesn't nest interactive elements (a11y + Safari
+  click-bubble safety). `opacity-0 group-hover:opacity-100`
+  keeps the editorial dashboard clean until the user mouses
+  over a row.
+
+**Key files:** `components/projects/delete-project-button.tsx`, `components/projects/project-list.tsx`
+
 ## V2-M40 — Delete-run affordance
 
 **Goal:** Close the Run CRUD gap. POST /api/runs (start), GET
