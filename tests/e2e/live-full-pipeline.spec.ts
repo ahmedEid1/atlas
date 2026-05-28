@@ -404,6 +404,18 @@ test.describe("live full agent-pipeline", () => {
       page.getByText(/supported|unsupported|faithfulness|cite_check/i).first(),
     ).toBeVisible({ timeout: 30_000 });
 
+    // M34 — the Download .md endpoint returns the markdown body as
+    // an attachment. Hit it directly via the authenticated API
+    // context to verify the route works on the live deploy (not just
+    // that the link renders).
+    const md = await context.request.get(`/api/runs/${runId}/draft.md`);
+    expect(md.status()).toBe(200);
+    expect(md.headers()["content-type"]).toContain("text/markdown");
+    expect(md.headers()["content-disposition"]).toBe(`attachment; filename="thoth-${runId}.md"`);
+    const body = await md.text();
+    // Drafts always contain at least one markdown heading.
+    expect(body).toMatch(/^#\s/m);
+
     // Clean up.
     const del = await context.request.delete(`/api/projects/${projectId}`);
     expect(del.status()).toBe(204);
