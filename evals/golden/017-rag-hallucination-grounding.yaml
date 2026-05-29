@@ -16,11 +16,15 @@ picoc:
 # the seed-corpus-based v1 metrics (citation_recall/precision, coverage) for
 # searchScope: outbound.
 #
-# Outbound discovery golden. Run in the full sweep (workflow_dispatch
-# goldens=all, or the dedicated outbound job) on a higher-RPS provider
-# (LLM_PROVIDER=groq) — the 50-paper screener fan-out rate-limits on the Mistral
-# free tier. discovery_recall is a REAL measured metric here (~0.6 with the fair
-# budget + identity-agnostic matching below), not informational.
+# Outbound discovery golden. Run in the full sweep (workflow_dispatch goldens=all)
+# on a provider/budget that completes the 50-paper fan-out — Mistral free tier
+# rate-limits and the per-run token cap trips at 50 (raise MAX_TOKENS_PER_RUN, or
+# use LLM_PROVIDER=claude-agent). HONEST STATE (verified across real runs, M127):
+# discovery_recall here is NOISY and frequently 0 — the discoverer surfaces many
+# on-topic RAG papers but hits these 5 specific ones only intermittently; it
+# swings with the LLM's query draw and with arXiv availability (arXiv aborting
+# under load loses the arXiv-id matches; the provider now retries). Directional
+# signal, NOT a calibrated gate.
 searchScope: outbound
 searchProviders:
   - openalex
@@ -35,11 +39,12 @@ searchMaxHits: 50
 # Five canonical RAG-hallucination / factual-grounding / RAG-evaluation papers a
 # competent reviewer expects. Matching is identity-agnostic — DOI OR arXiv id OR
 # exact title (see lib/eval/metrics.ts) — because the same paper is indexed under
-# its DOI by OpenAlex and its arXiv id by arXiv; listing both makes
-# discovery_recall robust to which provider surfaced it. With the fair budget the
-# discoverer reliably surfaces ~3/5 (RAGTruth, RGB, RAGAs); FLARE and Adaptive-RAG
-# stay hard for the LLM-generated queries and are kept here honestly so recall
-# reflects the discoverer's real reach, not a curated-to-win subset.
+# its DOI by OpenAlex and its arXiv id by arXiv; listing both makes the metric
+# robust to which provider surfaced a paper. These 5 are kept honestly (including
+# the ones the discoverer often misses) so recall reflects real reach, not a
+# curated-to-win subset — in practice the LLM-generated queries surface plenty of
+# relevant work but hit these exact 5 only intermittently, so expect a noisy,
+# often-low number until query targeting + arXiv reliability improve.
 expectedDiscovery:
   - { doi: "10.18653/v1/2024.acl-long.585",   arxivId: "2401.00396", title: "RAGTruth: A Hallucination Corpus for Developing Trustworthy Retrieval-Augmented Language Models" }
   - { doi: "10.18653/v1/2023.emnlp-main.495", arxivId: "2305.06983", title: "Active Retrieval Augmented Generation" }

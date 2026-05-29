@@ -28,24 +28,34 @@ export const arxivSearch: SearchProvider = async (q) => {
 
   const url = `https://export.arxiv.org/api/query?${params.toString()}`;
 
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      headers: { Accept: "application/atom+xml" },
-      signal: AbortSignal.timeout(15_000),
-    });
-  } catch (err) {
-    throw new SearchProviderError(
-      "arxiv",
-      `network error: ${err instanceof Error ? err.message : String(err)}`,
-      err,
-    );
+  // arXiv's API is slow and flaky under load: a single 15s attempt was observed
+  // aborting on EVERY query mid-eval (the host was saturated), silently dropping
+  // the entire arXiv provider for the run — which also loses the only path that
+  // matches a paper by its arXiv id. Retry with backoff + a longer per-attempt
+  // timeout so a transient abort / slow response doesn't lose arXiv coverage.
+  let response: Response | undefined;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      response = await fetch(url, {
+        headers: { Accept: "application/atom+xml" },
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (response.ok) break;
+      lastErr = new Error(`HTTP ${response.status} ${response.statusText}`);
+      // Only 429 / 5xx are worth retrying; other 4xx are terminal.
+      if (response.status !== 429 && response.status < 500) break;
+    } catch (err) {
+      lastErr = err; // network error / AbortSignal timeout — retryable
+    }
+    if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 2_000)); // 2s, 4s
   }
 
-  if (!response.ok) {
+  if (!response || !response.ok) {
     throw new SearchProviderError(
       "arxiv",
-      `HTTP ${response.status} ${response.statusText}`,
+      `network error after 3 attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+      lastErr,
     );
   }
 

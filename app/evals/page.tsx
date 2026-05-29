@@ -125,9 +125,11 @@ export default async function EvalsPage() {
           cite-check, which scores each cited claim strictly against its source
           paper and counts anything not clearly grounded as unsupported — a
           deliberately conservative bar. Some axes are still maturing: discovery
-          and screening are v2 and being calibrated, and 7 of 18 goldens have
-          data at this commit. Current focus: lifting faithfulness and golden
-          coverage.
+          and screening are v2 — discovery_recall in particular is noisy (it
+          depends on the LLM&apos;s query draw and live-provider availability), so
+          read it as a directional signal, not a gate. Not every golden runs in
+          every sweep — see the last-run line above. Current focus: discovery
+          query targeting, faithfulness, and golden coverage.
         </p>
       </section>
 
@@ -284,6 +286,32 @@ export default async function EvalsPage() {
             metric is actually measuring.
           </p>
         </div>
+
+        {/* WHERE THE NUMBERS COME FROM ─────────────────────────────────── */}
+        <article className="bg-[var(--thoth-blue-mist)]/30 border border-[var(--thoth-rule)] rounded-lg p-6 mb-6">
+          <p className="eyebrow mb-3">Where these numbers come from</p>
+          <p className="text-sm text-[var(--thoth-ink)] leading-relaxed">
+            Every score here is produced by running the <strong>actual Thoth agent</strong> — the
+            same pipeline that powers the live app (plan → discover/retrieve → screen → assess →
+            draft → cite-check) — headlessly over the versioned golden set. Nothing on this page is
+            hand-entered. Each run writes one row per{" "}
+            <code className="font-mono text-[0.85em] text-[var(--thoth-blue)]">(golden, metric)</code>{" "}
+            to the{" "}
+            <code className="font-mono text-[0.85em] text-[var(--thoth-blue)]">EvalRun</code> table,
+            stamped with the git commit and timestamp shown at the top of this page; the page always
+            renders the most recent run, so the figures are pinned to exactly the code that generated
+            them.
+          </p>
+          <p className="mt-3 text-sm text-[var(--thoth-ink)] leading-relaxed">
+            The agent is <strong>LLM-provider-agnostic</strong> — a run uses whichever model is
+            configured. The free, public demo runs on a free-tier model (Mistral) for $0; some
+            refreshes run on a frontier model (Claude) for higher fidelity. Either way the model
+            doesn&apos;t assign the scores by fiat: recall and precision are set-overlap against the
+            golden&apos;s expected papers, and faithfulness is the fraction of per-claim cite-check
+            verdicts that come back <em>supported</em> — so the numbers measure what the agent
+            actually produced on that run, not a model grading itself.
+          </p>
+        </article>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <article className="bg-[oklch(1_0_0)] border border-[var(--thoth-rule)] rounded-lg p-6">
