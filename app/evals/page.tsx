@@ -122,7 +122,7 @@ export default async function EvalsPage() {
           published with the last-run date, so a regression here is a public,
           falsifiable signal. Headline: citation precision 97% and recall 74%
           on the goldens scored so far. Faithfulness (38%) comes from
-          cite_check, which scores each cited claim strictly against its source
+          cite-check, which scores each cited claim strictly against its source
           paper and counts anything not clearly grounded as unsupported — a
           deliberately conservative bar. Some axes are still maturing: discovery
           and screening are v2 and being calibrated, and 7 of 18 goldens have
